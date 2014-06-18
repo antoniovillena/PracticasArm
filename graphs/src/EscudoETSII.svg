@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+<defs>
+  <radialGradient r="0.7" cy="0" cx="0.5" id="grad1">
+    <stop stop-color="#333"/>
+    <stop stop-color="#111" offset="1"/></radialGradient>
+  <linearGradient x2="1" y2="0" id="grad2">
+    <stop stop-color="#888" offset="0.5"/>
+    <stop stop-color="#ddd" offset="1"/></linearGradient>
+  <linearGradient x2="0" y2="1" id="grad3">
+    <stop stop-color="#888" offset="0.5"/>
+    <stop stop-color="#ddd" offset="1"/></linearGradient>
+  <linearGradient x2="0" y2="1" id="grad4">
+    <stop stop-color="#aaa" offset="0.5"/>
+    <stop stop-color="#ddd" offset="1"/></linearGradient></defs>
+<circle cx="256" cy="256" r="233" stroke="#111"
+                                stroke-width="12" fill="url(#grad1)"/>
+<polygon points="90 ,175 405,0   405,55  90 ,230" fill="url(#grad2)"/>
+<polygon points="140,225 190,197 190,400 140,400" fill="url(#grad3)"/>
+<polygon points="235,172 326,121 380,121 380,400
+         330,400 330,155 285,155 285,400 235,400" fill="url(#grad3)"/>
+<polygon points="140,225 165,211 165,400 140,400" fill="url(#grad4)"/>
+<polygon points="330,155 355,121 355,400 330,400" fill="url(#grad4)"/>
+<polygon points="235,172 260,158 260,400 235,400" fill="url(#grad4)"/></svg>
