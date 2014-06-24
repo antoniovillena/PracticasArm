@@ -133,7 +133,7 @@ más uno de estado) de 32 bits cada uno.
 El procesador es {\it Bi-Endian}, quiere decir que es configurable entre {\it Big Endian}
 y {\it Little Endian}. Aunque nuestro sistema operativo nos lo limita a {\it Little Endian}.
 
-Por tanto la regla que sigue es "el byte menos significativo ocupa la posición más baja".
+Por tanto la regla que sigue es ''el byte menos significativo ocupa la posición más baja''.
 Cuando escribimos un dato en una posición de memoria, dependiendo de si es byte, half word
 o word,... se ubica en memoria según el esquema de la figura 1.1. La dirección de un dato
 es la de su byte menos significativo. La memoria siempre se referencia a nivel de byte, es
@@ -247,12 +247,6 @@ En el listado \ref{lst:codigoPract1} se muestra el código de la primera
 práctica que probaremos. En el código hay una serie de elementos que
 aparecerán en todos los programas y que estudiaremos a continuación.
 
-La principal característica de un módulo fuente en ensamblador es
-que existe una clara separación entre las instrucciones y los
-datos. De hecho, un módulo fuente puede estar formado por tres bloques
-independientes que se van a ubicar en tres segmentos distintos en la
-memoria RAM.
-
 \begin{lstlisting}[caption={Código del programa intro1.s},label={lst:codigoPract1},numbers=left,escapeinside={@}{@}]
 .data
 
@@ -278,6 +272,152 @@ puntero_var2:   .word   var2
 puntero_var3:   .word   var3
 \end{lstlisting}
 
+La principal característica de un módulo fuente en ensamblador es
+que existe una clara separación entre las instrucciones y los
+datos. La {\it estructura más general de un módulo fuente} es:
+
+\begin{description}
+     \item[* Sección de datos.] Viene identificada por la directiva {\it .data}.
+En esta zona se definen todas las variables que utiliza el programa
+con el objeto de reservar memoria para contener los valores asignados. Hay que
+tener especial cuidado para que los datos estén alineados en palabras de 4 bytes,
+sobre todo después de las cadenas. Alinear significa rellenar con ceros el final
+de un dato para que el siguiente dato comience en una dirección múltiplo de 4 (con
+los dos bits menos significativos a cero). Los datos son modificables.
+
+     \item[* Sección de código.] Se indica con la directiva {\it .text}, y sólo
+puede contener código o datos no modificables. Como todas las instrucciones son
+de 32 bits no hay que tener especial cuidado en que estén alineadas. Si tratamos
+de escribir en esta zona el ensamblador nos mostrará un mensaje de error.
+\end{description}
+
+De estas tres secciones la único que obligatoriamente debe existir es
+el la sección .text (o sección de código). En el ejemplo \ref{fig:codigoPract1}
+comprobamos que están las dos.
+
+Un módulo fuente, como el del ejemplo, está formado por instrucciones,
+datos, símbolos y directivas. 
+Las instrucciones son representaciones nemotécnicas del juego
+de instrucciones del procesador. Un dato es una entidad que aporta un valor
+numérico, que puede expresarse en distintas bases o incluso a través de una cadena.
+Los símbolos son representaciones abstractas que el ensamblador maneja en tiempo
+de ensamblado pero que en el código binario resultante tendrá un valor numérico
+concreto. Hay tres tipos de símbolos: las etiquetas, las macros y las constantes simbólicas.
+Por último tenemos las directivas, que sirven para indicarle ciertas cosas al
+ensamblador, como delimitar secciones, insertar datos, crear macros, constantes
+simbólicas, etc... Las instrucciones se aplican en tiempo de ejecución
+mientras que las directivas se aplican en tiempo de ensamblado.
+
+\subsubsection{Datos}
+
+Los datos se pueden representar de distintas maneras. Para representar números tenemos
+4 bases. La más habitual es en su forma decimal, la cual no lleva ningún delimitador
+especial. Luego tenemos otra muy útil que es la representación hexadecimal, que
+indicaremos con el prefijo {\it 0x}. Otra interesante es la binaria, que emplea el
+prefijo {\it 0b} antes del número en binario. La cuarta y última base es la
+octal, que usaremos en raras ocasiones y se especifica con el prefijo {\it 0}. Sí, un
+cero a la izquierda de cualquier valor convierte en octal dicho número. Por ejemplo
+015 equivale a 13 en decimal. Todas estas bases pueden ir con un signo menos delante,
+codificando el valor negativo en complemento a dos. Para representar carácteres y cadenas
+emplearemos las comillas simples y las comillas dobles respectivamente.
+
+\subsubsection{Símbolos}
+
+Como las etiquetas se pueden ubicar en tanto en la sección de datos como en la de código,
+la versatilidad que nos dan las mismas es enorme. En la zona de datos pueden representar
+variables, constantes y cadenas. En la zona de código etiquetas de salto, funciones y
+punteros a zona de datos.
+
+Las macros y las constantes simbólicas son símbolos cuyo ámbito pertenece al preprocesador,
+a diferencia de las etiquetas que pertenecen al del ensamblador. Se especifican con las
+directivas .equ y .macro respectivamente y permiten que el código sea más legible y menos
+repetitivo.
+
+\subsubsection{Instrucciones}
+
+Las instrucciones del {\it AS} responden al formato general:
+
+
+\begin{lstlisting}
+Etiqueta:  Nemotécnico  Operando/s  /* Comentario */
+\end{lstlisting}
+
+De estos campos, sólo el nemónico (nombre de la instrucción) es obligatorio. En
+la sintaxis del {\it AS} cada instrucción ocupa una línea terminando preferiblemente
+con el ASCII 10 (LF), aunque son aceptadas las 4 combinaciones: CR, LF, CR LF y LF CR.
+Los campos se separan entre sí por al menos un carácter espacio (ASCII 32) o un tabulador
+y no existe distinción entre mayúsculas y minúsculas.
+
+\begin{lstlisting}
+main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
+\end{lstlisting}
+
+El Campo {\it etiqueta}, si aparece, debe estar formado por una
+cadena alfanumérica. La cadena no debe comenzar con un dígito y no se puede
+utilizar como cadena alguna palabra reservada del {\it AS} ni nombre
+de registro del microprocesador. En el ejemplo, la etiqueta es
+{\tt 'main:'}.
+
+El campo \textit{Nemotécnico} ({\tt ldr} en el ejemplo) es una forma
+abreviada de nombrar la instrucción del procesador.
+Está formado por caracteres alfabéticos (entre 1 y 11 caracteres).
+
+El campo \textit{Operando/s} indica dónde se encuentran los datos.
+Puede haber 0, 1 ó más operandos en una instrucción. Si hay más de uno
+normalmente al primero se le denomina destino (salvo excepciones como {\tt str})
+y a los demás fuentes, y deben ir separados por una coma.
+Los operandos pueden ser registros, etiquetas, valores inmediatos o incluso
+elementos más complejos como desplazadores/rotadores o indicadores de
+pre/post-incrementos. En cualquiera de los casos el tamaño debe ser una
+palabra (32 bits), salvo contadas excepciones como {\tt ldr} y {\tt str}
+donde puede ser media palabra (16 bits) o un byte (8 bits).
+En el ejemplo {\tt r1} es el operando destino, de tipo registro,
+y {\tt puntero_var1} es el operando fuente, una etiqueta, ambos
+de tamaño palabra (32 bits).
+
+El campo \textit{Comentario} es opcional ({\tt r1 <- &var1}, en el ejemplo)
+y debe comenzar con la secuencia {\tt /*} y acabar con {\tt */} al igual
+que los comentarios multilínea en C. No es obligatorio que estén a la
+derecha de las instrucciones, aunque es lo habitual. También es común
+verlos al comienzo de una función (ocupando varias líneas) para explicar
+los parámetros y funcionalidad de la misma.
+
+Cada instrucción del {\it AS} se refiere a una operación que puede
+realizar el microprocesador. También hay pseudoinstrucciones que son
+tratadas por el preprocesador como si fueran macros y codifican otras
+instrucciones, como {\tt lsl rn, #x} que codifica {\tt mov rn, rn, lsl #x}
+o {\tt push/pop} que se traducen instrucciones {\tt stm/ldm} más complejas
+y difíciles de recordar para el programador. Podemos agrupar el conjunto de
+instrucciones del {\it AS}, según el tipo de función que realice el
+microprocesador, en las siguientes categorías:
+
+\begin{itemize}
+
+       \item \textit{Instrucciones de transferencia de datos}
+Mueven información entre registros y posiciones de memoria. En la
+arquitectura ARMv6 no existen puertos ya que la E/S está mapeada
+en memoria. Pertenecen a este grupo las siguientes instrucciones:
+\textbf{mov, ldr, str, ldm, stm, push, pop}.
+
+       \item \textit{Instrucciones aritméticas.}  Realizan operaciones
+aritméticas sobre números binarios o BCD.  Son instrucciones de este
+grupo \textbf{add, cmp, adc, sbc, mul}.
+
+     \item \textit{Instrucciones de manejo de bits.}  Realizan
+operaciones de desplazamiento, rotación y lógicas sobre registros o
+posiciones de memoria. Están en este grupo las instrucciones:\textbf{
+and, tst, eor, orr, lsl, lsr, asr, ror, rrx}.
+
+     \item \textit{Instrucciones de transferencia de control.}  Se
+utilizan para controlar el flujo de ejecución de las instrucciones
+del programa. Tales como \textbf{b, bl, bx, blx} y sus variantes
+condicionales.
+
+\end{itemize}
+
+En esta sesión práctica se explorarán algunas de estas instrucciones.
+Para buscar información sobre cualquiera de ellas durante las prácticas,
+recuerda que puedes utilizar el datasheet del ARM1176JZF-S.
 
 \chapterend{}
 
