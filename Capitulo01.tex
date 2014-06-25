@@ -200,10 +200,9 @@ El encargado de unir el código del programa con el código de estas
 librerías es un programa llamado montador ({\it linker}) que genera el
 programa ejecutable (ver la figura \ref{fig:entorno})
 
-***cambiar los .asm por .s
 \begin{figure}[h]
   \centering
-    \includegraphics[width=13cm]{graphs/ensamblado.pdf}
+    \includegraphics[width=13cm]{graphs/ensamblado.eps}
   \caption{Entorno típico de programación}
   \label{fig:entorno}
 \end{figure}
@@ -256,7 +255,6 @@ var3:   .word   0x1234
 
 .text
 .global main
-.func main
  
 main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
         ldr     r1, [r1]            /* r1 <- *r1      */
@@ -372,10 +370,10 @@ pre/post-incrementos. En cualquiera de los casos el tamaño debe ser una
 palabra (32 bits), salvo contadas excepciones como {\tt ldr} y {\tt str}
 donde puede ser media palabra (16 bits) o un byte (8 bits).
 En el ejemplo {\tt r1} es el operando destino, de tipo registro,
-y {\tt puntero_var1} es el operando fuente, una etiqueta, ambos
+y {\tt puntero\_var1} es el operando fuente, una etiqueta, ambos
 de tamaño palabra (32 bits).
 
-El campo \textit{Comentario} es opcional ({\tt r1 <- &var1}, en el ejemplo)
+El campo \textit{Comentario} es opcional ({\tt r1 <- \&var1}, en el ejemplo)
 y debe comenzar con la secuencia {\tt /*} y acabar con {\tt */} al igual
 que los comentarios multilínea en C. No es obligatorio que estén a la
 derecha de las instrucciones, aunque es lo habitual. También es común
@@ -385,8 +383,8 @@ los parámetros y funcionalidad de la misma.
 Cada instrucción del {\it AS} se refiere a una operación que puede
 realizar el microprocesador. También hay pseudoinstrucciones que son
 tratadas por el preprocesador como si fueran macros y codifican otras
-instrucciones, como {\tt lsl rn, #x} que codifica {\tt mov rn, rn, lsl #x}
-o {\tt push/pop} que se traducen instrucciones {\tt stm/ldm} más complejas
+instrucciones, como {\tt lsl rn, \#x} que codifica {\tt mov rn, rn, lsl \#x},
+o bien {\tt push/pop} que se traducen instrucciones {\tt stm/ldm} más complejas
 y difíciles de recordar para el programador. Podemos agrupar el conjunto de
 instrucciones del {\it AS}, según el tipo de función que realice el
 microprocesador, en las siguientes categorías:
@@ -418,6 +416,144 @@ condicionales.
 En esta sesión práctica se explorarán algunas de estas instrucciones.
 Para buscar información sobre cualquiera de ellas durante las prácticas,
 recuerda que puedes utilizar el datasheet del ARM1176JZF-S.
+
+\subsubsection{Directivas}
+
+Las directivas son expresiones que aparecen en el módulo fuente e
+indican al compilador que realice determinadas tareas en el proceso
+de compilación. Son fácilmente distinguibles de las instrucciones
+porque siempre comienzan con un punto. El uso de directivas es
+aplicable sólo al entorno del compilador, por tanto varían de un
+compilador a otro y para diferentes versiones de un mismo compilador.
+Las directivas más frecuentes en el {\it AS} son:
+
+\begin{itemize}
+        \item \textit{Directivas de asignación:} Se utilizan para dar
+valores a las constantes o reservar posiciones de memoria para las
+variables (con un posible valor inicial).  \textbf{.byte, .hword, .word,
+.ascii, .asciz, .zero y .space}
+son directivas que indican al compilador que reserve memoria para
+las variables del tipo indicado. Por ejemplo,
+
+\begin{lstlisting}
+a1:   .byte  1       /* tipo byte, inicializada a 1 */
+var2: .byte  'A'     /* tipo byte, al caracter 'A'  */
+var3: .hword 25000   /* tipo hword (16 bits) a 25000*/
+var4: .word 0x12345678 /* tipo word de 32 bits      */
+b1:   .ascii "hola"  /* define cadena normal        */
+b2:   .asciz "ciao"  /* define cadena acabada en NUL*/
+dat1: .zero  300     /* 300 bytes de valor cero     */
+dat2: .space 200, 4  /* 200 bytes de valor 4        */
+\end{lstlisting}
+
+La directiva \textbf{.equ} (ó \textbf{.set}) es utilizada para asignar un
+valor a una constante simbólica.
+
+\begin{lstlisting}
+.equ N, -3     /* en adelante N se sustituye por -3 */
+\end{lstlisting}
+
+\item \textit{Directivas de control:}
+        \textbf{.text y .data} sirven para delimitar las distintas secciones
+        de nuestro módulo.
+        \textbf{.align {alineamiento}} es para alinear el siguiente dato,
+        rellenando con ceros, de tal forma que comience en una dirección
+        múltiplos del número que especifiquemos en {\it alineamiento},
+        normalmente potencia de 2. Si no especificamos {\it alineamiento}
+        por defecto toma el valor de 4 (alineamiento a palabra).
+
+\begin{lstlisting}
+a1: .byte 25   /* definimos un byte con el valor 25 */
+    .align     /* directiva que rellena con 3 bytes */
+a2: .word 4    /* variable alineada a tamaño palabra*/
+\end{lstlisting}
+
+        \textbf{.include} para incluir un archivo fuente dentro del actual.
+        \textbf{.global} hace visible al enlazador el símbolo que hemos
+        definido con la etiqueta del mismo nombre.
+
+     \item \textit{Directivas de operando:} Se aplican a los datos en
+        tiempo de compilación. En general, incluyen las operaciones lógicas
+        {\tt \&}, {\tt |}, {\tt \~{}}, aritméticas {\tt +}, {\tt -},
+        {\tt *}, {\tt /}, {\tt \%} y de desplazamiento
+        {\tt $<$}, {\tt $>$}, {\tt $<<$}, {\tt $>>$}.
+
+\begin{lstlisting}
+.equ pies, 9     /* definimos a 9 la constante pies */
+.equ yardas, pies/3     /* calculamos las yardas= 3 */
+.equ pulgadas, pies*12  /* calculamos pulgadas= 108 */
+\end{lstlisting}
+
+     \item \textit{Directivas de Macros:} Una {\it .macro} es un
+conjunto de sentencias en ensamblador (directivas e instrucciones) que
+pueden aparecer varias veces repetidas en un programa con algunas
+modificaciones (opcionales). Por ejemplo, supongamos que a lo largo de
+un programa realizamos varias veces la operación $n^{2}+1$ donde n y el
+resultado son registros. Para acortar el código a escribir
+podríamos usar una macro como la siguiente:
+
+\begin{lstlisting}
+    .macro CuadM1 input, aux, output
+        mul     aux, input, input
+        add     output, aux, #1
+    .endm    
+\end{lstlisting}
+
+Esta macro se llama {\it CuadM1} y tiene tres parámetros (input, aux y output).
+Cada vez que la usemos en el programa haremos:
+
+\begin{lstlisting}
+        CuadM1  r1, r8, r0
+\end{lstlisting}
+
+\noindent y el ensamblador {\it expande} la macro, es decir, en lugar de
+la llamada coloca:
+
+\begin{lstlisting}
+        mul     r8, r1, r1
+        add     r0, r8, #1
+\end{lstlisting}
+
+No hay que confundir las macros con los procedimientos. Por un lado,
+el código de un procedimiento es único, todas las llamadas usan el
+mismo, mientras que el de una macro aparece (se expande) cada vez que
+se referencia, por lo que ocuparán más memoria. Las macros serán
+más rápidas en su ejecución, pues es secuencial, frente a la de
+los procedimientos, ya que implican un salto cuando aparece la llamada
+y un retorno cuando se termina. La decisión de usar una macro o un
+procedimiento dependerá de cada situación en concreto, aunque las
+macros son muy flexibles (ofrecen muchísimas más posibilidades de las
+comentadas aquí). Esta posibilidad será explotada en sesiones más avanzadas.
+
+\end{itemize}
+
+\subsection{Ensamblar y {\it linkar} un programa}
+
+La traducción o ensamblado de un módulo fuente ({\bf nombreprograma.s})
+se realiza con el programa Gnu Assembler, con el siguiente comando:
+
+\hspace{2.5cm}{\bf as -o nombreprograma.o nombreprograma.s}
+
+NOTA: tanto el comando {\it as} como el nombre del programa son sensibles
+a las mayúsculas. Por tanto el comando debe ir en minúsculas y el nombre
+como queramos, pero recomendamos minúsculas también.
+Las opción {\bf -o nombreprograma.o} puede ir después de {\bf nombreprograma.s}.
+
+El {\it as} genera un fichero nombreprograma.o.
+
+Para montar ({\it linkar}) hay que hacer:
+
+\hspace{2.5cm}{\bf gcc -o nombreprograma nombreprograma.o}
+
+NOTA: Nuevamente, tanto {\it gcc} como el nombre del programa deben estar
+en minúsculas. Este comando es muy parecido al anterior, podemos poner si
+queremos {\bf -o nombreprograma} detrás de {\bf nombreprograma.o}. La única
+diferencia es que el archivo no tiene extensión, que por otro lado es una
+práctica muy recomendable para ejecutables en Linux.
+
+Una vez hecho ésto, ya tenemos un fichero ejecutable (nombreprograma) que
+podemos ejecutar o depurar con el {\it gdb}.
+
 
 \chapterend{}
 
