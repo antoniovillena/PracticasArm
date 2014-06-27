@@ -140,7 +140,6 @@ es la de su byte menos significativo. La memoria siempre se referencia a nivel d
 decir si decimos la posición N nos estamos refiriendo al byte N-ésimo, aunque se escriba
 media palabra, una palabra,...
 
-***cambiar los textos del .pdf por strb r1, [r0]  strh r1, [r0]  str  r1, [r0]  
 \begin{figure}[h]
   \centering
     \includegraphics[width=13cm]{graphs/memo.pdf}
@@ -202,7 +201,7 @@ programa ejecutable (ver la figura \ref{fig:entorno})
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=13cm]{graphs/ensamblado.eps}
+    \includegraphics[width=13cm]{graphs/ensamblado.pdf}
   \caption{Entorno típico de programación}
   \label{fig:entorno}
 \end{figure}
@@ -232,13 +231,84 @@ y editar los módulos fuente de nuestros programas. El traductor
 (que en el caso de traducir de un lenguaje ensamblador a lenguaje máquina
 recibe el nombre de ensamblador), el {\it linker} y el {\it debugger} son
 respectivamente GNU Assembler ({\bf AS}), GNU Compiler Collection ({\bf GCC})
-y GNU Debbuger ({\bf GDB}). Todas estas herramientas forman parte de la
+y GNU Debbuger ({\bf gdb}). Todas estas herramientas forman parte de la
 GNU toolchain que viene instalada por defecto en la mayoría de las distribuciones
 basadas en Linux, en concreto Raspbian. Para obtener más información sobre estos
 comandos se puede recurrir a la ayuda del sistema con <man as>, <man gcc> y
 <man gdb>. Se aconseja que a lo largo de de esta
 primera sesión práctica os vayais familiarizando con ambos entornos,
 aunque no se os indique explícitamente.
+
+\subsection{Configuración del entorno para realizar las prácticas en casa}
+
+Las instrucciones vienen detalladas en esta dirección:\newline
+\hspace{2.5cm}{\bf http://elinux.org/RPi\_Easy\_SD\_Card\_Setup}
+
+Vamos a hacer un resumen de cómo se haría en Windows. Para otros
+sistemas operativos (Linux, Mac Os) seguir las instrucciones antes mencionadas.
+
+\begin{enumerate}
+  \item Descargamos la última versión de RASPBIAN en la siguiente url: \newline
+\hspace{2.5cm}{\bf http://www.raspberrypi.org/downloads/}
+  \item Extraemos del .zip el archivo de imagen, en nuestro caso se llama
+        2014-01-07-wheezy-raspbian.img, aunque seguramente tu versión será más moderna.
+  \item Insertamos una tarjeta SD en tu PC (slot SD o adaptador USB) y nos aseguramos de que
+        funcione correctamente. Si no, la formateamos en FAT32.
+  \item Nos bajamos e instalamos la utilidad Win32DiskImager. \newline
+\hspace{2.5cm}{\bf http://sourceforge.net/projects/win32diskimager}
+  \item Ejecutamos como Administrador la utilidad anterior.
+  \item Dentro de la utilidad, seleccionamos el archivo de imagen anterior,
+        2014-01-07-wheezy-raspbian.img
+  \item Seleccionamos en Device la letra de unidad que nos apareció en el paso 3.
+        Debemos asegurarnos de que la letra sea la correcta, de lo contrario
+        podríamos destruir los datos de nuestro disco duro.
+  \item Pulsamos el botón Write y esperamos a que se complete la escritura.
+  \item Salimos de la utilidad y extraemos la tarjeta SD.
+  \item Ya estamos listos para introducir la tarjeta SD en nuestra Raspberry Pi.
+\end{enumerate}
+
+De forma alternativa podemos ejecutar la imagen anterior en un emulador de
+Raspberry Pi, y seguir gran parte de las mismas con la comodidad de tu PC. Para
+ello partimos del archivo de imagen obtenido en el apartado 2 de la lista anterior,
+y seguimos los siguientes pasos\footnote{\url{http://xecdesign.com/qemu-emulating-raspberry-pi-the-easy-way/}}.
+
+\begin{enumerate}
+  \item Descargamos el emulador QEMU desde aquí: \newline
+\hspace{2.5cm}{\bf http://lassauge.free.fr/qemu/}
+  \item Descargamos el siguiente núcleo o kernel desde aquí: \newline
+\hspace{2.5cm}{\bf http://xecdesign.com/downloads/linux-qemu/kernel-qemu}
+  \item Ejecutamos desde línea de comandos:
+\begin{lstlisting}
+qemu-system-armw -kernel kernel-qemu -cpu arm1176
+-m 256 -M versatilepb -no-reboot -serial stdio -append
+"root=/dev/sda2 panic=1 rootfstype=ext4 rw init=/bin/bash"
+-hda 2014-01-07-wheezy-raspbian.img
+\end{lstlisting}
+  \item {\tt nano /etc/ld.so.preload}
+  \item Pon un {\bf \#} al comienzo de la siguiente línea:
+\begin{lstlisting}
+#/usr/lib/arm-linux-gnueabihf/libcofi_rpi.so
+\end{lstlisting}
+  \item Presiona {\tt Ctrl-X} y luego {\tt y}, Enter para guardar y salir.
+  \item {\tt halt}
+  \item Cierra la ventana de QEMU, y edita el siguiente archivo .bat.
+\begin{lstlisting}
+qemu-system-armw -kernel kernel-qemu -cpu arm1176
+-m 256 -M versatilepb -no-reboot -serial stdio -append
+"root=/dev/sda2 panic=1 rootfstype=ext4 rw"
+-hda 2014-01-07-wheezy-raspbian.img
+\end{lstlisting}
+  \item Ejecuta el archivo .bat que acabas de crear. Ya está, cada vez que
+termines sal limpiamente con {\tt halt}. Todos los archivos que vayas creando
+se almacenan en la imagen como si se tratase de SD real corriendo sobre una
+Raspberry Pi real.
+\end{enumerate}
+
+Para mayor comodidad activa el usuario de root, sino vas a tener que preceder
+con {\tt sudo} todos los comandos. Por defecto el nombre de usuario es
+{\tt pi} y la contraseña {\tt raspberry}. Se activa root escribiendo
+{\tt sudo passwd root} y a continuación la contraseña de root que quieras
+asignar.
 
 \subsection{Aspecto de un programa en ensamblador}
 
@@ -474,7 +544,7 @@ a2: .word 4    /* variable alineada a tamaño palabra*/
 
      \item \textit{Directivas de operando:} Se aplican a los datos en
         tiempo de compilación. En general, incluyen las operaciones lógicas
-        {\tt \&}, {\tt |}, {\tt \~{}}, aritméticas {\tt +}, {\tt -},
+        {\tt \&}, {\tt |}, {\tt $\sim$}, aritméticas {\tt +}, {\tt -},
         {\tt *}, {\tt /}, {\tt \%} y de desplazamiento
         {\tt $<$}, {\tt $>$}, {\tt $<<$}, {\tt $>>$}.
 
@@ -553,6 +623,893 @@ práctica muy recomendable para ejecutables en Linux.
 
 Una vez hecho ésto, ya tenemos un fichero ejecutable (nombreprograma) que
 podemos ejecutar o depurar con el {\it gdb}.
+
+\section{Enunciados de la práctica}
+
+\subsection{Cómo empezar}
+
+Comenzaremos con el programa que hemos visto en el listado
+\ref{lst:codigoPract1}, y que se encuentra en el fichero {\tt intro1.s}.
+Edítalo con el programa {\bf nano} para verlo (y practicar un poco):
+
+\hspace{2.5cm}{\bf nano intro1.s}
+
+Dentro del editor tenemos una pequeña guía de comandos en la parte
+inferior. También podemos acceder a una ayuda más detallada pulsando {\bf F1}
+dentro del editor. Estos son los atajos de teclado más comunes:
+
+\begin{longtable}{| p{1.3cm} | p{12cm} |}
+\hline
+{\bf Atajo} & {\bf Función} \\ \hline
+Ctrl-x & Salir de nano, se pide confirmación con Y/N \\ \hline
+Ctrl-o & Salvar cambios \\ \hline
+Ctrl-c & Muestra panel con información sobre número de línea \\ \hline
+Alt-g  & Saltar a un número de línea en concreto \\ \hline
+Alt-a ó\newline
+Ctrl-6 & Seleccionar texto, mover cursores para definir región  \\ \hline
+Alt-\^ & Copiar selección \\ \hline
+Ctrl-k & Cortar selección \\ \hline
+Ctrl-u & Pegar selección \\ \hline
+Ctrl-w & Buscar texto \\ \hline
+Alt-w  & Repetir última búsqueda \\ \hline
+Alt-r  & Buscar y reemplazar \\ \hline
+\caption{Lista de atajos de teclado para editor nano}
+\label{list_nano}
+\end{longtable}
+
+Una vez que estéis familiarizados con el {\bf nano} podemos pasar al
+traductor:
+
+\hspace{2.5cm}{\bf as -o intro1.o intro1.s}
+
+Observa que cuando se traduce, aparece una lista de errores, o bien, una
+indicación de que el programa se ha traducido correctamente.
+No se puede pasar a la etapa de montaje hasta que no se han solucionado
+los errores de sintaxis.
+
+\hspace{2.5cm}{\bf gcc -o intro1 intro1.o}
+
+De la misma forma, el montador nos informa de si todo el proceso ha sido
+correcto.
+
+Una vez que hemos terminado con éxito este proceso podemos pasar el programa al
+{\it gdb} (GNU Debugger).
+
+\hspace{2.5cm}{\bf gdb intro1}
+
+El {\bf gdb} ofrece muchas posibilidades, sólo explicaremos las que vamos
+a utilizar. Nada más ejecutar el comando anterior, el {\bf gdb} se encuentra
+en modo interactivo:
+
+\begin{lstlisting}
+root@raspberrypi:~# gdb intro1
+GNU gdb (GDB) 7.4.1-debian
+Copyright (C) 2012 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later 
+This is free software: you are free to change and redis...
+There is NO WARRANTY, to the extent permitted by law.  ...
+and "show warranty" for details.
+This GDB was configured as "arm-linux-gnueabihf".
+For bug reporting instructions, please see:
+...
+Reading symbols from /root/intro1...(no debugging symbo...
+(gdb)
+\end{lstlisting}
+
+Podemos escribir {\bf help} para acceder a la ayuda integrada, o bien
+irnos a la página web de documentación
+\footnote{\url{http://sourceware.org/gdb/current/onlinedocs/gdb/}}
+del {\bf gdb}. El primer comando a aprender es:
+
+\begin{lstlisting}
+(gdb) quit
+\end{lstlisting}
+
+Lanzamos de nuevo el depurador {\bf gdb intro1}. En este momento no hay
+nada ejecutándose. Un primer paso es decirle al depurador que queremos
+lanzar el programa, esto es, cargarlo en memoria y apuntar a la primera
+instrucción del mismo:
+
+\begin{lstlisting}
+(gdb) start
+Temporary breakpoint 1 at 0x8390
+Starting program: /root/intro1
+ 
+Temporary breakpoint 1, 0x00008390 in main ()
+\end{lstlisting}
+
+Perfecto, nos hemos saltado todos los pasos de inicialización de la
+librería C y estamos a punto de ejecutar la primera instrucción de
+nuestra función main. Veamos qué hay allí:
+
+\begin{lstlisting}
+(gdb) disassemble
+Dump of assembler code for function main:
+=> 0x00008390: ldr r1, [pc, #24];  0x83b0 <puntero_var1>
+   0x00008394: ldr r1, [r1]
+   0x00008398: ldr r2, [pc, #20];  0x83b4 <puntero_var2>
+   0x0000839c: ldr r2, [r2]
+   0x000083a0: ldr r3, [pc, #16];  0x83b8 <puntero_var3>
+   0x000083a4: add r0, r1, r2
+   0x000083a8: str r0, [r3]
+   0x000083ac: bx  lr
+End of assembler dump.
+\end{lstlisting}
+
+Vemos que las instrucciones que hacían referencia a {\bf puntero\_varX}
+han cambiado. De momento lo ignoramos, ya lo explicaremos más adelante.
+Observen que hay una especie de flecha {\bf $=>$} apuntando a la
+instrucción que está apunto de ejecutarse (no lo ha hecho aún).
+Antes de ejecutarla, veamos los valores de algunos registros:
+
+\begin{lstlisting}
+(gdb) info registers r0 r1 r2 r3
+r0             0x1              1
+r1             0xbefffe04       3204447748
+r2             0xbefffe0c       3204447756
+r3             0x8390           33680
+\end{lstlisting}
+
+Podemos modificar el valor de los registros por medio de la orden
+{\bf print}, teniendo en cuenta los efectos adversos que esto podría
+ocasionar, ya que estamos alterando el funcionamiento de nuestro
+programa. En este caso no pasa nada, puesto que aún no hemos ejecutado
+ninguna instrucción.
+
+\begin{lstlisting}
+(gdb) print $r0 = 2
+$1 = 2
+(gdb) info registers r0 r1 r2 r3
+r0             0x2              2
+r1             0xbefffe04       3204447748
+r2             0xbefffe0c       3204447756
+r3             0x8390           33680
+\end{lstlisting}
+
+{\bf gdb} muestra \$1, que es el identificador asignado al resultado. Podemos
+usar dicho identificador en nuevas expresiones y así ahorramos tiempo al teclear.
+En este ejemplo no es muy útil, pero lo será si la expresión es más compleja.
+
+\begin{lstlisting}
+(gdb) print $1
+$2 = 2
+\end{lstlisting}
+
+Ahora podemos usar \$2, y así sucesivamente. Bueno, ya es hora de ejecutar la primera
+instrucción.
+
+\begin{lstlisting}
+(gdb) stepi
+0x00008394 in main ()
+\end{lstlisting}
+
+Veamos qué ha pasado desensamblando de nuevo.
+
+\begin{lstlisting}
+(gdb) disassemble
+Dump of assembler code for function main:
+   0x00008390: ldr r1, [pc, #24];  0x83b0 <puntero_var1>
+=> 0x00008394: ldr r1, [r1]
+   0x00008398: ldr r2, [pc, #20];  0x83b4 <puntero_var2>
+   0x0000839c: ldr r2, [r2]
+   0x000083a0: ldr r3, [pc, #16];  0x83b8 <puntero_var3>
+   0x000083a4: add r0, r1, r2
+   0x000083a8: str r0, [r3]
+   0x000083ac: bx  lr
+End of assembler dump.
+\end{lstlisting}
+
+Observamos que la flecha {\bf $=>$} ha cambiado de posición, apuntando ahora
+a la segunda instrucción. Veamos qué le ha pasado a {\bf r1}.
+
+\begin{lstlisting}
+(gdb) info register r1
+r1             0x10558  66904
+\end{lstlisting}
+
+Bien, ha cambiado. De hecho esta es la dirección de {\bf puntero\_var1}.
+Comprobémoslo usando su nombre simbólico con la sintaxis de C.
+
+\begin{lstlisting}
+(gdb) print &var1
+$3 = ( *) 0x10558 <puntero_var1>
+\end{lstlisting}
+
+Genial. Ahora veamos el contenido de dicha variable.
+
+\begin{lstlisting}
+(gdb) print &var1
+$4 = 3
+\end{lstlisting}
+
+Perfecto, es lo que esperábamos. Veamos el siguiente paso.
+
+\begin{lstlisting}
+(gdb) stepi
+0x00008398 in main ()
+(gdb) disas
+Dump of assembler code for function main:
+   0x00008390: ldr r1, [pc, #24];  0x83b0 <puntero_var1>
+   0x00008394: ldr r1, [r1]
+=> 0x00008398: ldr r2, [pc, #20];  0x83b4 <puntero_var2>
+   0x0000839c: ldr r2, [r2]
+   0x000083a0: ldr r3, [pc, #16];  0x83b8 <puntero_var3>
+   0x000083a4: add r0, r1, r2
+   0x000083a8: str r0, [r3]
+   0x000083ac: bx  lr
+End of assembler dump.
+\end{lstlisting}
+
+Puedes emplear {\bf disas} (pero no {\bf disa}) como comando
+abreviado. En realidad todos los comandos pueden abreviarse, sólo
+que no lo hemos hecho para os resulte más fácil su memorización.
+A partir de ahora pondré versiones abreviadas de comandos que ya
+hayamos mostrado.
+
+\begin{lstlisting}
+(gdb) i r r1
+r1             0x3  3
+\end{lstlisting}
+
+Vamos bien. Ahora ejecutamos hasta la instrucción {\bf str}, que
+serían exactamente 4 pasos.
+
+\begin{lstlisting}
+(gdb) si 4
+0x000083a8 in main ()
+(gdb) disas
+Dump of assembler code for function main:
+   0x00008390: ldr r1, [pc, #24];  0x83b0 <puntero_var1>
+   0x00008394: ldr r1, [r1]
+   0x00008398: ldr r2, [pc, #20];  0x83b4 <puntero_var2>
+   0x0000839c: ldr r2, [r2]
+   0x000083a0: ldr r3, [pc, #16];  0x83b8 <puntero_var3>
+   0x000083a4: add r0, r1, r2
+=> 0x000083a8: str r0, [r3]
+   0x000083ac: bx  lr
+End of assembler dump.
+\end{lstlisting}
+
+Comprobamos ahora que la intrucción {\bf str} funciona correctamente,
+inspeccionando la variable {\bf var3} antes y después.
+
+\begin{lstlisting}
+(gdb) p var3
+$5 = 4660
+(gdb) si
+0x000083ac in main ()
+(gdb) p var3
+$6 = 7
+\end{lstlisting}
+
+Ahora ejecutemos hasta el final.
+
+\begin{lstlisting}
+(gdb) continue
+Continuing.
+[Inferior 1 (process 2477) exited with code 07]
+\end{lstlisting}
+
+El depurador nos indica que el código de salida es 07. Este código
+se lo indicamos en el registro {\bf r0} justo antes de salir del {\bf main}.
+Nos salimos del depurador y comprobamos que ejecutando el programa
+directamente, aunque éste no muestre ninguna salida por pantalla, podemos
+verificar su código de salida de la siguiente forma.
+
+\begin{lstlisting}
+root@raspberrypi:~# ./intro1 ; echo $?
+7
+root@raspberrypi:~#
+\end{lstlisting}
+
+Ahora que ya tenemos una idea de las posibilidades del {\bf td}
+vamos a repasar unos cuantos conceptos con la ayuda de este programa.
+
+\subsection{Enteros y naturales}
+
+Recordemos que cuando se representa cualquier dato en memoria, éste tiene un
+valor explícito (el que tiene como dato guardado en binario) y un
+valor implícito (el que tiene interpretado como un tipo de dato
+determinado o como una instrucción). En este apartado queremos que veais la
+diferencia entre el valor explícito y el valor implícito interpretado como
+un natural y como un entero.
+
+\subsubsection{Ejercicio 1.1}
+Suponemos dos variables de longitud un byte {\tt var1}
+y {\tt var2} con los valores binarios ($00110010_b$) y ($11000000_b$),
+respectivamente. Completa las casillas en blanco.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+%\arrayrulecolor{black}
+\tabcolsep = 1mm
+\begin{tabular}{ccccc}
+& Valor explícito & Valor explícito & Valor implícito & Valor implícito \\
+ & (binario) & (hexadecimal) & (como un natural & (como un entero \\
+& & & en decimal) & en decimal) \\
+var1 &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{0.2cm}{0cm}00110010\rule{0.2cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} \\[1mm]
+var2 &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{0.2cm}{0cm}11000000\rule{0.2cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} \\
+\end{tabular}
+\vspace{0.5ex}
+}
+\end{center}
+
+Observa que los valores son bien diferentes según la interpretación (valor
+implícito) que se les dé.
+
+\subsubsection{Ejercicio 1.2}
+Calcula ahora la suma de los dos números y responde en las casillas en blanco.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{cccc}
+Valor explícito & Valor explícito & Valor implícito & Valor implícito \\
+(binario) & (hexadecimal) & (como un natural & (como un entero \\
+& & en decimal) & en decimal) \\
+\colorbox[gray]{1}{
+\begin{minipage}[b]{2cm}
+\begin{flushright}
+00110010\\
++11000000\\[-3mm]
+\hrulefill
+\end{flushright}
+\vspace{0.4cm}
+\end{minipage}
+} &
+= \colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2cm}{0cm}} &
+= \colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2cm}{0cm}} &
+= \colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2cm}{0cm}} \\
+\\
+\multicolumn{2}{l}{
+¿Cuál es el valor final de los flags?} &
+\multicolumn{2}{l}{
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}N=\rule{0.7cm}{0cm}Z=\rule{0.7cm}{0cm}C=\rule{0.7cm}{0cm}V=\rule{0.7cm}{0cm}}
+}\\[1mm]
+\multicolumn{3}{l}{
+¿Es el resultado final correcto interpretado como un natural?} &
+\multicolumn{1}{l}{
+\colorbox[gray]{1}{\rule{1cm}{0cm}\rule{0cm}{0.46cm}}} \\[1mm]
+\multicolumn{3}{l}{
+¿Es el resultado final correcto interpretado como un entero?} &
+\multicolumn{1}{l}{
+\colorbox[gray]{1}{\rule{1cm}{0cm}\rule{0cm}{0.46cm}}} \\
+\end{tabular}
+}
+\end{center}
+
+Ahora es el momento de comprobar si hemos contestado correctamente.
+El código de esta parte se encuentra en el fichero {\tt intro2.s}
+(listado \ref{lst:codigoPract2}).
+
+\begin{lstlisting}[caption={Código del programa intro2.s},label={lst:codigoPract2},numbers=left,escapeinside={@}{@}]
+.data
+
+var1:   .byte   0b00110101
+        .align
+var2:   .byte   0b11000000
+        .align
+
+.text
+.global main
+ 
+main:   ldr     r1, =var1     /* r1 <- &var1    */
+        ldrsb   r1, [r1]      /* r1 <- *r1      */
+        ldr     r2, =var2     /* r2 <- &var2    */
+        ldrsb   r2, [r2]      /* r2 <- *r2      */
+        add     r0, r1, r2    /* r0 <- r1 + r2  */
+        bx      lr
+\end{lstlisting}
+
+Si os fijáis hemos hecho algunos cambios con respecto a {\tt intro1.s}. Las
+variables son de tipo byte en lugar de word, lo que nos obliga a
+alinear con {\bf .align} después de cada una. Las cargamos con la
+instrucción {\bf ldrsb}, indicando que lo que cargamos es un byte {\bf b}
+al que le extendemos su signo {\bf s}. Hemos eliminado la variable {\bf var3},
+al fin y al cabo vamos a obtener el resultado en el registro {\bf r0}.
+Por último hemos simplificado la carga de la dirección de la variables
+con {\bf ldr r1, =var1}, de esta forma el ensamblador se encarga de declarar los
+punteros automáticamente.
+
+Ensámblalo, móntalo y síguelo con el {\bf gdb} tal y como se ha explicado en
+la primera parte de la práctica. Ejecuta sólo las 5 primeras instrucciones.
+Analiza el resultado del registro r0 y responde al siguiente ejercicio.
+
+\subsubsection{Ejercicio 1.3}
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{rccc}
+\multicolumn{3}{l}{Si interpretamos el resultado como byte}\\
+\multicolumn{2}{c}{binario} & hexa \\
+\multicolumn{2}{c}{\colorbox[gray]{1}{\rule{6cm}{0cm}\rule{0cm}{0.46cm}}}
+& \colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+\multicolumn{3}{l}{}\\
+\multicolumn{3}{l}{Si interpretamos el resultado como palabra (32 bits)}\\
+\multicolumn{2}{c}{binario} & hexa \\
+\multicolumn{2}{c}{\colorbox[gray]{1}{\rule{6cm}{0cm}\rule{0cm}{0.46cm}}}
+& \colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+\multicolumn{3}{l}{}\\
+\multicolumn{3}{l}{Ídem, pero si no hubiésemos extendido los signos}\\
+\multicolumn{3}{l}{(ldrb en lugar de ldrsb)}\\
+\multicolumn{2}{c}{binario} & hexa \\
+\multicolumn{2}{c}{\colorbox[gray]{1}{\rule{6cm}{0cm}\rule{0cm}{0.46cm}}}
+& \colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+\end{tabular}
+}
+\end{center}
+
+\subsubsection{Ejercicio 1.4}
+
+Repite el ejercicio anterior, pero ahora comprobando el resultado de los
+flags con lo que habías calculado en el Ejercicio 1.2. ¿Qué ocurre?
+
+Si observáis, el registro cpsr no cambia, es el mismo antes y después de
+ejecutar la instrucción {\bf add}.
+
+\begin{lstlisting}
+(gdb) i r cpsr
+cpsr         0x60000010    1610612752
+\end{lstlisting}
+
+Por cierto, desde {\bf gdb} no hay una forma sencilla de obtener los flags
+por separado. Por suerte son fáciles de interpretar a partir del valor
+hexadecimal de {\bf cpsr}. Convertimos a binario el nibble (dígito hexadecimal)
+más significativo de cpsr, en este caso 6 -> 0110. Hacemos corresponder 0110
+con la secuencia {\bf NZCV} (debemos aprenderla de memoria),
+con lo cual tendríamos N=0, Z=1, C=1 y V=0.
+
+La razón por la que no se actualizan los flags es que el ensamblador del ARM no
+lo hace a menos que se lo indiquemos con una {\bf s} detrás de la instrucción.
+Cambiemos la línea 15 del archivo {\tt intro2.s} por ésta.
+
+\begin{lstlisting}
+        adds    r0, r1, r2    /* r0 <- r1 + r2  */
+\end{lstlisting}
+
+Y repetimos todos los pasos: ensamblado, enlazado y depuración. Ahora sí, comprueba
+que los flags se corresponden con los valores calculados.
+
+\subsection{Instrucciones lógicas}
+
+
+\subsubsection{Ejercicio 1.5}
+Supón que tienes dos variables de tamaño 1 byte, {\tt var1} y {\tt var2}, con los valores
+$11110000_b$ y $10101010_b$. Calcula el resultado de hacer una operación
+AND y una operación OR entre las dos variables.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{cccccc}
+         & Valor     & & Valor         & Valor     & \\
+Variable & (binario) & & (hexadecimal) & (binario) & \\
+var1 &
+\colorbox[gray]{1}{\rule{0.3cm}{0cm}\rule{0cm}{0.46cm}11110000\rule{0.3cm}{0cm}}
+& &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{0.3cm}{0cm}\rule{0cm}{0.46cm}11110000\rule{0.3cm}{0cm}}
+& \\[1mm]
+var2 &
+\colorbox[gray]{1}{\rule{0.3cm}{0cm}\rule{0cm}{0.46cm}10101010\rule{0.3cm}{0cm}}
+& &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{0.3cm}{0cm}\rule{0cm}{0.46cm}10101010\rule{0.3cm}{0cm}}
+& \\[1mm]
+\cline{2-3}\cline{5-6}\\[-3mm]
+\multicolumn{1}{r}{var1 AND var2} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{1cm}{0cm}\rule{0cm}{0.46cm}} &
+\multicolumn{1}{r}{var1 OR var2} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{1cm}{0cm}\rule{0cm}{0.46cm}} \\
+& binario & hexa & & binario & hexa \\
+\end{tabular}
+}
+\end{center}
+
+Para comprobar el resultado tenemos el programa {\tt intro3.s}.
+
+\begin{lstlisting}[caption={Código del programa intro3.s},label={lst:codigoPract3},numbers=left,escapeinside={@}{@}]
+.text
+.global main
+ 
+main:   mov     r2, #0b11110000   /* r2 <- 11110000   */
+        mov     r3, #0b10101010   /* r3 <- 10101010   */
+        and     r0, r2, r3        /* r0 <- r2 AND r3  */
+        orr     r1, r2, r3        /* r1 <- r2 OR  r3  */
+        mvn     r4, r0            /* r4 <- NOT r0     */
+        mov     r0, #0x80000000
+        tst     r0, #0x80000000
+        tst     r0, #0x40000000
+        bx      lr
+\end{lstlisting}
+
+Ejecuta las 4 primeras instrucciones y comprueba tus respuestas.
+
+\subsubsection{Ejercicio 1.6}
+El resultado de la instrucción {\tt and} está en r0. ¿Cuál será el resultado
+de hacer un complemento a uno del mismo?
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{ccc}
+& binario & hexa \\
+r0 & 
+\colorbox[gray]{1}{\rule{6cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+& binario & hexa \\
+$\sim$r0 & 
+\colorbox[gray]{1}{\rule{6cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+\end{tabular}
+}
+\end{center}
+
+Ejecuta con el {\bf gdb} la instrucción {\tt mvn r4, r0} y comprueba tu
+respuesta.
+
+\subsubsection{Ejercicio 1.7}
+La instrucción {\tt tst} hace la operación {\tt and}
+entre un registro y una máscara y sólo actúa sobre los flags.
+Cumplimenta las casillas en blanco, teniendo en cuenta que el flag
+Z se pone a uno cuando el resultado de la {\tt and} es cero, y
+se pone a cero en caso contrario. Para simplificar indicamos
+sólo los 16 bits menos significativos del registro r0.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{ccc}
+& binario & hexa \\
+r0 &
+\colorbox[gray]{1}{\rule{0.5cm}{0cm}\rule{0cm}{0.6cm}
+10000000000000000000000000000000\rule{0.5cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0.5cm}{0cm}\rule{0cm}{0.6cm}80000000\rule{0.5cm}{0cm}}\\[1mm]
+&{\tt tst r0, \#0x80000000}&¿Z? \colorbox[gray]{1}{\rule{1.5cm}{0cm}\rule{0cm}{0.6cm}}\\[1mm]
+&{\tt tst r0, \#0x40000000}&¿Z? \colorbox[gray]{1}{\rule{1.5cm}{0cm}\rule{0cm}{0.6cm}}\\[1mm]
+\end{tabular}
+}
+\end{center}
+
+Comprueba tus respuestas con ayuda del {\bf gdb}, y examina el resto de flags,
+observa qué ocurre con el flag N (flag de signo).
+
+\subsection{Rotaciones y desplazamientos}
+
+En este apartado veremos el funcionamiento de las instrucciones de
+desplamiento y rotación. Las instrucciones de desplazamiento pueden
+ser lógicas o aritméticas.
+
+Los desplazamientos lógicos desplazan los bit del valor fuente
+introduciendo ceros (uno o más de uno). El último bit que sale del valor
+fuente se almacena en el flag C (figura~\ref{fig:instrSHIFT}).
+El desplazamiento aritmético hace lo mismo, pero manteniendo el signo
+(figura \ref{fig:instrSHIFTarit}).
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/lsrlsl.pdf}
+  \caption{Instrucciones de desplazamiento lógico}
+  \label{fig:instrSHIFT}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/asrasl.pdf}
+  \caption{Instrucciones de desplazamiento aritmético}
+  \label{fig:instrSHIFTarit}
+\end{figure}
+
+Las instrucciones de rotación también desplazan, pero el bit que sale del
+valor se realimenta. No existe ninguna instrucción para rotar hacia la
+izquierda {\tt ROL}, ya que puede simularse con la de rotación a la derecha
+{\tt ROR} que sí existe. En estas instrucciones el bit desplazado fuera
+es el mismo que el que entra, además de dejar una copia
+en el flag C (figura~\ref{fig:instrRotacion}).
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/rorrol.pdf}
+  \caption{Instrucciones de rotación}
+  \label{fig:instrRotacion}
+\end{figure}
+
+Las instrucciones de rotación con el carry funcionan de manera
+similar, pero el bit que entra es el que había en el flag C y el que sale va a
+parar al flag C (figura~\ref{fig:instrRotCarry}). Estas instrucciones
+sólo rotan un bit, al contrario que las anteriores que podían rotar/desplazar
+varios. La rotación con carry a la derecha es {\tt RRX}, no existe la contrapartida
+{\tt RLX} porque se puede sintetizar con otra instrucción ya existente {\tt adcs}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/rrxadcs.pdf}
+  \caption{Instrucciones de rotación con {\it carry}}
+  \label{fig:instrRotCarry}
+\end{figure}
+
+También podemos forzar el flag C o cualquier otro flag al
+valor que queramos con la siguiente instrucción.
+
+\begin{lstlisting}
+        msr     cpsr_f, #valor
+\end{lstlisting}
+
+Donde para calcular el valor hacemos el paso inverso al explicado en {\bf gdb}.
+Queremos cambiar los flags a estos valores: N=0, Z=1, C=1 y V=0. Por el orden
+memorizado de la secuencia {\bf NZCV}, calculamos el nibble binario, que es 0110.
+Lo pasamos a hexadecimal 0110 -> 6 y lo ponemos en la parte más alta de la
+constante de 32 bits, dejando el resto a cero.
+
+\begin{lstlisting}
+        msr     cpsr_f, #0x60000000
+\end{lstlisting}
+
+Todas las instrucciones de rotación en realidad son subinstrucciones que el
+ensamblador traduce a una instrucción {\bf mov}. Por esa razón las he puesto
+en mayúsculas, diferenciándolas de las instrucciones reales que están en
+minúscula. En realidad las dos siguientes instrucciones son totalmente
+equivalentes.
+
+\begin{lstlisting}
+        lsrs    r0, r0, #1
+        movs    r0, r0, LSR #1
+\end{lstlisting}
+
+Pero se tiende a escoger siempre la más sencilla, en este caso la primera. En
+próximas lecciones mostraremos la potencia que tienen las subistrucciones de
+desplazamiento/rotación (cuando están en mayúscula mezcladas con los operandos).
+Como adelanto, la siguiente instrucción multiplica por 5 el contenido de r0.
+
+\begin{lstlisting}
+        add     r0, r0, r0, LSL #2
+\end{lstlisting}
+
+\subsubsection{Ejercicio 1.8}
+Examina atentamente el programa {\tt intro4.s} (figura \ref{fig:codigoPract4}).
+Antes de ejecutarlo completa el siguiente cuadro, después comprueba los resultados con
+el {\bf gdb}. Observa la definición de variable {\tt var1: .word 0x80000000}.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{c}
+\colorbox[gray]{1}{
+\begin{tabular}{|p{3cm}||c|c|}
+\hline
+Instrucción & r1 (binario) & C \\
+\hline\hline
+ldr r1, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+lsrs r1, r1, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+lsrs r1, r1, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+\end{tabular}
+}
+\\[1mm]
+\colorbox[gray]{1}{
+\begin{tabular}{|p{3cm}||c|c|}
+\hline
+Instrucción & r2 (binario) & C \\
+\hline\hline
+ldr r2, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+asrs r2, r2, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+asrs r2, r2, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+\end{tabular}
+}
+\\[1mm]
+\colorbox[gray]{1}{
+\begin{tabular}{|p{3cm}||c|c|}
+\hline
+Instrucción & r3 (binario) & C \\
+\hline\hline
+ldr r3, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+rors r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+rors r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+rors r3, r3, \#24&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+\end{tabular}
+}
+\\[1mm]
+\colorbox[gray]{1}{
+\begin{tabular}{|p{3.2cm}||c|c|}
+\hline
+Instrucción & r4 (binario) & C \\
+\hline\hline
+ldr r4, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+msr cpsr\_f, \#0&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+adcs r4, r4, r4&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+adcs r4, r4, r4&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+adcs r4, r4, r4&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+msr cpsr\_f, \#0x2..&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline
+adcs r4, r4, r4&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+\hline 
+\end{tabular}
+}
+\\[1mm]
+\end{tabular}
+}
+\end{center}
+
+\begin{lstlisting}[caption={Código del programa intro4.s},label={lst:codigoPract4},numbers=left,escapeinside={@}{@}]
+.data
+
+var1:   .word   0x80000000
+
+.text
+.global main
+
+main:   ldr     r0, =var1     /* r0 <- &var1        */
+        ldr     r1, [r0]      /* r1 <- *r0          */
+        lsrs    r1, r1, #1    /* r1 <- r1 lsr #1    */
+        lsrs    r1, r1, #3    /* r1 <- r1 lsr #3    */
+        ldr     r2, [r0]      /* r2 <- *r0          */
+        asrs    r2, r2, #1    /* r2 <- r2 asr #1    */
+        asrs    r2, r2, #3    /* r2 <- r2 asr #3    */
+        ldr     r3, [r0]      /* r3 <- *r0          */
+        rors    r3, r3, #31   /* r3 <- r3 rol #1    */
+        rors    r3, r3, #31   /* r3 <- r3 rol #1    */
+        rors    r3, r3, #24   /* r3 <- r3 rol #8    */
+        ldr     r4, [r0]      /* r4 <- *r0          */
+        msr     cpsr_f, #0    /* C=0                */
+        adcs    r4, r4, r4    /* rotar izda carry   */
+        adcs    r4, r4, r4    /* rotar izda carry   */
+        adcs    r4, r4, r4    /* rotar izda carry   */
+        msr     cpsr_f, #0x20000000 /* C=1          */
+        adcs    r4, r4, r4    /* rotar izda carry   */
+        bx      lr
+\end{lstlisting}
+
+\subsection{Instrucciones de multiplicación}
+
+Las instrucciones de multiplicación admiten muchas posibilidades, debido
+a que es una operación en la cual el resultado tiene el doble de bits
+que cada operando. En la siguiente tabla vemos las 5 instrucciones de
+multiplicación que existen.
+
+\begin{longtable}{| p{2.5cm} | p{2.5cm} | p{7cm} |}
+\hline
+{\bf Instrucción} & {\bf Bits} & {\bf Nombre} \\ \hline
+mul    & 32=32x32 &  Multiplicación truncada \\ \hline
+umull  & 64=32x32 & Multiplicación sin signo de 32bits \\ \hline
+smull  & 64=32x32 & Multiplicación con signo de 32bits \\ \hline
+smulw* & 32=32x16 & Multiplicación con signo de 32x16bits \\ \hline
+smul** & 32=16x16 & Multiplicación con signo de 16x16bits \\ \hline
+\caption{Instrucciones de multiplicación}
+\label{list_mul}
+\end{longtable}
+
+La instrucción {\tt mul} realiza una multiplicación truncada, es decir,
+nos quedamos con los 32 bits inferiores del resultado. Como el signo
+del resultado es el bit más significativo el cual no obtenemos, esta
+multiplicación es válida tanto para operandos naturales (sin signo) como
+para enteros (con signo). En el ejemplo de abajo {\tt r0 = parte\_baja(r1*r2)}.
+
+\begin{lstlisting}
+        mul     r0, r1, r2
+\end{lstlisting}
+
+Las dos siguientes multiplicaciones ({\tt umull} y {\tt smull}) son largas,
+por eso la {\tt l} del final, donde el resultado es de 64 bits. Si los
+operandos son naturales escogemos la multiplicación sin signo (unsigned) {\tt umull}.
+Por el contrario, si tenemos dos enteros como factores hablamos de
+multiplicación con signo (signed) {\tt smull}. En ambos ejemplos la parte baja del
+resultado se almacena en r0, y la parte alta en r1. {\tt r1:r0 = r2*r3}
+
+\begin{lstlisting}
+        umull   r0, r1, r2, r3
+        smull   r0, r1, r2, r3
+\end{lstlisting}
+
+Ahora veamos {\tt smulw*}. Es con signo, y el asterisco puede ser una {\bf b} para
+seleccionar la parte baja del registro del segundo factor, o una {\bf t} para
+seleccionar la alta. Según el ejemplo {\tt r0 = r1*parte\_baja(r2)}.
+
+\begin{lstlisting}
+        smulwb  r0, r1, r2
+\end{lstlisting}
+
+Por último tenemos {\tt smul**} también con signo, donde se seleccionan partes
+alta o baja en los dos factores, puesto que ambos son de 16 bits. En el ejemplo
+{\tt r0 = parte\_alta(r1)*parte\_baja(r2)}.
+
+\begin{lstlisting}
+        smultb  r0, r1, r2
+\end{lstlisting}
+
+En los dos últimos tipos {\tt smulw*} y {\tt smul**} no se permite el sufijo {\bf s}
+para actualizar los flags.
+
+\subsubsection{Ejercicio 1.9}
+Completa los recuadros en blanco con los resultados en hexadecimal empleando
+calculadora. Luego ensambla el listado \ref{lst:codigoPract5} y comprueba
+mediante {\bf gdb} que los cálculos anteriores son correctos.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+\tabcolsep = 1mm
+\begin{tabular}{cccc}
+& Producto & Factor1 & Factor2 \\
+mul & 
+\colorbox[gray]{1}{\rule{4cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+umull & 
+\colorbox[gray]{1}{\rule{4cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+smull & 
+\colorbox[gray]{1}{\rule{4cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+smuwb & 
+\colorbox[gray]{1}{\rule{4cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+smutt & 
+\colorbox[gray]{1}{\rule{4cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} &
+\colorbox[gray]{1}{\rule{2cm}{0cm}\rule{0cm}{0.46cm}} \\
+\end{tabular}
+}
+\end{center}
+
+\begin{lstlisting}[caption={Código del programa intro5.s},label={lst:codigoPract5},numbers=left,escapeinside={@}{@}]
+.data
+var1:   .word   0x12345678
+var2:   .word   0x87654321
+var3:   .word   0x00012345
+
+.text
+.global main
+main:   ldr     r0, =var1         /* r0 <- &var1        */
+        ldr     r1, =var2         /* r1 <- &var2        */
+        ldr     r2, =var3         /* r2 <- &var3        */
+        ldrh    r3, [r0]          /* r3 <- baja(*r0)    */
+        ldrh    r4, [r1]          /* r4 <- baja(*r1)    */
+        muls    r5, r3, r4        /* r5 <- r3*r4        */
+        ldr     r3, [r0]          /* r3 <- *r0          */
+        ldr     r4, [r1]          /* r4 <- *r1          */
+        umull   r5, r6, r3, r4    /* r6:r5 <- r3*r4     */
+        smull   r5, r6, r3, r4    /* r6:r5 <- r3*r4     */
+        ldrh    r3, [r0]          /* r3 <- baja(*r0)    */
+        ldr     r4, [r2]          /* r4 <- *r2          */
+        smulwb  r5, r3, r4        /* r5 <- r3*baja(r4)  */
+        smultt  r5, r3, r4    /* r5 <- alta(r3)*alta(r4)*/
+\end{lstlisting}
+
 
 
 \chapterend{}
