@@ -113,10 +113,10 @@ más uno de estado) de 32 bits cada uno.
         Desde el {\it Modo Usuario} sólo podemos acceder a las banderas condicionales, que
         contienen información sobre el estado de la última operación realizada por la ALU.
         A diferencia de otras arquitecturas en ARMv6 podemos elegir si queremos que una
-        instrucción actualice o no las banderas condicionales, poniendo una "s" detrás
+        instrucción actualice o no las banderas condicionales, poniendo una ``s'' detrás
         del nemotécnico \footnote{Es la forma de nombrar las instrucciones desde
         ensamblador, normalmente derivadas de una abreviatura del verbo en inglés. Por
-        ejemplo la instrucción {\it MOV} viene de "move" (mover) }. Existen 4 banderas
+        ejemplo la instrucción {\it MOV} viene de ``move'' (mover) }. Existen 4 banderas
         y son las siguientes:
 
     \begin{itemize}
@@ -133,7 +133,7 @@ más uno de estado) de 32 bits cada uno.
 El procesador es {\it Bi-Endian}, quiere decir que es configurable entre {\it Big Endian}
 y {\it Little Endian}. Aunque nuestro sistema operativo nos lo limita a {\it Little Endian}.
 
-Por tanto la regla que sigue es ''el byte menos significativo ocupa la posición más baja''.
+Por tanto la regla que sigue es ``el byte menos significativo ocupa la posición más baja''.
 Cuando escribimos un dato en una posición de memoria, dependiendo de si es byte, half word
 o word,... se ubica en memoria según el esquema de la figura 1.1. La dirección de un dato
 es la de su byte menos significativo. La memoria siempre se referencia a nivel de byte, es
@@ -230,12 +230,12 @@ En el laboratorio utilizaremos el editor {\bf nano} para crear
 y editar los módulos fuente de nuestros programas. El traductor
 (que en el caso de traducir de un lenguaje ensamblador a lenguaje máquina
 recibe el nombre de ensamblador), el {\it linker} y el {\it debugger} son
-respectivamente GNU Assembler ({\bf AS}), GNU Compiler Collection ({\bf GCC})
+respectivamente GNU Assembler ({\bf as}), GNU Compiler Collection ({\bf gcc})
 y GNU Debbuger ({\bf gdb}). Todas estas herramientas forman parte de la
 GNU toolchain que viene instalada por defecto en la mayoría de las distribuciones
 basadas en Linux, en concreto Raspbian. Para obtener más información sobre estos
-comandos se puede recurrir a la ayuda del sistema con <man as>, <man gcc> y
-<man gdb>. Se aconseja que a lo largo de de esta
+comandos se puede recurrir a la ayuda del sistema con {\tt man as}, {\tt man gcc} y
+{\tt man gdb}. Se aconseja que a lo largo de de esta
 primera sesión práctica os vayais familiarizando con ambos entornos,
 aunque no se os indique explícitamente.
 
@@ -359,8 +359,8 @@ de 32 bits no hay que tener especial cuidado en que estén alineadas. Si tratamo
 de escribir en esta zona el ensamblador nos mostrará un mensaje de error.
 \end{description}
 
-De estas tres secciones la único que obligatoriamente debe existir es
-el la sección .text (o sección de código). En el ejemplo \ref{fig:codigoPract1}
+De estas tres secciones la única que obligatoriamente debe existir es
+la sección .text (o sección de código). En el ejemplo \ref{lst:codigoPract1}
 comprobamos que están las dos.
 
 Un módulo fuente, como el del ejemplo, está formado por instrucciones,
@@ -403,7 +403,7 @@ repetitivo.
 
 \subsubsection{Instrucciones}
 
-Las instrucciones del {\it AS} responden al formato general:
+Las instrucciones del {\bf as} responden al formato general:
 
 
 \begin{lstlisting}
@@ -411,7 +411,7 @@ Etiqueta:  Nemotécnico  Operando/s  /* Comentario */
 \end{lstlisting}
 
 De estos campos, sólo el nemónico (nombre de la instrucción) es obligatorio. En
-la sintaxis del {\it AS} cada instrucción ocupa una línea terminando preferiblemente
+la sintaxis del {\bf as} cada instrucción ocupa una línea terminando preferiblemente
 con el ASCII 10 (LF), aunque son aceptadas las 4 combinaciones: CR, LF, CR LF y LF CR.
 Los campos se separan entre sí por al menos un carácter espacio (ASCII 32) o un tabulador
 y no existe distinción entre mayúsculas y minúsculas.
@@ -422,9 +422,9 @@ main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
 
 El Campo {\it etiqueta}, si aparece, debe estar formado por una
 cadena alfanumérica. La cadena no debe comenzar con un dígito y no se puede
-utilizar como cadena alguna palabra reservada del {\it AS} ni nombre
+utilizar como cadena alguna palabra reservada del {\bf as} ni nombre
 de registro del microprocesador. En el ejemplo, la etiqueta es
-{\tt 'main:'}.
+{\tt main:}.
 
 El campo \textit{Nemotécnico} ({\tt ldr} en el ejemplo) es una forma
 abreviada de nombrar la instrucción del procesador.
@@ -450,13 +450,13 @@ derecha de las instrucciones, aunque es lo habitual. También es común
 verlos al comienzo de una función (ocupando varias líneas) para explicar
 los parámetros y funcionalidad de la misma.
 
-Cada instrucción del {\it AS} se refiere a una operación que puede
+Cada instrucción del {\bf as} se refiere a una operación que puede
 realizar el microprocesador. También hay pseudoinstrucciones que son
 tratadas por el preprocesador como si fueran macros y codifican otras
 instrucciones, como {\tt lsl rn, \#x} que codifica {\tt mov rn, rn, lsl \#x},
 o bien {\tt push/pop} que se traducen instrucciones {\tt stm/ldm} más complejas
 y difíciles de recordar para el programador. Podemos agrupar el conjunto de
-instrucciones del {\it AS}, según el tipo de función que realice el
+instrucciones del {\bf as}, según el tipo de función que realice el
 microprocesador, en las siguientes categorías:
 
 \begin{itemize}
@@ -495,7 +495,7 @@ de compilación. Son fácilmente distinguibles de las instrucciones
 porque siempre comienzan con un punto. El uso de directivas es
 aplicable sólo al entorno del compilador, por tanto varían de un
 compilador a otro y para diferentes versiones de un mismo compilador.
-Las directivas más frecuentes en el {\it AS} son:
+Las directivas más frecuentes en el {\bf as} son:
 
 \begin{itemize}
         \item \textit{Directivas de asignación:} Se utilizan para dar
@@ -602,27 +602,31 @@ comentadas aquí). Esta posibilidad será explotada en sesiones más avanzadas.
 La traducción o ensamblado de un módulo fuente ({\bf nombreprograma.s})
 se realiza con el programa Gnu Assembler, con el siguiente comando:
 
-\hspace{2.5cm}{\bf as -o nombreprograma.o nombreprograma.s}
+\begin{lstlisting}
+        as -o nombreprograma.o nombreprograma.s
+\end{lstlisting}
 
-NOTA: tanto el comando {\it as} como el nombre del programa son sensibles
+NOTA: tanto el comando {\bf as} como el nombre del programa son sensibles
 a las mayúsculas. Por tanto el comando debe ir en minúsculas y el nombre
 como queramos, pero recomendamos minúsculas también.
 Las opción {\bf -o nombreprograma.o} puede ir después de {\bf nombreprograma.s}.
 
-El {\it as} genera un fichero nombreprograma.o.
+El {\bf as} genera un fichero nombreprograma.o.
 
 Para montar ({\it linkar}) hay que hacer:
 
-\hspace{2.5cm}{\bf gcc -o nombreprograma nombreprograma.o}
+\begin{lstlisting}
+        gcc -o nombreprograma nombreprograma.o
+\end{lstlisting}
 
-NOTA: Nuevamente, tanto {\it gcc} como el nombre del programa deben estar
+NOTA: Nuevamente, tanto {\bf gcc} como el nombre del programa deben estar
 en minúsculas. Este comando es muy parecido al anterior, podemos poner si
 queremos {\bf -o nombreprograma} detrás de {\bf nombreprograma.o}. La única
 diferencia es que el archivo no tiene extensión, que por otro lado es una
 práctica muy recomendable para ejecutables en Linux.
 
 Una vez hecho ésto, ya tenemos un fichero ejecutable (nombreprograma) que
-podemos ejecutar o depurar con el {\it gdb}.
+podemos ejecutar o depurar con el {\bf gdb}.
 
 \section{Enunciados de la práctica}
 
@@ -632,7 +636,9 @@ Comenzaremos con el programa que hemos visto en el listado
 \ref{lst:codigoPract1}, y que se encuentra en el fichero {\tt intro1.s}.
 Edítalo con el programa {\bf nano} para verlo (y practicar un poco):
 
-\hspace{2.5cm}{\bf nano intro1.s}
+\begin{lstlisting}
+        nano intro1.s
+\end{lstlisting}
 
 Dentro del editor tenemos una pequeña guía de comandos en la parte
 inferior. También podemos acceder a una ayuda más detallada pulsando {\bf F1}
@@ -660,22 +666,28 @@ Alt-r  & Buscar y reemplazar \\ \hline
 Una vez que estéis familiarizados con el {\bf nano} podemos pasar al
 traductor:
 
-\hspace{2.5cm}{\bf as -o intro1.o intro1.s}
+\begin{lstlisting}
+        as -o intro1.o intro1.s
+\end{lstlisting}
 
 Observa que cuando se traduce, aparece una lista de errores, o bien, una
 indicación de que el programa se ha traducido correctamente.
 No se puede pasar a la etapa de montaje hasta que no se han solucionado
 los errores de sintaxis.
 
-\hspace{2.5cm}{\bf gcc -o intro1 intro1.o}
+\begin{lstlisting}
+        gcc -o intro1 intro1.o
+\end{lstlisting}
 
 De la misma forma, el montador nos informa de si todo el proceso ha sido
 correcto.
 
 Una vez que hemos terminado con éxito este proceso podemos pasar el programa al
-{\it gdb} (GNU Debugger).
+{\bf gdb} (GNU Debugger).
 
-\hspace{2.5cm}{\bf gdb intro1}
+\begin{lstlisting}
+        gdb intro1
+\end{lstlisting}
 
 El {\bf gdb} ofrece muchas posibilidades, sólo explicaremos las que vamos
 a utilizar. Nada más ejecutar el comando anterior, el {\bf gdb} se encuentra
@@ -818,7 +830,7 @@ $3 = ( *) 0x10558 <puntero_var1>
 Genial. Ahora veamos el contenido de dicha variable.
 
 \begin{lstlisting}
-(gdb) print &var1
+(gdb) print var1
 $4 = 3
 \end{lstlisting}
 
@@ -902,7 +914,7 @@ root@raspberrypi:~# ./intro1 ; echo $?
 root@raspberrypi:~#
 \end{lstlisting}
 
-Ahora que ya tenemos una idea de las posibilidades del {\bf td}
+Ahora que ya tenemos una idea de las posibilidades del {\bf gdb}
 vamos a repasar unos cuantos conceptos con la ayuda de este programa.
 
 \subsection{Enteros y naturales}
@@ -995,7 +1007,7 @@ El código de esta parte se encuentra en el fichero {\tt intro2.s}
 \begin{lstlisting}[caption={Código del programa intro2.s},label={lst:codigoPract2},numbers=left,escapeinside={@}{@}]
 .data
 
-var1:   .byte   0b00110101
+var1:   .byte   0b00110010
         .align
 var2:   .byte   0b11000000
         .align
@@ -1283,7 +1295,7 @@ Como adelanto, la siguiente instrucción multiplica por 5 el contenido de r0.
 \end{lstlisting}
 
 \subsubsection{Ejercicio 1.8}
-Examina atentamente el programa {\tt intro4.s} (figura \ref{fig:codigoPract4}).
+Examina atentamente el programa {\tt intro4.s} (listado \ref{lst:codigoPract4}).
 Antes de ejecutarlo completa el siguiente cuadro, después comprueba los resultados con
 el {\bf gdb}. Observa la definición de variable {\tt var1: .word 0x80000000}.
 

@@ -1,6 +1,6 @@
 .data
 
-var1:   .byte   0b00110101
+var1:   .byte   0b00110010
         .align
 var2:   .byte   0b11000000
         .align
