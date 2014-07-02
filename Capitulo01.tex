@@ -304,11 +304,7 @@ se almacenan en la imagen como si se tratase de SD real corriendo sobre una
 Raspberry Pi real.
 \end{enumerate}
 
-Para mayor comodidad activa el usuario de root, sino vas a tener que preceder
-con {\tt sudo} todos los comandos. Por defecto el nombre de usuario es
-{\tt pi} y la contraseña {\tt raspberry}. Se activa root escribiendo
-{\tt sudo passwd root} y a continuación la contraseña de root que quieras
-asignar.
+Por defecto el nombre de usuario es {\tt pi} y la contraseña {\tt raspberry}.
 
 \subsection{Aspecto de un programa en ensamblador}
 
@@ -632,6 +628,32 @@ podemos ejecutar o depurar con el {\bf gdb}.
 
 \subsection{Cómo empezar}
 
+Recuerda que en laboratorio las raspberries no tienen
+monitor ni teclado, la única conexión con el mundo real
+es el puerto Ethernet. Así que antes de nada averigua cuál es la
+dirección IP, el usuario y la contraseña asignados a tu puesto
+y escribe lo siguiente.
+
+\begin{lstlisting}
+        ssh usuario@192.168.1.42
+\end{lstlisting}
+
+Y luego introduce la contraseña. A diferencia de cuando trabajas en casa
+el usuario/contraseña {\bf pi/raspberry} no está activado. Procura limpiar
+el directorio de trabajo al terminar.
+
+También es buena idea conectarte por ssh a la Raspberry que tengas en casa
+como acabamos de explicar, así te ahorras el tener que disponer de teclado
+y monitor extra. Desde Windows puedes bajarte putty.exe 
+\footnote{\url{http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html}}
+(no requiere instalación) y crear un acceso directo en el escritorio con
+el siguiente destino, cambiando {\bf ruta} y {\bf 192.168.1.42} por lo que
+corresponda.
+
+\begin{lstlisting}
+C:\ruta\putty.exe 192.168.1.42 -l pi -pw raspberry
+\end{lstlisting}
+
 Comenzaremos con el programa que hemos visto en el listado
 \ref{lst:codigoPract1}, y que se encuentra en el fichero {\tt intro1.s}.
 Edítalo con el programa {\bf nano} para verlo (y practicar un poco):
@@ -694,7 +716,7 @@ a utilizar. Nada más ejecutar el comando anterior, el {\bf gdb} se encuentra
 en modo interactivo:
 
 \begin{lstlisting}
-root@raspberrypi:~# gdb intro1
+pi@raspberrypi ~ $ gdb intro1
 GNU gdb (GDB) 7.4.1-debian
 Copyright (C) 2012 Free Software Foundation, Inc.
 License GPLv3+: GNU GPL version 3 or later 
@@ -704,7 +726,7 @@ and "show warranty" for details.
 This GDB was configured as "arm-linux-gnueabihf".
 For bug reporting instructions, please see:
 ...
-Reading symbols from /root/intro1...(no debugging symbo...
+Reading symbols from /home/pi/intro1...(no debugging sy...
 (gdb)
 \end{lstlisting}
 
@@ -725,7 +747,7 @@ instrucción del mismo:
 \begin{lstlisting}
 (gdb) start
 Temporary breakpoint 1 at 0x8390
-Starting program: /root/intro1
+Starting program: /home/pi/intro1
  
 Temporary breakpoint 1, 0x00008390 in main ()
 \end{lstlisting}
@@ -909,9 +931,9 @@ directamente, aunque éste no muestre ninguna salida por pantalla, podemos
 verificar su código de salida de la siguiente forma.
 
 \begin{lstlisting}
-root@raspberrypi:~# ./intro1 ; echo $?
+pi@raspberrypi ~ $ ./intro1 ; echo $?
 7
-root@raspberrypi:~#
+pi@raspberrypi ~ $
 \end{lstlisting}
 
 Ahora que ya tenemos una idea de las posibilidades del {\bf gdb}
