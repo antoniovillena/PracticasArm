@@ -6,7 +6,6 @@ var3:   .word   0x1234
 
 .text
 .global main
-.func main
  
 main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
         ldr     r1, [r1]            /* r1 <- *r1      */
