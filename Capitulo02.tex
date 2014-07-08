@@ -73,8 +73,8 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     a memoria ningún registro implicado en el cálculo de la dirección
     se modifica.
 \begin{itemize}
-  \item{\tt [Rx, +\#inmediato] \newline
-            [Rx, -\#inmediato] \newline}
+  \item{\tt [Rx, \#+inmediato] \newline
+            [Rx, \#-inmediato] \newline}
     Simplemente añade (o sustrae) un valor inmediato al registro dado
     para calcular la dirección. Es muy útil para acceder a elementos
     fijos de un array, ya que el desplazamiento es constante. Por
@@ -127,14 +127,393 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
 
 
   \item[Direccionamiento a memoria, actualizando registro puntero.]
-    Es la forma más sencilla y admite 4 variantes. Después del acceso
-    a memoria ningún registro implicado en el cálculo de la dirección
-    se modifica.
+    En este modo de direccionamiento, el registro que genera la dirección
+    se actualiza con la propia dirección. De esta forma podemos recorrer
+    un array con un sólo registro sin necesidad de hacer el incremento del
+    puntero en una instrucción aparte. Hay dos métodos de actualizar dicho
+    registro, antes de ejecutar la instrucción (preindexado) o después
+    de la misma (postindexado). Los tres siguientes tipos son los
+    postindexados.
+
+\begin{itemize}
+  \item{\tt [Rx], \#+inmediato \newline
+            [Rx], \#-inmediato \newline}
+    Una notación muy parecida a la versión que no actualiza registro, la única
+    diferencia es que la constante de desplazamiento queda fuera de los corchetes.
+    Presenta el mismo límite de hasta 4095. Este ejemplo pone a cero los 3 primeros
+    elementos {\tt a[0], a[1], a[2]} del array.
+
+\begin{lstlisting}
+    mov     r2, #0          /* r2 <- 0      */
+    str     r2, [r1], #+4   /* a[0] <- r2   */
+    str     r2, [r1], #+4   /* a[1] <- r2   */
+    str     r2, [r1], #+4   /* a[2] <- r2   */
+\end{lstlisting}
+
+  \item{\tt [Rx], +Ry \newline
+            [Rx], -Ry \newline}
+    Igual que antes pero con registro en lugar de inmediato.
+
+  \item{\tt [Rx], +Ry, operación\_desp \#inmediato \newline
+            [Rx], -Ry, operación\_desp \#inmediato \newline}
+
+    Nótese que en todos los modos postindexados
+    encerramos entre llaves el primer registro, que es el que se va
+    a utilizar en la instrucción de lectura o escritura en memoria. Es decir
+    primero cargamos de {\tt [Rx]} y luego actualizamos {\tt Rx} con el valor
+    que corresponda. Esta instrucción.
+
+\begin{lstlisting}
+    ldr     r2, [r1], +r3, LSL #2
+\end{lstlisting}
+
+    Se puede desglosar en estas otras dos, cuyo comportamiento es exactamente
+    el mismo.
+
+\begin{lstlisting}
+    ldr     r2, [r1]
+    add     r1, r1, r3, LSL #2
+\end{lstlisting}
+\end{itemize}
+
+    Ya hemos visto la notación postindexada. Veamos ahora los tres modos
+    preindexados.
+
+\begin{itemize}
+  \item{\tt [Rx, \#+inmediato]! \newline
+            [Rx, \#-inmediato]! \newline}
+    La idea en todos los casos es encerrar entre corchetes la dirección que
+    se va a usar en la instrucción. Para diferenciarlo del caso que no actualiza
+    el registro le añadimos un {\tt !} al final.
+
+    Este modo es muy útil en casos que queramos reusar en una futura instrucción
+    la dirección que hemos calculado. En este ejemplo duplicamos el valor
+    que se encuentra en {\tt a[3]}.
+
+\begin{lstlisting}
+    ldr     r2, [r1, #+12]!
+    add     r2, r2, r2
+    str     r2, [r1]
+\end{lstlisting}
+
+  \item{\tt [Rx, +Ry]! \newline
+            [Rx, -Ry]! \newline}
+
+    Similar al anterior pero usando {\tt Ry} en lugar de inmediato.
+
+  \item{\tt [Rx, +Ry, operación\_desp \#inmediato]! \newline
+            [Rx, -Ry, operación\_desp \#inmediato]! \newline}
+
+    Tercer y último caso de direccionamiento preindexado. Al igual que
+    antes, desgloso en dos instrucciones para ver el funcionamiento exacto.
+
+\begin{lstlisting}
+    ldr     r2, [r1, +r3, LSL #2]!
+\end{lstlisting}
+
+    Equivale a esto.
+
+\begin{lstlisting}
+    ldr     r2, [r1, +r3, LSL #2]
+    add     r1, r1, r3, LSL #2
+\end{lstlisting}
+
+    O bien a esto otro.
+
+\begin{lstlisting}
+    add     r1, r1, r3, LSL #2
+    ldr     r2, [r1]
+\end{lstlisting}
+\end{itemize}
 
 
+\subsection{Tipos de datos}
+
+\vspace{0.25cm}
+{\bf Tipos de datos básicos.} En la siguiente tabla se recogen los diferentes tipos de datos básicos
+ que podrán aparecer en los ejemplos, así como su tamaño y  rango de
+representación.
+
+\vspace{1cm}
+\begin{center}
+%\begin{table}[h!]
+\begin{tabular}{|l|l|c|c|}\hline
+ ARM & Tipo en C & bits & Rango \\ \hline
+ {\tt .byte}  & {\tt unsigned char} & 8 & 0 a 255 \\
+              & ({\tt signed}) {\tt char} & 8 & -128 a 127 \\ \hline
+ {\tt .hword} & {\tt unsigned short int} & 16 &  0 a 65.535 \\
+ {\tt .short} & ({\tt signed}) {\tt short int} & 16 & -32.768 a 32767 \\ \hline
+ {\tt .word}  & {\tt unsigned int} & 32 & 0 a 65.535 \\
+ {\tt .int}   & ({\tt signed}) {\tt int} &  32 & -32.768 a 32.767 \\
+              & {\tt unsigned long int}  & 32 & 0 a 4294967296 \\ 
+              & ({\tt signed}) {\tt long int} &  32 & -2147483648 a 2147483647 \\ \hline
+ {\tt .quad}  & {\tt unsigned long long} & 64 &  0 a $2^{64}$ \\
+              & ({\tt signed}) {\tt long long} & 64 & -$2^{63}$ a $2^{63}$-1 \\ \hline
+\end{tabular}
+%\end{table}
+\end{center}
+
+Nótese como en ensamblador los tipos son neutrales al signo, lo importante
+es la longitud en bits del tipo. La mayoría de las instrucciones (salvo
+multiplicación) hacen la misma operación tanto si se trata de un número
+natural como si es entero en complemento a dos. Nosotros decidiremos el tipo
+mediante las constantes que pongamos o según los flags que interpretemos del
+resultado de la operación.
 \end{descript}
 
 
+\noindent{\bf Punteros.} Un {\bf puntero} siempre ocupa 32 bits y contiene
+una dirección de memoria. Los punteros siempre se cargan con una instrucción
+{\tt ldr}, y su valor se obtiene normalmente con un direccionamiento relativo
+a {\tt pc}. Estas direcciones se almacenan justo después de la instrucción
+de retorno de nuestra función {\tt bx lr}, algo como esto.
+
+\begin{lstlisting}
+.data
+var1:   .word   3
+
+.text
+.global main
+main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
+        ldr     r2, [r1]            /* r2 <- *r1      */
+        bx      lr
+puntero_var1:   .word   var1
+\end{lstlisting}
+
+En el primer {\tt ldr} cargamos el valor del puntero en el registro {\tt r1}.
+En el segundo {\tt ldr} leemos en {\tt r2} el valor de la variable apuntada por el puntero,
+en este caso, {\tt 3}. No podemos escribir sobre {\tt puntero\_var1}, recuerda
+que estamos en la sección de código, por razones de seguridad saltaría una excepción si
+intentamos escribir ahí.
+
+Normalmente se emplear la notación {\tt =variable} en el primer {\tt ldr}, por lo que el
+ensamblador se encargaría de hacer el trabajo sucio de alojar la constante del puntero
+debajo de la instrucción de retorno de la función.
+
+\begin{lstlisting}
+.data
+var1:   .word   3
+
+.text
+.global main
+main:   ldr     r1, =var1    /* r1 <- &var1    */
+        ldr     r2, [r1]     /* r2 <- *r1      */
+        bx      lr
+\end{lstlisting}
+
+
+\noindent{\bf Vectores.} Todos los elementos de un vector se almacenan en un único
+bloque de memoria a partir de una dirección determinada. Los
+diferentes elementos se almacenan en posiciones consecutivas, de
+manera que el elemento {\tt i}  está entre los {\tt i-1} e {\tt i+1}
+(figura \ref{fig:2.3}). Los
+vectores están definidos siempre a partir de la posición 0. El propio
+índice indica cuántos elementos hemos de desplazarnos respecto del
+comienzo del primer elemento (para acceder al elemento cero hemos de
+saltarnos 0 elementos, para acceder al elemento 1 hemos de saltarnos
+un elemento, etc... En general, para acceder al elemento con índice
+{\tt i}
+hemos de saltarnos los {\tt i} elementos anteriores).
+
+Dado un vector {\tt int v[N];}, todos los elementos se encuentran en posiciones
+consecutivas a partir de la dirección de {\tt v[0]}
+(puesto que son {\tt int}, en este ejemplo, cada elemento ocupa 4 bytes). Por lo tanto,
+el acceso al elemento {\tt v[i]} se consigue aplicando la siguiente expresión.
+
+\begin{equation}
+v[i] = M_d[@v[0] + i*4] 
+\label{eq:uno}
+\end{equation}
+
+Con $ @v[0]$ nos referimos a la dirección en memoria del elemento
+ $ v[0]$. Con $ M_d[\ ]$ notamos el acceso a memoria para la lectura/escritura
+de un dato (el número de bytes de memoria implicado dependerá del tipo
+de datos declarado). Cuando nos queramos refererir al acceso a memoria
+para la obtención de un puntero, lo notaremos como
+$ M_{ref}[\ ]$.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/2-3.eps}
+  \caption{Representación de un vector en memoria}
+  \label{fig:2.3}
+\end{figure}
+
+
+\noindent{\bf Matrices bidimensionales.} Una matriz bidimensional de N$\times$M
+elementos se almacena en un único bloque de memoria. Interpretaremos
+una matriz de N$\times$M como una matriz con $N$ filas de $M$ elementos cada
+una. Si cada elemento de la matriz ocupa $B$ bytes, la matriz ocupará un
+bloque de  $M \times N \times B$ bytes (ver figura \ref{fig:2.5}(a)).
+
+Dentro de este bloque, los elementos se almacenan por filas. Primero
+se guardan todos los elementos de la fila $0$, después todos los de la
+fila $1$, etc... Dentro de cada fila, los elementos están ordenados por
+columnas (figura \ref{fig:2.5}(b)).
+
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/2-5.eps}
+  \caption{(a) Formato de una matriz  C con $N$ filas y $M$ columnas y (b)
+organización por filas}
+  \label{fig:2.3}
+\end{figure}
+
+Por lo tanto, para acceder al elemento {\tt mat[i][j]} hemos de saltar
+$i$ filas completas (de $M$ elementos de $B$ bytes) y después $j$
+elementos de $B$ bytes (suponiendo una matriz de enteros, $B= 2$ bytes). Es
+decir, la fórmula para obtener el elemento {\tt mat[i][j]} será:
+\begin{equation}
+mat[i][j] = M_d[@mat + ((i*M)+j)*B] 
+\label{eq:accesoelemmatriz}
+\end{equation}
+
+
+\subsection{Instrucciones de salto}
+
+Las instrucciones de salto pueden producir saltos incondicionales ({\tt b} y {\tt bx})
+o saltos condicionales. En los saltos condicionales añadimos dos o tres letras
+a la ({\tt b/bx}), mediante las cuales condicionamos si se salta o no dependiendo
+del estado de los flags. Estas condiciones se pueden añadir a cualquier
+otra instrucción, aunque la mayoría de las veces lo que nos interesa es controlar
+el flujo del programa y así ejecutar o no un grupo de instrucciones dependiendo
+del resultado de una operación (reflejado en los flags).
+
+La lista completa de condiciones es ésta.
+
+\begin{itemize}
+  \item{\tt EQ} ({\tt eq}ual, igual). Cuando {\tt Z} está activo ({\tt Z} vale 1).
+  \item{\tt NEQ} ({\tt n}ot {\tt eq}ual, igual). Cuando {\tt Z} está inactivo ({\tt Z} vale 0).
+  \item{\tt MI} ({\tt mi}nus, negativo). Cuando {\tt N} está activo ({\tt N} vale 1).
+  \item{\tt PL} ({\tt pl}us, positivo o cero). Cuando {\tt N} está inactivo ({\tt N} vale 0).
+  \item{\tt CS/HS} ({\tt c}arry {\tt s}et/{\tt h}igher or {\tt s}ame, carry activo/mayor o igual). Cuando {\tt C} está activo ({\tt C} vale 1).
+  \item{\tt CC/LO} ({\tt c}arry {\tt c}lear/{\tt l}ower, carry inactivo/menor). Cuando {\tt C} está inactivo ({\tt C} vale 0).
+  \item{\tt VS} (o{\tt v}erlow {\tt s}et, desbordamiento activo). Cuando {\tt V} está activo ({\tt V} vale 1).
+  \item{\tt VC} (o{\tt v}erlow {\tt c}lear, desbordamiento inactivo). Cuando {\tt V} está inactivo ({\tt V} vale 0).
+  \item{\tt GT} ({\tt g}reater {\tt t}han, mayor en complemento a dos). Cuando {\tt Z} está inactivo y {\tt N=V}({\tt Z} vale 0, {\tt N} vale {\tt V}).
+  \item{\tt LT} ({\tt l}ower {\tt t}han, menor en complemento a dos). Cuando {\tt N!=V} ({\tt N} vale {\tt not V}).
+  \item{\tt GE} ({\tt g}reater or {\tt e}qual, mayor o igual en complemento a dos). Cuando {\tt N=V}({\tt N} vale {\tt V}).
+  \item{\tt LE} ({\tt l}ower or {\tt e}qual, menor o igual en complemento a dos). Cuando {\tt Z} está activo y {\tt N!=V} ({\tt Z} vale 1, {\tt N} vale {\tt not V}).
+  \item{\tt HI} ({\tt h}igher, mayor). Cuando {\tt C} está activo y {\tt Z} inactivo ({\tt C} vale 1, {\tt Z} vale 0).
+  \item{\tt LS} ({\tt l}ower or {\tt s}ame, menor o igual). Cuando {\tt C} está inactivo ó {\tt Z} activo ({\tt C} vale 0 ó {\tt Z} vale 1).
+\end{itemize}
+
+Por ejemplo, la instrucción {\tt beq destino\_salto} producirá un salto
+a la instrucción indicada por la etiqueta {\tt destino\_salto} si y sólo
+si el bit de estado cero está activo (Z=1), y en caso contrario
+(Z=0) no interrumpirá el flujo secuencial de instrucciones.
+Previo a un salto condicional, el registro de flags debe ser actualizado
+mediante alguna instrucción aritmética ({\tt adds}, {\tt subs}, {\tt cmp},
+\dots) o lógica ({\tt and}, {\tt orr}, {\tt tst}, \dots). En la mayoría
+de los casos tenemos que añadir el sufijo {\tt s} a una instrucción normal
+{\tt add}, para forzar que la nueva instrucción {\tt adds} actualice los flags.
+
+El operando de la instrucción de salto puede ser una etiqueta {\tt b} que indica la
+posición de memoria a saltar, o bien un registro en caso de {\tt bx}.
+
+Un aspecto muy peculiar de la arquitectura ARM es que las llamadas a
+subrutinas se hacen mediante un sencillo añadido a la instrucción de salto. La
+instrucción {\tt bl} (también {\tt blx}) hace una llamada a una subrutina,
+mediante un salto a la subrutina y escribiendo en {\tt lr} la dirección de la
+siguiente instrucción.
+
+\begin{lstlisting}
+main:   mov     r1, #1
+        mov     r2, #2
+        bl      subrut
+        mov     r4, #4  /* siguiente instrucción */
+        ...
+
+subrut: mov     r3, #3
+        bx      lr
+\end{lstlisting}
+
+Si seguimos el flujo del programa primero cargamos {\tt r1} a 1, luego {\tt r2}
+a 2 y lo siguiente que hay es una llamada a subrutina. En dicha llamada el
+procesador carga en {\tt lr} la dirección de la siguiente instrucción {\tt mov r4, \#4}
+y salta a la etiqueta {\tt subrut:}. Se ejecuta el {\tt mov r3, \#3} de la subrutina
+y después {\tt bx lx} que vendría a ser la instrucción de retorno. Es decir, salimos
+de la subrutina retomando el flujo del programa principal, ejecutando {\tt mov r4, \#4}.
+
+Este sencillo esquema vale para un sólo nivel de subrutinas, es decir, dentro de
+{\tt subrut} no podemos llamar a otra subrutina porque machacamos el valor del
+registro {\tt lr}. La solución para extender a cualquier número de niveles es almacenar
+el registro {\tt lr} en pila con las instrucciones {\tt push} y {\tt pop}.
+
+\begin{lstlisting}
+main:   mov     r1, #1
+        mov     r2, #2
+        bl      nivel1
+        mov     r5, #5  /* siguiente instrucción */
+        ...
+
+nivel1: push    {lr}
+        mov     r3, #3
+        bl      nivel2
+        pop     {lr}
+        bx      lr
+
+nivel2: mov     r4, #4
+        bx      lr
+\end{lstlisting}
+
+Como véis en el último nivel ({\tt nivel2}) podemos ahorrarnos el tener que
+almacenar y recuperar {\tt lr} en la pila.
+
+
+
+\subsection{Estructuras de control de alto nivel}
+
+En este punto veremos cómo se traducen a ensamblador las estructuras
+de control de alto nivel que definen un bucle ({\tt for}, {\tt while},
+\dots), así como las condicionales ({\tt if-else}).
+
+Las estructuras {\tt for} y {\tt while} se pueden ejecutar un mínimo de 0
+iteraciones (si la primera vez no se cumple la condición). La traducción de
+las estructuras {\tt for} y {\tt while} se puede ver en los listados
+\ref{lst:codigoPract2-1} y \ref{lst:codigoPract2-2}.
+
+Para programar en ensamblador estas estructuras se utilizan instrucciones
+de salto condicional. Previo a la instrucción de salto es necesario evaluar
+la condición del bucle o de la sentencia {\tt if}, mediante instrucciones
+aritméticas o lógicas, con el fin de actualizar los flags de estado.
+
+\begin{lstlisting}[caption={Código del programa tipos1.c},label={lst:codigoPract2-1},escapeinside={@}{@}]
+  int vi, vf, i;
+
+  for ( i= vi; i<=vf; i++ ){ 
+    /*cuerpo del bucle*/
+  }
+
+  i= vi; 
+  while ( i<=vf ){ 
+    /*cuerpo del bucle*/
+    i++; 
+  }
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Traducción de las estructuras {\tt for} y {\tt while}.
+Hemos supuesto que el valor inicial está en la variable {\tt vi}
+y el valor final en  la variable {\tt vf} y se ha utilizado el
+registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPract2-2},escapeinside={@}{@}]
+        ldr     r1, =vi
+        ldr     r1, [r1]
+        ldr     r2, =vf
+        ldr     r2, [r2]
+bucle:  cmp     r1, r2
+        bhi     salir
+        /* cuerpo
+           del
+           bucle  */
+        add     r1, r1, #1
+        b       bucle
+salir:
+\end{lstlisting}
+
+\subsection{Compilación a ensamblador}
+
+Para acabar la teoría veamos cómo trabaja un compilador de C real. 
 \chapterend{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
