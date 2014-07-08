@@ -1,20 +1,141 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Documento LaTeX                                             %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Título:   Capítulo 2
-% Autor:    Ignacio Moreno Doblas
-% Fecha:    2014-02-01
-% Versión:  0.5.0
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapterbegin{Título del capítulo}
-\label{chp:Utiliz}
-%\minitoc
+\input{hackcapitulo.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Título del apartado}
-\label{sec:TestSuiteCrec}
+\chapterbegin{Tipos de datos y sentencias de alto nivel}
+\label{chp:TipDat}
+\minitoc
 
-\section{Título del apartado}
+{\bf Objetivo}:
+En esta sesión repasaremos cómo se representa la
+información en la memoria del computador: veremos la definición en
+ensamblador de punteros, vectores y matrices. También veremos cómo se programan las
+estructuras de alto nivel del tipo {\tt if-else} y los bucles {\tt
+for} y {\tt while}.
 
+\section{Lectura previa}
+
+\subsection{Modos de direccionamiento del ARM}
+
+En la arquitectura ARM los accesos a memoria se hacen mediante instrucciones
+específicas {\tt ldr} y {\tt str} (luego veremos las variantes {\tt ldm},
+{\tt stm} y las preprocesadas {\tt push} y {\tt pop}). El resto de instrucciones
+toman operandos desde registros o valores inmediatos, sin excepciones. En este
+caso la arquitectura nos fuerza a que trabajemos de un modo determinado: primero
+cargamos los registros desde memoria, luego procesamos el valor de estos registros
+con el amplio abanico de instrucciones del ARM, para finalmente volcar los
+resultados desde registros a memoria. Existen otras arquitecturas como la Intel x86,
+donde las instrucciones de procesado nos permiten leer o escribir directamente
+de memoria. Ningún método es mejor que otro, todo es cuestión de diseño. Normalmente
+se opta por direccionamiento a memoria en instrucciones de procesado en arquitecturas
+con un número reducido de registros, donde se emplea la memoria como almacén
+temporal. En nuestro caso disponemos de suficientes registros, por lo que podemos
+hacer el procesamiento sin necesidad de interactuar con la memoria, lo que por otro
+lado también es más rápido.
+
+\begin{descript}
+  \item[Direccionamiento inmediato.]
+    El operando fuente es una constante, formando parte de la instrucción.
+\begin{lstlisting}
+    mov     r0, #1
+    add     r2, r3, #4
+\end{lstlisting}
+  \item[Direccionamiento inmediato con desplazamiento o rotación.]
+    Es una variante del anterior en la cual se permiten operaciones intermedias
+    sobre los registros.
+\begin{lstlisting}
+    mov     r1, r2, LSL #1      /* r1 <- (r2*2) */
+    mov     r1, r2, LSL #2      /* r1 <- (r2*4) */
+    mov     r1, r3, ASR #3      /* r1 <- (r3/8) */
+\end{lstlisting}
+    Implicitamente también interviene en la creación de constantes, rotando o
+    desplazando constantes más pequeñas de forma transparente al usuario. Como todas
+    las instrucciones ocupan 32 bits, es técnicamente imposible que podamos cargar
+    en un registro cualquier constante de 32 bits con la instrucción {\tt mov}. Por
+    esta razón cuando se necesita cargar una constante más compleja en un registro
+    (como una dirección a una variable de memoria) se emplea {\tt ldr}. En algunos
+    casos es difícil determinar si el ensamblador conseguirá codificar una constante
+    por medio de esta técnica, con lo que la única solución es probar.
+\begin{lstlisting}
+    mov     r1, #0x80000020
+\end{lstlisting}
+    Ensamblamos y vemos que no da problemas. Sin embargo con esta otra.
+\begin{lstlisting}
+    mov     r1, #0x80000040
+\end{lstlisting}
+    El ensamblador nos muestra el siguiente error.
+\begin{lstlisting}
+intro1.s: Assembler messages:
+intro1.s:10: Error: invalid constant (80000040) after fixup
+\end{lstlisting}
+
+  \item[Direccionamiento a memoria, sin actualizar registro puntero.]
+    Es la forma más sencilla y admite 4 variantes. Después del acceso
+    a memoria ningún registro implicado en el cálculo de la dirección
+    se modifica.
+\begin{itemize}
+  \item{\tt [Rx, +\#inmediato] \newline
+            [Rx, -\#inmediato] \newline}
+    Simplemente añade (o sustrae) un valor inmediato al registro dado
+    para calcular la dirección. Es muy útil para acceder a elementos
+    fijos de un array, ya que el desplazamiento es constante. Por
+    ejemplo si tenemos {\tt r1} apuntando a un array de enteros de
+    32 bits {\tt int a[]} y queremos poner a 1 el
+    elemento {\tt a[3]}, lo hacemos así.
+
+\begin{lstlisting}
+    mov     r2, #1          /* r2 <- 1          */
+    str     r2, [r1, #+12]  /* *(r1 + 12) <- r2 */
+\end{lstlisting}
+
+    Nótese que hemos multiplicado por 4 el desplazamiento porque cada
+    elemento del array son 4 bytes. El desplazamiento no puede ser mayor
+    de 12 bits, por lo que nuestro rango está límitado entre {\tt [Rx, \#-4095]}
+    y {\tt [Rx, \#+4095]}.
+
+  \item{\tt [Rx, +Ry] \newline
+            [Rx, -Ry] \newline}
+
+    Parecido al anterior pero en lugar de un inmediato emplea otro registro. Útil
+    en el caso de queramos mantener fijo el registro {\tt Rx} y movernos con {\tt Ry},
+    o bien para acceder a desplazamientos mayores a 4095. El mismo ejemplo de
+    arriba utilizando esta variante sería.
+
+\begin{lstlisting}
+    mov     r2, #1          /* r2 <- 1          */
+    mov     r3, #12         /* r3 <- 12         */
+    str     r2, [r1, +r3]   /* *(r1 + r3) <- r2 */
+\end{lstlisting}
+
+  \item{\tt [Rx, +Ry, operación\_desp \#inmediato] \newline
+            [Rx, -Ry, operación\_desp \#inmediato] \newline}
+
+    En este caso aplicamos una operación de desplazamiento
+    o rotación sobre el segundo registro {\tt Ry}. Muy útil
+    en caso de arrays o estructuras con elementos de longitud
+    potencia de 2, ya que podemos indexar directamente. El
+    mismo ejemplo de antes.
+    
+\begin{lstlisting}
+    mov     r2, #1
+    mov     r3, #3
+    str     r2, [r1, +r3, LSL #2]
+\end{lstlisting}
+
+    Nótese cómo accedemos a {\tt a[3]}
+    directamente con el valor del índice, {\tt 3}).
+\end{itemize}
+
+
+  \item[Direccionamiento a memoria, actualizando registro puntero.]
+    Es la forma más sencilla y admite 4 variantes. Después del acceso
+    a memoria ningún registro implicado en el cálculo de la dirección
+    se modifica.
+
+
+\end{descript}
 
 
 \chapterend{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
