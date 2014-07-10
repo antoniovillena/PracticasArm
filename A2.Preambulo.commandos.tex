@@ -158,3 +158,8 @@
 
 % Modifica el interlineado
 %\renewcommand{\baselinestretch}{1.5}
+
+   \definecolor{myfboxbg}{gray}{0.9}
+   \newsavebox{\efcaja}
+   \newenvironment{myfbox}{\begin{lrbox}{\efcaja}}
+               {\end{lrbox}{\colorbox{myfboxbg}{\usebox{\efcaja}}}}

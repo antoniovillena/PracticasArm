@@ -1,10 +1,8 @@
 .data
-
 var1:   .asciz  "%d\012"
 
 .text
 .global main
- 
 main:   push    {r4, lr}
         mov     r1, #0
         ldr     r4, =var1

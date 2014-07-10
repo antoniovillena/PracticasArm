@@ -513,7 +513,324 @@ salir:
 
 \subsection{Compilación a ensamblador}
 
-Para acabar la teoría veamos cómo trabaja un compilador de C real. 
+Para acabar la teoría veamos cómo trabaja un compilador de C real. Normalmente
+los compiladores crean código compilado (archivos {\bf .o}) en un
+único paso. En el caso de {\bf gcc} este proceso se hace en dos fases: en una
+primera se pasa de C a ensamblador, y en una segunda de ensambladador a código
+compilado (código máquina). Lo interesante es que podemos interrumpir justo
+después de la compilación y ver con un editor el aspecto que tiene el código
+ensamblador generado a partir del código fuente en C.
+
+Veámoslo con un ejemplo.
+
+\begin{lstlisting}[caption={Código del programa tipos2.c},label={lst:codigoPract2-2},escapeinside={@}{@}]
+#include <stdio.h>
+
+void main(void){
+
+  int i;
+
+  for ( i= 0; i<5; i++ ){
+    printf("%d\n", i);
+  }
+
+}
+\end{lstlisting}
+
+Después de crear el fichero {\tt tipos2.s}, lo compilamos con este comando.
+
+\begin{lstlisting}
+        gcc -Os -S -o tipos2a.s tipos2.c
+\end{lstlisting}
+
+Con el parámetro {\tt -S} forzamos la interrupción (generamos {\tt .s} en lugar de
+{\tt .o}) y con {\tt -Os} le indicamos al compilador que queremos optimizar en
+tamaño, es decir que queremos código ensamblador lo más pequeño posible, sin
+importar el rendimiento del mismo.
+
+El código ensamblador resultante está un poco sucio, lleno de directivas superfluas,
+con punteros a variables e instrucciones no simplificadas por el preprocesador. Tras
+limpiarlo quedaría así.
+
+\begin{lstlisting}[caption={Código del programa tipos2a.s},label={lst:codigoPract2-3},escapeinside={@}{@}]
+.data
+var1:   .asciz  "%d\012"
+
+.text
+.global main
+main:   push    {r4, lr}
+        mov     r4, #0
+.L2:    mov     r1, r4
+        ldr     r0, =var1
+        add     r4, r4, #1
+        bl      printf
+        cmp     r4, #5
+        bne     .L2
+        pop     {r4, pc}
+\end{lstlisting}
+
+El carácter {\tt \\n} se ha transformado en octal {\tt \\012} puesto que el ensamblador
+no entiende de secuencias de escape. La instrucciones {\tt push} y {\tt pop} son la versión
+simple de {\tt stmfd} y {\tt ldmfd} que veremos más adelante. Nótese que la función no acaba
+con el típico {\tt bx lr}, se trata de una optimización que consigue reducir de dos
+instrucciones a una.
+
+\begin{lstlisting}
+        pop     {r4, pc}
+\end{lstlisting}
+
+La instrucción anterior es equivalente a estas otras dos.
+
+\begin{lstlisting}
+        pop     {r4, lr}
+        bx      lr
+\end{lstlisting}
+
+En general no vamos a emplear este tipo de optimizaciones en las prácticas, puesto que
+dificultan la legibilidad del código.
+
+El resto del código es sencillo de seguir. El registro {\tt r4} hace la función del
+contador {\tt i} del bucle, y la salida por pantalla se produce mediante una llamada
+a la función printf {\tt bl printf}. Los parámetros se los pasamos a printf mediante
+{\tt r0} y {\tt r1} y son un puntero a la cadena a imprimir {\tt \%d\textbackslash n}
+y el entero que le vamos a pasar. El porqué se usan estos parámetros (y el hecho de
+haber almacenado {\tt r4} en pila) responde a la convención {\bf AAPCS} que
+veremos con más detenimiento en el siguiente capítulo.
+
+Veamos qué ocurre cuando le indicamos al compilador que queremos optimizar al
+máximo en velocidad (la escala va del 0 al 3) el mismo código en C.
+
+\begin{lstlisting}
+        gcc -O3 -S -o tipos2b.s tipos2.c
+\end{lstlisting}
+
+Tras simplificar, el fichero en ensamblador generado sería este.
+
+\begin{lstlisting}[caption={Código del programa tipos2b.s},label={lst:codigoPract2-4},escapeinside={@}{@}]
+.data
+var1:   .asciz  "%d\012"
+
+.text
+.global main
+main:   push    {r4, lr}
+        mov     r1, #0
+        ldr     r4, =var1
+        mov     r0, r4
+        bl      printf
+        mov     r0, r4
+        mov     r1, #1
+        bl      printf
+        mov     r0, r4
+        mov     r1, #2
+        bl      printf
+        mov     r0, r4
+        mov     r1, #3
+        bl      printf
+        mov     r0, r4
+        mov     r1, #4
+        pop     {r4, lr}
+        b       printf
+\end{lstlisting}
+
+Observamos que el bucle como tal ha desaparecido. En realidad lo que ha ocurrido
+es que el compilador a empleado una técnica agresiva de optimización llamada
+{\it loop unrolling} o desenrollamiento de bucle, que consiste en sustituir
+mediante repeticiones del cuerpo del bucle, de tal forma que no perdemos tiempo
+comparando ni haciendo el salto condicional. En este caso empleamos tantas repeticiones
+como iteraciones tiene el bucle, aunque normalmente se llega hasta un límite de
+repeticiones. De no ser así el ejecutable se volvería excesivamente grande.
+
+Por último señalar que se optimizado el final de la función, aunque de otra forma
+distinta al caso anterior. La última iteración debería ser así.
+
+\begin{lstlisting}
+        mov     r0, r4
+        mov     r1, #4
+        b       printf
+        pop     {r4, lr}
+        bx      lr
+\end{lstlisting}
+
+\subsection{Ejercicios propuestos.}
+
+\subsubsection{Ejercicio 2.1}
+Basándonos en los ejemplos anteriores, escribe un bucle for {\tt for} que imprima
+los 50 primeros números pares naturales en orden inverso (desde 100 hasta 2 en pasos
+de 2). Una vez hecho esto, aplica desenrollamiento de bucle de tal forma
+que el salto condicional se ejecute 10 veces, con 5 repeticiones cada vez.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{4.5cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+\subsubsection{Ejercicio 2.2}
+Escribe el código ensamblador correspondiente a una estructura {\tt
+if} en la que no exista la rama de {\tt else}.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{4.5cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+\subsubsection{Ejercicio 2.3}
+
+Escribe en ensamblador un código equivalente a éste. Primero
+haciendo uso de la instrucción {\tt ands} y un registro auxiliar,
+luego simplifica con la instrucción {\tt tst}.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\begin{minipage}{0.6\linewidth}
+\begin{verbatim}
+  for ( i= 0; i<10; i++ ){
+    if( i&1 )
+      printf("%d es impar\n", i);
+    else
+      printf("%d es par\n", i);
+  }
+\end{verbatim}
+\end{minipage}
+\end{center}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{7cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+\subsubsection{Ejercicio 2.4}
+
+Escribe en ensamblador la estructura de alto nivel {\tt switch},
+aplicándola al siguiente ejemplo en C.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+%\begin{center}
+\begin{minipage}{0.6\linewidth}
+\begin{verbatim}
+  for ( i= 1950; i<2015; i++ ){
+    switch( i&3 ){
+      case 0:  printf("En %d hubo olimpiadas\n", i);
+               break;
+      case 2:  printf("En %d hubo mundial de fútbol\n", i);
+               break;
+      default: printf("En %d no pasó nada\n", i);
+    }
+  }
+\end{verbatim}
+\end{minipage}
+%\end{center}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{7cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+\section{Enunciados de la práctica}
+
+
+\subsection{Suma de elementos de un vector}
+
+En este primer apartado, estudiaremos un bucle que calcula la suma de
+todos los elementos de un vector. El vector se denomina {\tt
+vector} y tiene 8 elementos de tipo {\tt int} (entero de 32 bits). Los algoritmos
+que realizan la suma de sus elementos, tanto en C como en ensamblador, se
+pueden encontrar en los listados \ref{lst:2.9} y \ref{lst:2.10}.
+
+\begin{lstlisting}[caption={Código del programa tipos3.c},label={lst:2.9},escapeinside={@}{@}]
+#include <stdio.h>
+
+void main(void){
+  int i, suma;
+  int vector[5]= {128, 32, 100, -30, 124};
+
+  for ( suma= i= 0; i<5; i++ ){
+    suma+= vector[i];
+  }
+  printf("%d\n", suma);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Código del programa tipos3.s},label={lst:2.10},escapeinside={@}{@}]
+.data
+var1:   .asciz  "La suma es %d\n"
+var2:   .word   128, 32, 100, -30, 124
+
+.text
+.global main
+main:   push    {r4, lr}
+        mov     r0, #5
+        mov     r1, #0
+        ldr     r2, =var2
+bucle:  ldr     r3, [r2], #4
+        add     r1, r1, r3
+        subs    r0, r0, #1
+        bne     bucle
+        ldr     r0, =var1
+        bl      printf
+        pop     {r4, lr}
+        bx      lr
+\end{lstlisting}
+
+Si analizamos el código en ensamblador (listado \ref{lst:2.10}(b)), veremos que se
+recorre todo el vector con el registro {\tt r0}, realizándose la suma sobre el
+registro {\tt r1}. A diferencia de ejemplos anteriores decrementamos de 5 a 0, así
+nos ahorramos una comparación, ya que la instrucción {\tt subs} detecta cuando hemos
+llegado al valor cero activando el flag {\tt Z}.
+
+En {\tt r2} vamos recorriendo el vector elemento a elemento mediante un modo postindexado
+que apunta al siguiente elemento una vez leemos el actual con {\tt ldr}. Una vez calculada
+la suma en {\tt r1}, la mostramos por pantalla mediante una llamada a {\tt printf}.
+
+El código del listado \ref{fig:2.10} está en el fichero {\tt tipos3.s}. Compila y
+monta el programa con el {\tt as} y el {\tt gcc}. Ahora ejecuta el algoritmo
+con el {\tt gdb}. Recuerda empezar con {\tt start}. Para ver su funcionamiento,
+podemos ejecutar un par de iteraciones con {\tt si} y ver cómo los valores de
+los registros van cambiando {\tt i r r0 r1 r2 r3} (de vez en cuando ejecuta
+{\tt disas} para saber por dónde vas). Si ejecutamos un par de iteraciones con
+{\tt si} veremos que el hecho de ejecutar instrucción a instrucción resulta
+poco útil. Para acelerar el proceso, podemos utilizar puntos de parada o {\it breakpoints}.
+
+
+*** ni en lugar de si **
+Otro problema que tenemos es que cuando 
+Para instalar un {\it breakpoint} hemos de utilizar el cursor para situarnos
+sobre la instrucción donde queremos poner el punto de parada. Con el
+cursor, sitúate sobre la instrucción {\tt JMP bucle1} y pulsa \fbox{F10}, opción
+{\bf B}reakpoint, subopción {\bf T}oggle (o utiliza el cortocircuito
+\fbox{F2}).
+Veremos cómo la instrucción ha quedado marcada. Se puede ejecutar el
+programa con un {\it run} (\fbox{F10}, opción {\bf R}un, subopción {\bf
+R}un, o el
+cortocircuito \fbox{F9}). En este caso, el programa se ejecturá hasta que
+encuentre una instrucción con un {\it breakpoint} o hasta que el programa
+finalice. Si ejecutamos con \fbox{F9}, veremos que siempre nos detenemos en
+el punto en el que colocamos el {\it breakpoint} y que cada vez se ejecuta
+una iteración completa. De esta forma, podemos hacer una ejecución
+completa. Tres comentarios respecto a los {\it breakpoints} y la
+opción {\it run}:
+
+
+
 \chapterend{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
