@@ -766,7 +766,7 @@ void main(void){
   for ( suma= i= 0; i<5; i++ ){
     suma+= vector[i];
   }
-  printf("%d\n", suma);
+  printf("La suma es %d\n", suma);
 }
 \end{lstlisting}
 
@@ -801,7 +801,7 @@ En {\tt r2} vamos recorriendo el vector elemento a elemento mediante un modo pos
 que apunta al siguiente elemento una vez leemos el actual con {\tt ldr}. Una vez calculada
 la suma en {\tt r1}, la mostramos por pantalla mediante una llamada a {\tt printf}.
 
-El código del listado \ref{fig:2.10} está en el fichero {\tt tipos3.s}. Compila y
+El código del listado \ref{lst:2.10} está en el fichero {\tt tipos3.s}. Compila y
 monta el programa con el {\tt as} y el {\tt gcc}. Ahora ejecuta el algoritmo
 con el {\tt gdb}. Recuerda empezar con {\tt start}. Para ver su funcionamiento,
 podemos ejecutar un par de iteraciones con {\tt si} y ver cómo los valores de
@@ -810,24 +810,172 @@ los registros van cambiando {\tt i r r0 r1 r2 r3} (de vez en cuando ejecuta
 {\tt si} veremos que el hecho de ejecutar instrucción a instrucción resulta
 poco útil. Para acelerar el proceso, podemos utilizar puntos de parada o {\it breakpoints}.
 
+Otro problema que tenemos es que al ejecutar un paso de una instrucción exacta {\tt si}
+nos metemos dentro de la rutina {\tt printf}, cosa que no nos interesa a no ser que queramos
+descubrir las interioridades de la librería. Para evitar esto ejecutamos con {\tt ni}, que
+ejecutará {\tt bl printf} de un paso sin meterse dentro.
 
-*** ni en lugar de si **
-Otro problema que tenemos es que cuando 
-Para instalar un {\it breakpoint} hemos de utilizar el cursor para situarnos
-sobre la instrucción donde queremos poner el punto de parada. Con el
-cursor, sitúate sobre la instrucción {\tt JMP bucle1} y pulsa \fbox{F10}, opción
-{\bf B}reakpoint, subopción {\bf T}oggle (o utiliza el cortocircuito
-\fbox{F2}).
-Veremos cómo la instrucción ha quedado marcada. Se puede ejecutar el
-programa con un {\it run} (\fbox{F10}, opción {\bf R}un, subopción {\bf
-R}un, o el
-cortocircuito \fbox{F9}). En este caso, el programa se ejecturá hasta que
-encuentre una instrucción con un {\it breakpoint} o hasta que el programa
-finalice. Si ejecutamos con \fbox{F9}, veremos que siempre nos detenemos en
-el punto en el que colocamos el {\it breakpoint} y que cada vez se ejecuta
-una iteración completa. De esta forma, podemos hacer una ejecución
-completa. Tres comentarios respecto a los {\it breakpoints} y la
-opción {\it run}:
+Para introducir un breakpoint hay varias maneras, siempre es buena idea investigar a fondo
+la ayuda que se nos brinda el propio depurador con {\tt help break}. Nosotros pondremos dos
+puntos de ruptura.
+
+\begin{lstlisting}
+(gdb) start
+Temporary breakpoint 1 at 0x83cc
+Starting program: /home/pi/tipos3
+
+Temporary breakpoint 1, 0x000083cc in main ()
+(gdb) break bucle
+Breakpoint 2 at 0x83dc
+(gdb) disas bucle
+Dump of assembler code for function bucle:
+   0x000083dc <+0>:     ldr     r3, [r2], #4
+   0x000083e0 <+4>:     add     r1, r1, r3
+   0x000083e4 <+8>:     subs    r0, r0, #1
+   0x000083e8 <+12>:    bne     0x83dc <bucle>
+   0x000083ec <+16>:    ldr     r0, [pc, #12]   ; 0x8400 <bucle+36>
+   0x000083f0 <+20>:    bl      0x82f0 <printf>
+   0x000083f4 <+24>:    pop     {r4, lr}
+   0x000083f8 <+28>:    bx      lr
+   0x000083fc <+32>:                    ; <UNDEFINED> instruction: 0x000105b3
+   0x00008400 <+36>:    andeq   r0, r1, r4, lsr #11
+End of assembler dump.
+(gdb) break *0x83ec
+Breakpoint 3 at 0x83ec
+\end{lstlisting}
+
+Ahora toca continuar la ejecución del programa hasta el final o hasta llegar a
+un punto de ruptura, y esto se hace con {\tt continue} (de forma abreviada {\tt cont}).
+También podemos mostrar la lista de puntos de ruptura, desactivar temporalmente un breakpoint
+o simplemente borrarlo.
+
+\begin{lstlisting}
+(gdb) info breakpoints
+Num     Type           Disp Enb Address    What
+2       breakpoint     keep y   0x000083dc <bucle>
+3       breakpoint     keep y   0x000083ec <bucle+16>
+(gdb) disable 2
+(gdb) delete 3
+(gdb) i b
+Num     Type           Disp Enb Address    What
+2       breakpoint     keep n   0x000083dc <bucle>
+\end{lstlisting}
+
+Antes de acabar nuestra sesión con {\tt gdb} depuramos la última iteración del bucle,
+y luego dos instrucciones más para mostrar el texto que emite {\tt printf}.
+
+\begin{lstlisting}
+(gdb) i r r0 r1
+r0             0x1      1
+r1             0xe6     230
+(gdb) disas
+Dump of assembler code for function bucle:
+=> 0x000083dc <+0>:     ldr     r3, [r2], #4
+   0x000083e0 <+4>:     add     r1, r1, r3
+   0x000083e4 <+8>:     subs    r0, r0, #1
+   0x000083e8 <+12>:    bne     0x83dc <bucle>
+   0x000083ec <+16>:    ldr     r0, [pc, #12]   ; 0x8400 <bucle+36>
+   0x000083f0 <+20>:    bl      0x82f0 <printf>
+   0x000083f4 <+24>:    pop     {r4, lr}
+   0x000083f8 <+28>:    bx      lr
+End of assembler dump.
+(gdb) ni 4
+0x000083ec in bucle ()
+(gdb) i r r1 r3
+r1             0x162    354
+r3             0x7c     124
+(gdb) ni 2
+La suma es 354
+0x000083f4 in bucle ()
+\end{lstlisting}
+
+Ahora vamos a modificar un poco el programa. Copiamos {\tt tipos3.s} en
+otro fichero {\tt tipos4.s} (con {\tt cp tipos3.s tipos4.s}). Ahora modifica
+la lista de números del array, reemplazándola por esta otra.
+
+\begin{lstlisting}
+var2:   .word   1600000000, -100, 800000000, -50, 200
+\end{lstlisting}
+
+Haz el ejercicio 2.5 y acábalo antes de seguir.\vspace{0.25cm}
+
+\subsubsection{Ejercicio 2.5}
+Sabiendo que la suma de los 5 elementos del vector anterior es
+2.400.000.050 completa el siguiente cuadro:
+
+\colorbox[gray]{0.9}{
+\small
+%\arrayrulecolor{black}
+\begin{tabular}{c}
+\begin{minipage}{0.9\linewidth}
+Traduce el número 2.400.000.050 a binario: \\\\
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{11.25cm}{0cm}}\\
+\end{minipage} \\
+\begin{minipage}{0.9\linewidth}
+Interpreta el resultado como un entero de 32 bits y tradúcelo a
+decimal, ¿cuánto da? \\\\
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{11.25cm}{0cm}}\\\\
+¿Se puede representar el número entero 2.400.000.050 con 32 bits? \\\\
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{11.25cm}{0cm}}\\
+\end{minipage} \\
+\end{tabular}
+\vspace{0.5ex}
+}
+
+\vspace{0.25cm}
+Si has hecho el ejercicio 2.5 puedes ahora comprobar que la suma de
+los valores de este vector produce un {\it overflow} sobre un {\tt
+int}. Por tanto, el programador debería ir acumulando el resultado de
+la suma sobre un {\tt long long} (64 bits), tal y como se muestra
+en el siguiente listado.
+
+\begin{lstlisting}
+void main(void){
+  int i, suma;
+  int vector[5]= {1600000000, -100, 800000000, -50, 200};
+
+  for ( suma= i= 0; i<5; i++ ){
+    suma+= vector[i];
+  }
+  printf("La suma es %d\n", suma);
+}
+----------------
+.data
+var1:   .asciz  "La suma es %lld\n"
+var2:   .word   1600000000, -100, 800000000, -50, 200
+
+.text
+.global main
+main:   push    {r4, r5, r6, lr}
+        mov     r5, #5
+        mov     r2, #0
+        mov     r3, #0
+        ldr     r4, =var2
+bucle:  ldr     r0, [r4], #4
+        mov     r1, r0, ASR #31
+        adds    r2, r2, r0
+        adc     r3, r3, r1
+        subs    r5, r5, #1
+        bne     bucle
+        ldr     r0, =var1
+        bl      printf
+        pop     {r4, r5, r6, lr}
+        bx      lr
+\end{lstlisting}
+
+En el código ensamblador la variable suma se almacena en los registros {\tt r3:r2}.
+Como el array almacenado en memoria es de 32 bits, lo que hacemos es cargar el valor
+en cada iteración en {\tt r0} y extender el signo mediante la instrucción
+{\tt mov r1, r0, ASR \#31} a los registros {\tt r1:r0}. Por último hacemos la suma
+{\tt r3:r2= r3:r2+r1:r0} mediante dos instrucciones de suma, en la primera {\tt adds}
+sumamos los 32 bits inferiores almacenando también el posible acarreo (flag {\tt Z}),
+y en la segunda {\tt adc} sumamos los 32 bits superiores más el acarreo anterior.
+
+Sin entrar en detalles que veremos en el próximo capítulo, el número de 64 bits que
+le enviamos a la función {\tt printf} debe estar {\tt r3:r2}, debemos guardar en pila
+todos los registros por encima de {\tt r4} (incluyéndolo) y en el {\tt push} debe
+haber un número par de elementos, de lo contrario se introduce uno más {\tt r6} aunque
+no lo usemos dentro de nuestra función.
 
 
 
