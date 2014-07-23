@@ -1,20 +1,145 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Documento LaTeX                                             %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Título:   Capítulo 3
-% Autor:    Ignacio Moreno Doblas
-% Fecha:    2014-02-01
-% Versión:  0.5.0
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapterbegin{Título del capítulo}
-\label{chp:App}
-%\minitoc
+\input{hackcapitulo.tex}
+\chapterbegin{Subrutinas y paso de parámetros}
+\label{chp:Subrut}
+\minitoc
 
-%\section{Nombre de la sección}
+{\bf Objetivos}: En esta sesión experimentaremos con las
+subrutinas. Veremos en qué consiste la convención AAPCS y cómo
+aplicarla tanto para llamar a funciones externas como para crear
+nuestras propias funciones. Escribiremos un programa en C que llame
+a funciones escritas en ensamblador. Por último explicaremos qué
+son los registros de activación y cómo aplicarlos para almacenar
+variables locales.
+
+\section{Lectura previa}
+
+\subsection{La pila y las instrucciones {\tt ldm} y {\tt stm}}
+
+Se denomina pila de programa a aquella zona de memoria, organizada de
+forma LIFO ({\it Last In, First Out}), que el programa emplea
+principalmente para el almacenamiento temporal de datos.
 %
-%\section{Nombre de la sección}
-%
-%\section{Nombre de la sección}
+Esta pila, definida en memoria, es fundamental para el funcionamiento
+de las rutinas%
+\footnote{
+En este texto usaremos el término rutina (o subrutina) 
+como la implementación
+a bajo nivel de lo que en alto nivel se conoce como procedimientos
+y funciones. La diferencia entre procedimiento y función, radica
+en que las funciones proporcionan un valor de retorno. 
+}%
+, aspecto que se desarrollarán en esta
+práctica.
+
+El puntero de pila es {\tt r13} aunque por convención nunca se emplea esa
+nomeclatura, sino que lo llamamos {\tt sp} ({\bf s}tack {\bf p}ointer o puntero
+de pila). Dicho registro apunta siempre a la palabra de memoria que corresponde
+a la cima de la pila (última palabra introducida en ella).
+
+La pila tiene asociadas dos operaciones: {\tt push} (meter un elemento en la pila) y
+{\tt pop} (sacar un elemento de la pila). En la operación {\tt push} primero
+decrementamos en 4 (una palabra son 4 bytes) el registro {\tt sp} y luego escribimos
+dicho elemento en memoria. Decimos que la pila crece hacia abajo.
+
+\begin{lstlisting}[caption={Operación push},escapeinside={@}{@}]
+        sub     sp, sp, #4
+        str     r0, [sp]
+\end{lstlisting}
+
+Para sacar elementos de la pila tenemos la operación {\tt pop}, que primero extrae
+el elemento de la pila y luego incrementa el puntero (decrece hacia arriba).
+
+\begin{lstlisting}[caption={Operación pop},escapeinside={@}{@}]
+        ldr     r0, [sp]
+        add     sp, sp, #4
+\end{lstlisting}
+
+Para el procesador ARM estas instrucciones no existen. Sin embargo tenemos las
+instrucciones {\tt stm} y {\tt ldm} que son mucho más potentes y el ensamblador
+permite las pseudoinstrucciones {\tt push} y {\tt pop} que de forma transparente
+traducirá a {\tt stm} y {\tt ldm}.
+
+Un uso muy común de la pila es salvaguardar una serie de registros, que queremos
+usar para hacer las operaciones que necesitemos pero que al final tenemos que
+restaurar a sus valores originales. En un procesador típico escribiríamos algo así.
+
+\begin{lstlisting}
+        push    r1
+        push    r2
+        push    r4
+        /* código que modifica los
+           registros r1, r2 y r4   */
+        pop     r4
+        pop     r2
+        pop     r1
+\end{lstlisting}
+
+Observa que el orden de recuperación de registros es inverso al de guardado. Pues
+bien, en ARM lo tenemos mucho más fácil. Gracias a las instrucciones de carga/escritura
+múltiple podemos meter los registros en una lista, empleando una única instrucción.
+
+\begin{lstlisting}
+        push    {r1, r2, r4}
+        /* código que modifica los
+           registros r1, r2 y r4   */
+        pop     {r1, r2, r4}
+\end{lstlisting}
+
+En este caso el orden no es relevante, el procesador siempre usa el orden ascendente para
+el {\tt push} y el descendente para el {\tt pop}, aunque nosotros por legibilidad siempre
+escribiremos los registros en orden ascendente.
+
+Las instrucciones {\tt ldm} y {\tt stm} tienen la siguiente sintaxis.
+
+\begin{lstlisting}
+    ldm{modo_direc}{cond} rn{!}, lista_reg
+    stm{modo_direc}{cond} rn{!}, lista_reg
+\end{lstlisting}
+
+{\bf modo\_direc}
+\begin{itemize}
+  \item{\tt ia} Incrementa dirección después ({bf a}fter) de cada transferencia. Es el modo por defecto
+                en caso de omitirlo.
+  \item{\tt ib} Incrementa dirección antes ({bf b}efore) de cada transferencia.
+  \item{\tt da} Decrementa después de cada transferencia.
+  \item{\tt db} Decrementa antes de cada transferencia.
+\end{itemize}
+
+{\bf cond} Es opcional, son las mismas condiciones de los flags que vimos en el capítulo
+          anterior, que permiten ejecutar o no dicha instrucción. En la práctica sólo las
+          usamos para los saltos condicionales.
+
+{\bf rn} Es el registro base, el cual apunta a la dirección inicial de memoria donde
+          se hará la transferencia. El más común es {\tt sp} ({\tt r13}), pero puede
+          emplearse cualquier otro.
+
+{\bf !} Es un sufijo opcional. Si está presente, actualizamos {\tt rn} al final de la operación.
+
+{\bf cond} Una lista de uno o más registros, que serán leídos o escritos en memoria. La
+          lista va encerrada entre llaves y separada por comas. También podemos
+          usar un rango de registros. En este ejemplo se almacenan los registros {\tt r3, r4,
+          r5, r6, r10 y r12}.
+
+\begin{lstlisting}
+        stmdb   r1!, {r3-r6, r10, r12}
+\end{lstlisting}
+
+Si tenemos en cuenta que {\tt push} predecrementa, que {\tt pop} postincrementa y que ambas
+actualizan el registro base, la traducción de las pseudoinstrucciones {\tt push \{r4, r6\}}
+y {\tt pop \{r4, r6\}} serían respectivamente.
+
+\begin{lstlisting}
+    stmdb sp!, {r4, r6}    /* push */
+    ldmia sp!, {r4, r6}    /* pop  */
+\end{lstlisting}
+
+Nosotros sin embargo emplearemos los nemónicos {\tt push/pop}, mucho más fáciles de
+recordar.
+
+\subsection{Convención AAPCS}
 
 
 \chapterend{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
