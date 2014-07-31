@@ -1,11 +1,8 @@
-#include <stdio.h>
+  int a, b;
 
-void main(void){
-
-  int i;
-
-  for ( i= 0; i<5; i++ ){
-    printf("%d\n", i);
+  if( a==b ){ 
+    /* código entonces */
   }
-
-}
+  else{
+    /* código sino */
+  }

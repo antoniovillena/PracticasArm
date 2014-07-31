@@ -52,7 +52,8 @@ lado también es más rápido.
     las instrucciones ocupan 32 bits, es técnicamente imposible que podamos cargar
     en un registro cualquier constante de 32 bits con la instrucción {\tt mov}. Por
     esta razón cuando se necesita cargar una constante más compleja en un registro
-    (como una dirección a una variable de memoria) se emplea {\tt ldr}. En algunos
+    (como una dirección a una variable de memoria) no podemos hacerlo con la instrucción
+    {\tt mov}, tenemos que recurrir a {\tt ldr} con direccionamiento a memoria. En algunos
     casos es difícil determinar si el ensamblador conseguirá codificar una constante
     por medio de esta técnica, con lo que la única solución es probar.
 \begin{lstlisting}
@@ -263,50 +264,49 @@ resultado de la operación.
 
 
 \noindent{\bf Punteros.} Un {\bf puntero} siempre ocupa 32 bits y contiene
-una dirección de memoria. Los punteros siempre se cargan con una instrucción
-{\tt ldr}, y su valor se obtiene normalmente con un direccionamiento relativo
-a {\tt pc}. Estas direcciones se almacenan justo después de la instrucción
-de retorno de nuestra función {\tt bx lr}, algo como esto.
+una dirección de memoria. En ensamblador no tienen tanta utilidad como en C,
+ya que disponemos de registros de sobra y es más costoso acceder a
+las variables a través de los punteros que directamente. En este ejemplo
+acceder a la dirección de var1 nos cuesta 2 {\tt ldrs} a través del puntero,
+mientras que directamente se puede hacer con uno sólo.
+
 
 \begin{lstlisting}
 .data
-var1:   .word   3
-
-.text
-.global main
-main:   ldr     r1, puntero_var1    /* r1 <- &var1    */
-        ldr     r2, [r1]            /* r2 <- *r1      */
-        bx      lr
+var1:           .word   3
 puntero_var1:   .word   var1
-\end{lstlisting}
-
-En el primer {\tt ldr} cargamos el valor del puntero en el registro {\tt r1}.
-En el segundo {\tt ldr} leemos en {\tt r2} el valor de la variable apuntada por el puntero,
-en este caso, {\tt 3}. No podemos escribir sobre {\tt puntero\_var1}, recuerda
-que estamos en la sección de código, por razones de seguridad saltaría una excepción si
-intentamos escribir ahí.
-
-Normalmente se emplear la notación {\tt =variable} en el primer {\tt ldr}, por lo que el
-ensamblador se encargaría de hacer el trabajo sucio de alojar la constante del puntero
-debajo de la instrucción de retorno de la función.
-
-\begin{lstlisting}
-.data
-var1:   .word   3
 
 .text
 .global main
-main:   ldr     r1, =var1    /* r1 <- &var1    */
-        ldr     r2, [r1]     /* r2 <- *r1      */
+main:   ldr     r0, =puntero_var1
+        ldr     r1, [r0]
+        ldr     r2, [r1]
+        ldr     r3, =var1
         bx      lr
 \end{lstlisting}
 
+Observamos cómo el valor de {\tt r3} es el mismo que el de {\tt r1}.
 
+\begin{lstlisting}
+(gdb) ni 4
+0x000083a0 in main ()
+(gdb) i r r0 r1 r2 r3
+r0             0x1054c  66892
+r1             0x10548  66888
+r2             0x3      3
+r3             0x10548  66888
+\end{lstlisting}
+
+Incluso en tipos que en C están basados en punteros como las cadenas,
+en ensamblador no es necesario tenerlos almacenados en memoria puesto
+que podemos obtener dicho valor en un registro con una única instrucción {\tt ldr}.
+
+\vspace{0.25cm}
 \noindent{\bf Vectores.} Todos los elementos de un vector se almacenan en un único
 bloque de memoria a partir de una dirección determinada. Los
 diferentes elementos se almacenan en posiciones consecutivas, de
 manera que el elemento {\tt i}  está entre los {\tt i-1} e {\tt i+1}
-(figura \ref{fig:2.3}). Los
+(figura \ref{fig:dos_3}). Los
 vectores están definidos siempre a partir de la posición 0. El propio
 índice indica cuántos elementos hemos de desplazarnos respecto del
 comienzo del primer elemento (para acceder al elemento cero hemos de
@@ -336,7 +336,7 @@ $ M_{ref}[\ ]$.
   \centering
     \includegraphics[width=10cm]{graphs/2-3.eps}
   \caption{Representación de un vector en memoria}
-  \label{fig:2.3}
+  \label{fig:dos_3}
 \end{figure}
 
 
@@ -344,12 +344,12 @@ $ M_{ref}[\ ]$.
 elementos se almacena en un único bloque de memoria. Interpretaremos
 una matriz de N$\times$M como una matriz con $N$ filas de $M$ elementos cada
 una. Si cada elemento de la matriz ocupa $B$ bytes, la matriz ocupará un
-bloque de  $M \times N \times B$ bytes (ver figura \ref{fig:2.5}(a)).
+bloque de  $M \times N \times B$ bytes (ver figura \ref{fig:dos_5}(a)).
 
 Dentro de este bloque, los elementos se almacenan por filas. Primero
 se guardan todos los elementos de la fila $0$, después todos los de la
 fila $1$, etc... Dentro de cada fila, los elementos están ordenados por
-columnas (figura \ref{fig:2.5}(b)).
+columnas (figura \ref{fig:dos_5}(b)).
 
 
 \begin{figure}[h]
@@ -357,12 +357,12 @@ columnas (figura \ref{fig:2.5}(b)).
     \includegraphics[width=10cm]{graphs/2-5.eps}
   \caption{(a) Formato de una matriz  C con $N$ filas y $M$ columnas y (b)
 organización por filas}
-  \label{fig:2.3}
+  \label{fig:dos_5}
 \end{figure}
 
 Por lo tanto, para acceder al elemento {\tt mat[i][j]} hemos de saltar
 $i$ filas completas (de $M$ elementos de $B$ bytes) y después $j$
-elementos de $B$ bytes (suponiendo una matriz de enteros, $B= 2$ bytes). Es
+elementos de $B$ bytes (suponiendo una matriz de enteros, $B= 4$ bytes). Es
 decir, la fórmula para obtener el elemento {\tt mat[i][j]} será:
 \begin{equation}
 mat[i][j] = M_d[@mat + ((i*M)+j)*B] 
@@ -409,14 +409,14 @@ mediante alguna instrucción aritmética ({\tt adds}, {\tt subs}, {\tt cmp},
 de los casos tenemos que añadir el sufijo {\tt s} a una instrucción normal
 {\tt add}, para forzar que la nueva instrucción {\tt adds} actualice los flags.
 
-El operando de la instrucción de salto puede ser una etiqueta {\tt b} que indica la
+El operando de la instrucción de salto ({\tt b}) puede ser una etiqueta que indica la
 posición de memoria a saltar, o bien un registro en caso de {\tt bx}.
 
 Un aspecto muy peculiar de la arquitectura ARM es que las llamadas a
 subrutinas se hacen mediante un sencillo añadido a la instrucción de salto. La
 instrucción {\tt bl} (también {\tt blx}) hace una llamada a una subrutina,
-mediante un salto a la subrutina y escribiendo en {\tt lr} la dirección de la
-siguiente instrucción.
+mediante un salto a la subrutina y escribiendo en el registro {\tt lr} la
+dirección de la siguiente instrucción.
 
 \begin{lstlisting}
 main:   mov     r1, #1
@@ -437,7 +437,7 @@ y después {\tt bx lx} que vendría a ser la instrucción de retorno. Es decir, 
 de la subrutina retomando el flujo del programa principal, ejecutando {\tt mov r4, \#4}.
 
 Este sencillo esquema vale para un sólo nivel de subrutinas, es decir, dentro de
-{\tt subrut} no podemos llamar a otra subrutina porque machacamos el valor del
+{\tt subrut} no podemos llamar a otra subrutina porque sobreescribimos el valor del
 registro {\tt lr}. La solución para extender a cualquier número de niveles es almacenar
 el registro {\tt lr} en pila con las instrucciones {\tt push} y {\tt pop}.
 
@@ -461,7 +461,16 @@ nivel2: mov     r4, #4
 Como véis en el último nivel ({\tt nivel2}) podemos ahorrarnos el tener que
 almacenar y recuperar {\tt lr} en la pila.
 
+\vspace{0.25cm}
+Las instrucciones de salto en la arquitectura ARM abarcan una zona muy extensa,
+hasta 16Mb. Sin embargo no cubren todo el ancho del bus de direcciones, sólo
+24 de los 32 bits. En caso de necesitar un salto mayor de 24 bits recurrimos
+a la misma solución de la carga de inmediatos del {\tt mov}, solo que el
+registro a cargar es el {\tt pc}.
 
+\begin{lstlisting}
+        ldr pc, =etiqueta
+\end{lstlisting}
 
 \subsection{Estructuras de control de alto nivel}
 
@@ -472,14 +481,16 @@ de control de alto nivel que definen un bucle ({\tt for}, {\tt while},
 Las estructuras {\tt for} y {\tt while} se pueden ejecutar un mínimo de 0
 iteraciones (si la primera vez no se cumple la condición). La traducción de
 las estructuras {\tt for} y {\tt while} se puede ver en los listados
-\ref{lst:codigoPract2-1} y \ref{lst:codigoPract2-2}.
+\ref{lst:codigoPract2_1} y \ref{lst:codigoPract2_2}.
 
 Para programar en ensamblador estas estructuras se utilizan instrucciones
 de salto condicional. Previo a la instrucción de salto es necesario evaluar
 la condición del bucle o de la sentencia {\tt if}, mediante instrucciones
-aritméticas o lógicas, con el fin de actualizar los flags de estado.
+aritméticas o lógicas, con el fin de actualizar los flags de estado. La
+traducción de la estructura {\tt if} está en los listados
+\ref{lst:codigoPract2_3} y \ref{lst:codigoPract2_4}.
 
-\begin{lstlisting}[caption={Código del programa tipos1.c},label={lst:codigoPract2-1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos1.c},label={lst:codigoPract2_1},escapeinside={@}{@}]
   int vi, vf, i;
 
   for ( i= vi; i<=vf; i++ ){ 
@@ -496,7 +507,7 @@ aritméticas o lógicas, con el fin de actualizar los flags de estado.
 \begin{lstlisting}[caption={Traducción de las estructuras {\tt for} y {\tt while}.
 Hemos supuesto que el valor inicial está en la variable {\tt vi}
 y el valor final en  la variable {\tt vf} y se ha utilizado el
-registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPract2-2},escapeinside={@}{@}]
+registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPract2_2},escapeinside={@}{@}]
         ldr     r1, =vi
         ldr     r1, [r1]
         ldr     r2, =vf
@@ -511,6 +522,32 @@ bucle:  cmp     r1, r2
 salir:
 \end{lstlisting}
 
+\begin{lstlisting}[caption={Código del programa tipos2.c},label={lst:codigoPract2_3},escapeinside={@}{@}]
+  int a, b;
+
+  if( a==b ){ 
+    /* código entonces */
+  }
+  else{
+    /* código sino */
+  }
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Traducción de la estructura {\tt if}},label={lst:codigoPract2_4},escapeinside={@}{@}]
+        ldr     r1, =a
+        ldr     r1, [r1]
+        ldr     r2, =b
+        ldr     r2, [r2]
+        cmp     r1, r2
+        bne     sino
+entonces:
+        /* código entonces */
+        b       final
+sino:
+        /* código sino */
+final:  ...
+\end{lstlisting}
+
 \subsection{Compilación a ensamblador}
 
 Para acabar la teoría veamos cómo trabaja un compilador de C real. Normalmente
@@ -523,7 +560,7 @@ ensamblador generado a partir del código fuente en C.
 
 Veámoslo con un ejemplo.
 
-\begin{lstlisting}[caption={Código del programa tipos2.c},label={lst:codigoPract2-2},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3.c},label={lst:codigoPract2_5},escapeinside={@}{@}]
 #include <stdio.h>
 
 void main(void){
@@ -537,10 +574,10 @@ void main(void){
 }
 \end{lstlisting}
 
-Después de crear el fichero {\tt tipos2.s}, lo compilamos con este comando.
+Después de crear el fichero {\tt tipos3.s}, lo compilamos con este comando.
 
 \begin{lstlisting}
-        gcc -Os -S -o tipos2a.s tipos2.c
+        gcc -Os -S -o tipos3a.s tipos3.c
 \end{lstlisting}
 
 Con el parámetro {\tt -S} forzamos la interrupción (generamos {\tt .s} en lugar de
@@ -552,7 +589,7 @@ El código ensamblador resultante está un poco sucio, lleno de directivas super
 con punteros a variables e instrucciones no simplificadas por el preprocesador. Tras
 limpiarlo quedaría así.
 
-\begin{lstlisting}[caption={Código del programa tipos2a.s},label={lst:codigoPract2-3},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3a.s},label={lst:codigoPract2_6},escapeinside={@}{@}]
 .data
 var1:   .asciz  "%d\012"
 
@@ -569,7 +606,7 @@ main:   push    {r4, lr}
         pop     {r4, pc}
 \end{lstlisting}
 
-El carácter {\tt \\n} se ha transformado en octal {\tt \\012} puesto que el ensamblador
+El carácter {\tt \textbackslash n} se ha transformado en octal {\tt \textbackslash 012} puesto que el ensamblador
 no entiende de secuencias de escape. La instrucciones {\tt push} y {\tt pop} son la versión
 simple de {\tt stmfd} y {\tt ldmfd} que veremos más adelante. Nótese que la función no acaba
 con el típico {\tt bx lr}, se trata de una optimización que consigue reducir de dos
@@ -593,7 +630,8 @@ El resto del código es sencillo de seguir. El registro {\tt r4} hace la funció
 contador {\tt i} del bucle, y la salida por pantalla se produce mediante una llamada
 a la función printf {\tt bl printf}. Los parámetros se los pasamos a printf mediante
 {\tt r0} y {\tt r1} y son un puntero a la cadena a imprimir {\tt \%d\textbackslash n}
-y el entero que le vamos a pasar. El porqué se usan estos parámetros (y el hecho de
+y el entero que le vamos a pasar. El porqué se usan estos registros para pasar
+parámetros (y el hecho de
 haber almacenado {\tt r4} en pila) responde a la convención {\bf AAPCS} que
 veremos con más detenimiento en el siguiente capítulo.
 
@@ -601,12 +639,12 @@ Veamos qué ocurre cuando le indicamos al compilador que queremos optimizar al
 máximo en velocidad (la escala va del 0 al 3) el mismo código en C.
 
 \begin{lstlisting}
-        gcc -O3 -S -o tipos2b.s tipos2.c
+        gcc -O3 -S -o tipos3b.s tipos3.c
 \end{lstlisting}
 
 Tras simplificar, el fichero en ensamblador generado sería este.
 
-\begin{lstlisting}[caption={Código del programa tipos2b.s},label={lst:codigoPract2-4},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3b.s},label={lst:codigoPract2_7},escapeinside={@}{@}]
 .data
 var1:   .asciz  "%d\012"
 
@@ -646,7 +684,7 @@ distinta al caso anterior. La última iteración debería ser así.
 \begin{lstlisting}
         mov     r0, r4
         mov     r1, #4
-        b       printf
+        bl      printf
         pop     {r4, lr}
         bx      lr
 \end{lstlisting}
@@ -752,11 +790,11 @@ aplicándola al siguiente ejemplo en C.
 
 En este primer apartado, estudiaremos un bucle que calcula la suma de
 todos los elementos de un vector. El vector se denomina {\tt
-vector} y tiene 8 elementos de tipo {\tt int} (entero de 32 bits). Los algoritmos
+vector} y tiene 5 elementos de tipo {\tt int} (entero de 32 bits). Los algoritmos
 que realizan la suma de sus elementos, tanto en C como en ensamblador, se
-pueden encontrar en los listados \ref{lst:2.9} y \ref{lst:2.10}.
+pueden encontrar en los listados \ref{lst:dos_9} y \ref{lst:dos_10}.
 
-\begin{lstlisting}[caption={Código del programa tipos3.c},label={lst:2.9},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos4.c},label={lst:dos_9},escapeinside={@}{@}]
 #include <stdio.h>
 
 void main(void){
@@ -770,7 +808,7 @@ void main(void){
 }
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Código del programa tipos3.s},label={lst:2.10},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos4.s},label={lst:dos_10},escapeinside={@}{@}]
 .data
 var1:   .asciz  "La suma es %d\n"
 var2:   .word   128, 32, 100, -30, 124
@@ -791,7 +829,7 @@ bucle:  ldr     r3, [r2], #4
         bx      lr
 \end{lstlisting}
 
-Si analizamos el código en ensamblador (listado \ref{lst:2.10}(b)), veremos que se
+Si analizamos el código en ensamblador (listado \ref{lst:dos_10}(b)), veremos que se
 recorre todo el vector con el registro {\tt r0}, realizándose la suma sobre el
 registro {\tt r1}. A diferencia de ejemplos anteriores decrementamos de 5 a 0, así
 nos ahorramos una comparación, ya que la instrucción {\tt subs} detecta cuando hemos
@@ -801,7 +839,7 @@ En {\tt r2} vamos recorriendo el vector elemento a elemento mediante un modo pos
 que apunta al siguiente elemento una vez leemos el actual con {\tt ldr}. Una vez calculada
 la suma en {\tt r1}, la mostramos por pantalla mediante una llamada a {\tt printf}.
 
-El código del listado \ref{lst:2.10} está en el fichero {\tt tipos3.s}. Compila y
+El código del listado \ref{lst:dos_10} está en el fichero {\tt tipos4.s}. Compila y
 monta el programa con el {\tt as} y el {\tt gcc}. Ahora ejecuta el algoritmo
 con el {\tt gdb}. Recuerda empezar con {\tt start}. Para ver su funcionamiento,
 podemos ejecutar un par de iteraciones con {\tt si} y ver cómo los valores de
@@ -822,7 +860,7 @@ puntos de ruptura.
 \begin{lstlisting}
 (gdb) start
 Temporary breakpoint 1 at 0x83cc
-Starting program: /home/pi/tipos3
+Starting program: /home/pi/tipos4
 
 Temporary breakpoint 1, 0x000083cc in main ()
 (gdb) break bucle
@@ -833,11 +871,11 @@ Dump of assembler code for function bucle:
    0x000083e0 <+4>:     add     r1, r1, r3
    0x000083e4 <+8>:     subs    r0, r0, #1
    0x000083e8 <+12>:    bne     0x83dc <bucle>
-   0x000083ec <+16>:    ldr     r0, [pc, #12]   ; 0x8400 <bucle+36>
+   0x000083ec <+16>:    ldr     r0, [pc, #12]
    0x000083f0 <+20>:    bl      0x82f0 <printf>
    0x000083f4 <+24>:    pop     {r4, lr}
    0x000083f8 <+28>:    bx      lr
-   0x000083fc <+32>:                    ; <UNDEFINED> instruction: 0x000105b3
+   0x000083fc <+32>:                    ; <UNDEFI..
    0x00008400 <+36>:    andeq   r0, r1, r4, lsr #11
 End of assembler dump.
 (gdb) break *0x83ec
@@ -874,7 +912,7 @@ Dump of assembler code for function bucle:
    0x000083e0 <+4>:     add     r1, r1, r3
    0x000083e4 <+8>:     subs    r0, r0, #1
    0x000083e8 <+12>:    bne     0x83dc <bucle>
-   0x000083ec <+16>:    ldr     r0, [pc, #12]   ; 0x8400 <bucle+36>
+   0x000083ec <+16>:    ldr     r0, [pc, #12]
    0x000083f0 <+20>:    bl      0x82f0 <printf>
    0x000083f4 <+24>:    pop     {r4, lr}
    0x000083f8 <+28>:    bx      lr
@@ -889,8 +927,8 @@ La suma es 354
 0x000083f4 in bucle ()
 \end{lstlisting}
 
-Ahora vamos a modificar un poco el programa. Copiamos {\tt tipos3.s} en
-otro fichero {\tt tipos4.s} (con {\tt cp tipos3.s tipos4.s}). Ahora modifica
+Ahora vamos a modificar un poco el programa. Copiamos {\tt tipos4.s} en
+otro fichero {\tt tipos4.s} (con {\tt cp tipos4.s tipos5.s}). Ahora modifica
 la lista de números del array, reemplazándola por esta otra.
 
 \begin{lstlisting}
@@ -931,7 +969,8 @@ en el siguiente listado.
 
 \begin{lstlisting}
 void main(void){
-  int i, suma;
+  int i;
+  long long suma;
   int vector[5]= {1600000000, -100, 800000000, -50, 200};
 
   for ( suma= i= 0; i<5; i++ ){
@@ -968,16 +1007,92 @@ Como el array almacenado en memoria es de 32 bits, lo que hacemos es cargar el v
 en cada iteración en {\tt r0} y extender el signo mediante la instrucción
 {\tt mov r1, r0, ASR \#31} a los registros {\tt r1:r0}. Por último hacemos la suma
 {\tt r3:r2= r3:r2+r1:r0} mediante dos instrucciones de suma, en la primera {\tt adds}
-sumamos los 32 bits inferiores almacenando también el posible acarreo (flag {\tt Z}),
+sumamos los 32 bits inferiores almacenando también el posible acarreo (flag {\tt C}),
 y en la segunda {\tt adc} sumamos los 32 bits superiores más el acarreo anterior.
 
 Sin entrar en detalles que veremos en el próximo capítulo, el número de 64 bits que
 le enviamos a la función {\tt printf} debe estar {\tt r3:r2}, debemos guardar en pila
 todos los registros por encima de {\tt r4} (incluyéndolo) y en el {\tt push} debe
-haber un número par de elementos, de lo contrario se introduce uno más {\tt r6} aunque
-no lo usemos dentro de nuestra función.
+haber un número par de elementos. Si tuviésemos un número impar, como es el caso,
+salvaremos el siguiente registro {\tt r6} aunque no lo necesitemos en nuestra función.
 
 
+
+\subsubsection{Ejercicio 2.6}
+Dada la definición de matriz {\tt short mat[4][6]}; ¿cuál es la
+fórmula para acceder al elemento {\tt mat[i][2]}?
+
+\begin{center}
+\colorbox[gray]{0.9}{
+%\arrayrulecolor{black}
+\small
+\begin{tabular}{c}
+%\rowcolor{white} 
+\\
+\begin{minipage}{0.9\linewidth}
+\colorbox[gray]{1}{\rule{0cm}{0.6cm}\rule{11cm}{0cm}}\\
+\end{minipage} \\
+\end{tabular}
+\vspace{0.5ex}
+}
+\end{center}
+
+
+\begin{lstlisting}[caption={Matrices},label={lst:dos_11},escapeinside={@}{@}]
+matriz: .hword    0,    1,    2,    3,    4,    5
+        .hword 0x10, 0x11, 0x12, 0x13, 0x14, 0x15
+        .hword 0x20, 0x21, 0x22, 0x23, 0x24, 0x25
+        .hword 0x30, 0x31, 0x32, 0x33, 0x34, 0x35
+suma:   .hword 0
+------------------------------
+suma= 0; 
+for ( i= 0; i<4; i++ ){
+  suma+= mat[i][2];
+}
+\end{lstlisting}
+
+Queremos hacer un programa que sume todos los elementos de la columna
+2 de la matriz (listado \ref{lst:dos_11}). Completa {\tt tipos7.s} para
+que implemente este código, utilizando dentro del bucle que realiza la
+suma la fórmula del ejercicio 2.6. Para comprobarlo, el resultado
+es 104 = 0x68.
+
+Fíjate en que en esta versión del código que recorre los elementos de
+una columna,  para calcular la dirección de cada elemento aplicamos la
+expresión \ref{eq:accesoelemmatriz}. A ésto es a lo que llamamos
+acceso aleatorio a los elementos de la matriz. 
+
+Sin embargo, sabemos que hay una relación entre los elementos de una
+fila y de la siguiente, cuando el tamaño de la columna es
+constante. Para hallar esta relación haz siguiente ejercicio.
+
+\subsubsection{Ejercicio 2.7}
+
+Calcula las fórmulas de acceso a  {\tt mat[i][2]} y  {\tt mat[i+1][2]} y
+halla su diferencia (resta las dos fórmulas).
+
+\vspace{0.25cm}
+\colorbox[gray]{0.9}{
+\small
+%\arrayrulecolor{black}
+\begin{tabular}{c}
+\\
+%\rowcolor{white} 
+\begin{minipage}{0.9\linewidth}
+\colorbox[gray]{1}{\rule{0cm}{0.6cm}\rule{11cm}{0cm}}\\
+\end{minipage} \\
+\end{tabular}
+\vspace{0.5ex}
+}
+
+\vspace{0.25cm} 
+
+Una vez hallada esta relación, que es un desplazamiento en memoria,
+ahora sabes que se pueden recorrer todos los elementos de una columna
+sin más que ir sumando ese desplazamiento. Decimos entonces que
+hacemos un acceso secuencial a los elementos de la matriz. Copia el
+fichero {\tt tipos7.s} a {\tt tipos8.s} e implementa sobre este
+último  el acceso secuencial. El resultado es el anterior (104 = 0x68).
 
 \chapterend{}
 

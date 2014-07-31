@@ -1,7 +1,7 @@
 .data
 
 var1:   .asciz  "La suma es %d\n"
-var2:   .word   1600000000, -100, 800000000, -50, 200
+var2:   .word   128, 32, 100, -30, 124
 
 .text
 .global main
