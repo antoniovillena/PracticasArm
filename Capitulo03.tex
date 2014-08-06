@@ -825,6 +825,264 @@ la pila desde el llamador, pasando por la llamada a la función y la ejecución 
   \item Equilibramos la pila desde el llamador en caso de haber pasado parámetros por pila.
 \end{itemize}
 
+\section{Ejercicios}
+
+\subsection{Mínimo de un vector}
+
+Dado un vector de enteros y su longitud, escribe una función en ensamblador
+que recorra todos los elementos del vector y nos devuelva el valor mínimo.
+Para comprobar su funcionamiento, haz {\tt .global} la función y tras ensamblarla,
+enlázala con este programa en C.
+
+\begin{lstlisting}
+#include <stdio.h>
+
+int vect[]= {8, 10, -3, 4, -5, 50, 2, 3};
+
+void main(void){
+  printf("%d\n", minimo(vect, 8));
+}
+\end{lstlisting}
+
+Hay muchas formas de calcular el mínimo de una lista de elementos, la más sencilla es
+comparar todos los elemento con una variable, la cual actualizamos sólo si el elemento es
+menor que la variable.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\begin{minipage}{0.6\linewidth}
+\begin{verbatim}
+  int minimo(int* v, int len){
+    int i, min;
+
+    min= v[0];
+    for ( i= 1; i<len; i++ )
+      if( v[i]<min )
+        min= v[i];
+    return min;
+  }
+\end{verbatim}
+\end{minipage}
+\end{center}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{7cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+Una vez hecho el ejercicio observa lo molesto que resulta el tener que
+comprobar la longitud del vector cada vez que añadimos y eliminamos un
+elemento. ¿Cómo resolverias este problema en C empleando {/tt sizeof}?
+
+Ahora convierte a ensamblador la función {/tt main} anterior. ¿Se te
+ocurre alguna alternativa para el {/tt sizeof}?.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{4.5cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+Nota de ayuda: El preprocesador del {\bf as} no es muy potente pero
+suficiente para realizar cálculos aritméticos sencillos sobre constantes
+y etiquetas. Recuerda que las sumas y restas tienen menos prioridad que
+las multiplicaciones y divisiones, ante la duda usa siempre los paréntesis.
+Al ser la aritmética sólo de enteros, la división nunca devuelve
+decimales, lo que se hace es truncar el valor. Truncar es redondear hacia
+abajo al entero más cercano, de tal forma que {\tt 7/8} vale {\tt 1} a
+pesar de que su resultado real esté más cerca del {\tt 2}.
+
+En caso de trabajar con potencias de 2 podemos reemplazar las
+multiplicaciones y divisiones por desplazamientos, y los módulos por
+{\tt and} lógicos.
+
+\begin{lstlisting}
+        mov     r1, #(fin-ini)/16
+        mov     r1, #(fin-ini)>>4
+        ...
+        mov     r2, # 1234 % 8
+        mov     r2, # 1234 & 7
+\end{lstlisting}
+
+\subsection{Media aritmética de dos números}
+
+Escribe una función en ensamblador que calcule la media aritmética (truncada porque
+trabajamos con enteros) de dos números. Escribe también la función {\tt main} con 
+cinco llamadas a {\tt media} con distintos parámetros.
+
+\begin{center}
+\begin{myfbox}
+\small
+\begin{minipage}{0.92\linewidth}
+\begin{center}
+\colorbox[gray]{1}{\rule{0cm}{4.5cm}\rule{11cm}{0cm}}
+\end{center}
+\end{minipage}
+\end{myfbox}
+\end{center}
+
+Una vez hecho esto, supón que cada instrucción tarda un ciclo de reloj en ejecutarse.
+Cuenta manualmente el número de ciclos que tarda la ejecución completa desde la primera
+instrucción de {\tt main} hasta la última {\tt bx lr}, incluyendo ésta. En caso de una
+llamada a subrutina cuenta todas las instrucciones que se ejecutan metiéndote en la
+subrutina. La única excepción es {\tt bl printf}, que debes contar como un único ciclo.
+
+Haz lo mismo pero usando la herramienta {\tt gdb} para comprobar el resultado anterior.
+Recuerda no meterte dentro de los printf con {\tt ni}, en las llamadas a la función
+{\tt abs} usa {\tt si}.
+
+Hay una forma de acelerar las funciones, aunque sólo es práctica para funciones pequeñas
+que se utilicen mucho. Se trata de escribir el contenido de la función en lugar de
+llamar a la misma, y para evitar repetir siempre el mismo código utilizamos la directiva
+{\tt .macro}. Con este truco nos ahorramos al menos la ejecución de las instrucciones
+{\tt bl funcion} y {\tt bx lr}. El inconveniente es que el tamaño del ejecutable será
+mayor.
+
+Como ejemplo vamos a dar una implementación del método {\tt abs}.
+
+\begin{lstlisting}[caption={Parte de subrut8.s},label={lst:codigoPract3_9},escapeinside={@}{@}]
+      .macro  abs
+        tst     r0, r0
+        negmi   r0, r0
+      .endm
+
+.data
+var1:   .asciz  "%d\n"
+
+.text
+.global main
+main:   push    {r4, lr}
+        mov     r0, #1
+        bl      abs
+        mov     r1, r0
+        ldr     r0, =var1
+        bl      printf
+
+        mov     r0, #-2
+        bl      abs
+        mov     r1, r0
+        ldr     r0, =var1
+        bl      printf
+
+        mov     r0, #3
+        bl      abs
+        mov     r1, r0
+        ldr     r0, =var1
+        bl      printf
+
+        mov     r0, #-4
+        bl      abs
+        mov     r1, r0
+        ldr     r0, =var1
+        bl      printf
+        pop     {r4, lr}
+        bx      lr
+
+abs:    tst     r0, r0
+        negmi   r0, r0
+        bx      lr
+\end{lstlisting}
+
+Borra el {\tt bl} antes del {\tt abs} para probar la versión con macros. Dentro de 
+{\tt gdb} la secuencia de comandos para contar los pasos saltándose el
+{\tt bl printf} junto con la cuenta es la siguiente.
+
+\begin{lstlisting}
+start / si 6 / ni / si 5 / ni /
+/ si 5 / ni / si 5 / ni / si 2
+6+1+(5+1)*3+2 = 27
+\end{lstlisting}
+
+Usa las macros en el ejercicio de la media y rellena la siguiente tabla.
+
+\begin{center}
+\small
+\colorbox[gray]{0.9}{
+%\arrayrulecolor{black}
+\tabcolsep = 1mm
+\begin{tabular}{ccccc}
+&Ciclos contados & Ciclos contados & Ciclos manualmente & Ciclos, con {\tt gdb} \\
+&manualmente & con {\tt gdb}       & empleando macros & y macros \\
+media &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} \\[1mm]
+abs &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{2.6cm}{0cm}} &
+\colorbox[gray]{1}{\rule{0cm}{0.46cm}\rule{1.1cm}{0cm}27\rule{1.1cm}{0cm}} \\
+\end{tabular}
+\vspace{0.5ex}
+}
+\end{center}
+
+Este conteo de ciclos es ilustrativo. En un procesador real sólo
+las instrucciones simples tardan un ciclo de reloj, siempre y cuando
+el resultado de la operación no se utilice en la instrucción posterior,
+en cuyo la duración es de dos ciclos. Después hay instrucciones
+complejas como las multiplicaciones, que necesitan 3 ciclos (más si hay
+que añadir la penalización anterior). Por último están los casos 
+más complejos. Por un lado tenemos los saltos condicionales, donde el
+procesador hace una predicción de salto dentro de las 2 posibilidades
+que hay, si se produce un fallo en la predicción se penalizan ciclos.
+Por otro lado están los accesos a memoria, que tampoco tienen una
+temporización constante porque está la caché por medio. Si se produce
+un fallo de caché hay que añadir la penalización correspondiente.
+
+\subsection{Algoritmo de ordenación}
+
+Escoge un algoritmo de ordenación de entre los 4 siguientes.
+
+\begin{itemize}
+  \item Burbuja.
+  \item Selección.
+  \item Inserción.
+  \item Quicksort.
+\end{itemize}
+
+E impleméntalo en ensamblador. Como ejemplo mostramos el código en C
+del algoritmo de la burbuja.
+
+\begin{lstlisting}[caption={Parte de subrut9.c},label={lst:codigoPract3_10},escapeinside={@}{@}]
+#include <stdio.h>
+
+int vect[]= {8, 10, -3, 4, -5, 50, 2, 3};
+
+void ordena(int* v, int len){
+  int i, j, aux;
+
+  for ( i= 1; i<len; i++ )
+    for ( j= 0; j<len-i; j++ )
+      if( v[j] > v[j+1] )
+        aux= v[j],
+        v[j]= v[j+1],
+        v[j+1]= aux;
+}
+
+void main(void){
+  int i;
+
+  ordena(vect, 8);
+  for ( i= 0; i<8; i++ )
+    printf("%d\n", vect[i]);
+}
+\end{lstlisting}
+
+La lista de algoritmos está ordenada por dificultad, por lo que el algoritmo
+{\tt Quicksort} es con diferencia el más difícil de implementar. Recomendamos
+dejarlo para el final en caso de que el alumno decida realizar los 4 algoritmos
+en ensamblador.
 
 \chapterend{}
 
