@@ -1,0 +1,244 @@
+\input{hackcapitulo.tex}
+\chapterbegin{E/S a bajo nivel}
+\label{chp:Subrut}
+\minitoc
+
+{\bf Objetivos}: Hasta ahora hemos programado en ensamblador sobre
+la capa que nos ofrece el sistema operativo. Nosotros llamamos a una
+función y ésta hace todo lo demás: le dice al sistema operativo lo
+que tiene que hacer con tal periférico y el sistema operativo (en concreto
+el kernel) le envía las órdenes directamente al periférico, al espacio
+de memoria donde esté mapeado el mismo.
+
+Lo que vamos a hacer en este capítulo es comunicarnos directamente con los
+periféricos, para lo cual debemos prescindir totalmente del sistema operativo.
+Este modo de acceder directamente al hardware de la máquina se denomina {\tt Bare Metal},
+que traducido viene a ser algo como {\tt Metal desnudo}, haciendo referencia a
+que estamos ante la máquina tal y cómo es, sin ninguna capa de abstracción de
+por medio.
+
+Veremos ejemplos de acceso directo a periféricos, en concreto el LED y los temporizadores,
+que son bastante sencillos de manejar.
+
+
+\section{Lectura previa}
+
+\subsection{Librerías y Kernel, las dos capas que queremos saltarnos}
+
+Anteriormente hemos utilizado funciones específicas para
+comunicarnos con los periféricos. Si por ejemplo necesitamos escribir
+en pantalla, llamamos a la función {\tt printf}. Pues bien, entre
+la llamada a la función y lo que vemos en pantalla hay 2 capas de por medio.
+
+Una primera capa se encuentra en la librería runtime que acompaña al
+ejecutable, la cual incluye sólamente el fragmento de código de la
+función que necesitemos, en este caso en {\tt printf}. El resto de
+funciones de la librería ({\tt stdio}), si no las invocamos no aparecen
+en el ejecutable. El enlazador se encarga de todo esto, tanto de ubicar
+las funciones que llamemos desde ensamblador, como de poner la dirección
+numérica correcta que corresponda en la instrucción {\tt bl printf}.
+
+Este fragmento de código perteneciente a la primera capa sí que podemos
+depurarlo mediante {\tt gdb}. Lo que hace es, a parte del formateo que
+realiza la propia función, trasladar al sistema operativo una determinada
+cadena para que éste lo muestre por pantalla. Es una especie de traductor
+intermedio que nos facilita las cosas. Nosotros desde ensamblador también
+podemos hacer llamadas al sistema directamente como veremos posteriormente.
+
+La segunda capa va desde que hacemos la llamada al sistema hasta que se
+produce la transferencia de datos al periférico, retornando desde la llamada
+al sistema y volviendo a la primera capa, que a su vez retornará el control
+a la llamada a librería que hicimos en nuestro programa inicialmente.
+
+En esta segunda capa se ejecuta código del kernel, el cual no podemos depurar.
+Además el procesador entra en un modo privilegiado, ya que en modo usuario (el
+que se ejecuta en nuestro programa ensamblador y dentro de la librería) no
+tenemos privilegios suficientes como para acceder a la zona de memoria que
+mapea los periféricos.
+
+Ahora veremos un ejemplo en el cual nos saltamos la capa intermedia para
+comunicarnos directamente con el kernel vía llamada al sistema. En este ejemplo
+vamos a escribir una simple cadena por pantalla, en concreto "Hola Mundo!".
+
+\begin{lstlisting}[caption={esbn1.c},label={lst:codigoPract4_1},escapeinside={@}{@}]
+.data
+
+cadena: .asciz "Hola Mundo!\n"
+cadenafin:
+
+.text
+.global main
+ 
+main:   push    {r7, lr}           /* preservamos reg.*/
+        mov     r0, #1             /* salida estándar */
+        ldr     r1, =cadena        /* cadena a enviar */
+        mov     r2, #cadenafin-cadena     /* longitud */
+        mov     r7, #4             /* seleccionamos la*/
+        swi     #0        /* llamada a sistema 'write'*/
+        mov     r0, #0             /* devolvemos ok   */
+        pop     {r7, lr}           /* recuperamos reg.*/
+        bx      lr                 /* salimos de main */
+\end{lstlisting}
+
+La instrucción que ejecuta la llamada al sistema es {\tt swi \#0},
+siempre tendrá cero como valor inmediato. El código numérico de
+la llamada y el número de parámetros podemos buscarlo en cualquier
+manual de Linux, buscando "Linux system call table" en Google. En
+nuestro caso la llamada {\tt write} se corresponde con el código
+4 y acepta tres parámetros: manejador de fichero, dirección de
+los datos a escribir (nuestra cadena) y longitud de los datos.
+
+En general se tiende a usar una lista reducida de posibles llamadas
+a sistema, y que éstas sean lo más polivalentes posibles. En este
+caso vemos que no existe una función específica para escribir en
+pantalla. Lo que hacemos es escribir bytes en un fichero, pero usando
+un manejador especial conocido como salida estándar, con lo cual todo
+lo que escribamos a este fichero especial aparecerá por pantalla.
+
+Pero el propósito de este capítulo no es saltarnos una capa
+para comunicarnos directamente con el sistema operativo. Lo que queremos
+es saltarnos las dos capas y enviarle órdenes directamente a los periféricos.
+Para esto tenemos que saltarnos el sistema operativo, o lo que es lo mismo,
+hacer nosotros de sistema operativo para realizar las tareas que queramos.
+
+Este modo de trabajar (como hemos adelantado) se denomina Bare Metal, porque
+accedemos a las entrañas del hardware. En él podemos hacer desde cosas
+muy sencillas como encender un LED hasta programar desde cero nuestro propio
+sistema operativo.
+
+\subsection{Ejecutar código en Bare Metal}
+
+El proceso de arranque de la Raspberry Pi es el siguiente:
+
+\begin{itemize}
+  \item Cuando la encendemos, el núcleo ARM está desactivado. Lo primero que se activa es el
+        núcleo GPU, que es un procesador totalmente distinto e independiente al ARM. En este
+        momento la SDRAM está desactivada.
+  \item El procesador GPU empieza a ejecutar la primera etapa del bootloader (son 3 etapas), que
+        está almacenada en ROM dentro del mismo chip que comparten ARM y GPU. Esta primera etapa
+        accede a la tarjeta SD y lee el fichero {\tt bootcode.bin} en caché L2 y lo ejecuta,
+        siendo el código de {\tt bootcode.bin} la segunda etapa del bootloader.
+  \item En la segunda etapa se activa la SDRAM y se carga la tercera parte del bootloader, cuyo
+        código está repartido entre {\tt loader.bin} (opcional) y {\tt start.elf}.
+  \item En tercera y última etapa del bootloader se accede opcionalmente a dos archivos ASCII de
+        configuración llamados {\tt config.txt} y {\tt cmdline.txt}. Lo más relevante de esta
+        etapa es que cargamos en RAM (en concreto en la dirección 0x8000) el archivo
+        {\tt kernel.img} con código ARM, para luego ejecutarlo y acabar con el bootloader, pasando
+        el control desde la GPU hacia la CPU.
+        Este último archivo es el que nos interesa modificar para nuestros propósitos, ya que es
+        lo primero que la CPU ejecuta y lo hace en modo privilegiado, es decir, con acceso total
+        al hardware.
+\end{itemize}
+
+De todos estos archivos los obligatorios son {\tt bootcode.bin}, {\tt start.elf} y
+{\tt kernel.img}. Los dos primeros los bajamos del repositorio oficial
+\footnote{\url{https://github.com/raspberrypi}} y el tercero {\tt kernel.img} es el que nosotros
+vamos a generar. Estos tres archivos deben estar en el directorio raíz de la primera partición
+de la tarjeta SD, la cual debe estar formateada en FAT32.
+
+El proceso completo que debemos repetir cada vez que desarrollemos un programa nuevo
+en Bare Metal es el siguiente:
+
+\begin{itemize}
+  \item Apagamos la Raspberry.
+  \item Extraemos la tarjeta SD.
+  \item Introducimos la SD en el lector de nuestro ordenador de desarrollo.
+  \item Montamos la unidad y copiamos (sobreescribimos) el kernel.img que acabamos
+        de desarrollar.
+  \item Desmontamos y extraemos la SD.
+  \item Insertamos de nuevo la SD en la Raspberry y la encendemos.
+\end{itemize}
+
+Es un proceso sencillo para las prácticas que vamos a hacer, pero para proyectos más largos
+se vuelve bastante pesado de realizar. Hay varias alternativas que agilizan el ciclo de
+trabajo, donde no es necesario extraer la SD y por tanto podemos actualizar el {\tt kernel.img}
+en cuestión de segundos.
+
+\begin{itemize}
+  \item Cable JTAG con software Openocd \footnote{\url{http://openocd.sourceforge.net}}
+  \item Cable USB-serie desde el ordenador de desarrollo hacia la Raspberry, requiere
+        tener instaladas las herramientas de compilación cruzada en el ordenador de desarrollo.
+  \item Cable serie-serie que comunica dos Raspberries, una orientada a desarrollo y la otra
+        para ejecutar los programas en Bare Metal. No es imprescindible trabajar directamente
+        con la Raspberry de desarrollo, podemos acceder vía ssh con nuestro ordenador habitual,
+        sin necesidad de tener instaladas las herramientas de compilación en el mismo.
+\end{itemize}
+
+En las dos últimas opciones lo que se almacena en el kernel.img de la SD es un bootloader
+que lee continuamente del puerto serie y en el momento en que recibe un archivo lo carga
+en RAM y lo ejecuta. Para más información sobre estos métodos recomendamos que sigan los
+README del siguiente repositorio \footnote{\url{https://github.com/dwelch67/raspberrypi}}.
+
+\subsection{Acceso a periféricos}
+
+Los periféricos se controlan leyendo y escribiendo datos a los registros asociados. No
+confundir estos registros con los registros de la CPU. Un registro asociado a un periférico
+es un ente, normalmente del mismo tamaño que el ancho del bus de datos, que sirve para
+configurar diferentes aspectos del mismo. No se trata de RAM, por lo que no se garantiza que
+al leer de un registro obtengamos el último valor que escribimos. Es más, incluso hay
+registros que sólo admiten ser leídos y otros que sólo admiten escrituras. La funcionalidad
+de los registros también es muy variable, incluso dentro de un mismo registro los diferentes
+bits del mismo tienen distinto comportamiento.
+
+Como cada periférico se controla de una forma diferente, no hay más remedio que leerse
+el datasheet del mismo si queremos trabajar con él. En nuestro caso queremos encender el LED
+de la Raspberry que está conectado al dispositivo GPIO (entrada/salida de propósito general).
+Este dispositivo tiene puertos accesibles al exterior mediante un conector de dos filas de
+pines en la esquina superior izquierda de la Raspberry, por lo que podemos conseguir los
+mismos resultados conectando LEDs sobre diferentes pines de este conector.
+
+El datasheet que tenemos que buscar es el siguiente
+\footnote{\url{http://www.raspberrypi.org/wp-content/uploads/2012/02/BCM2835-ARM-Peripherals.pdf}},
+ya que el dispositivo GPIO se encuentra en el propio chip (el mismo que contiene CPU y GPU).
+En el primer capítulo nos encontramos con el siguiente párrafo.
+
+{\it Physical addresses range from 0×20000000 to 0x20FFFFFF for peripherals. The bus addresses
+for peripherals are set up to map onto the peripheral bus address range starting at
+0x7E000000. Thus a peripheral advertised here at bus address 0x7Ennnnnn is available
+at physical address 0x20nnnnnn.}
+
+Esto quiere decir que los registros de los periféricos están mapeados en memoria en
+0×20nnnnnn, que es donde haremos las lecturas y escrituras. Pero debemos
+trasladar las direcciones que nos indica el datasheet desde 0x7Ennnnnn hasta 0x20nnnnnn,
+porque lo primero son direcciones del bus y lo segundo direcciones físicas, y desde
+software empleamos estas últimas.
+
+Para nuestros propósitos nos bastaría con acceder a los registros GPFSELx, GPSETx y GPCLRx,
+que se corresponden con 13 de los 41 registros que contiene el GPIO. Vemos la tabla con las
+direcciones de estos registros (dos de los cuales no se usan, están reservados)
+
+\begin{longtable}{ p{1.8cm} | p{2cm} | p{5cm} | p{1cm} | p{1cm} }
+\hline
+{\bf Dirección} & {\bf Nombre} & {\bf Descripción} & {\bf Tam.} & {\bf Tipo} \\ \hline
+7E200000 & GPFSEL0 & GPIO Function Select 0 & 32 & R/W \\ \hline
+7E200004 & GPFSEL1 & GPIO Function Select 1 & 32 & R/W \\ \hline
+7E200008 & GPFSEL2 & GPIO Function Select 2 & 32 & R/W \\ \hline
+7E20000C & GPFSEL3 & GPIO Function Select 3 & 32 & R/W \\ \hline
+7E200010 & GPFSEL4 & GPIO Function Select 4 & 32 & R/W \\ \hline
+7E200014 & GPFSEL5 & GPIO Function Select 5 & 32 & R/W \\ \hline
+7E200018 & -       & Reservado              & -  & -   \\ \hline
+7E20001C & GPSET0  & GPIO Pin Output Set 0  & 32 & W   \\ \hline
+7E200020 & GPSET1  & GPIO Pin Output Set 1  & 32 & W   \\ \hline
+7E200024 & -       & Reservado              & -  & -   \\ \hline
+7E200028 & GPCLR0  & GPIO Pin Output Clear 0 & 32 & W  \\ \hline
+7E20002C & GPCLR1  & GPIO Pin Output Clear 1 & 32 & W  \\ \hline
+\end{longtable}
+
+Estos registros controlan 54 pines, que a su vez están agrupados
+en 6 grupos funcionales de 9 pines cada uno. El LED interno de la
+Raspberry se corresponde con el pin 6 del GPIO, se nombran con
+GPIO más el número de pin, en nuestro caso sería GPIO 6. Nótese
+que la numeración empieza en 0, desde GPIO 0 hasta GPIO 53. De
+todos estos pines sólo diecisiete (0, 1, 4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25 y 27)
+son accesibles a través del conector, y si disponemos del modelo B+ la lista
+aumenta en nueve (5, 6, 12, 13, 16, 19, 20, 21 y 26).
+
+
+
+
+
+
+\chapterend{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
