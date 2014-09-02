@@ -225,16 +225,227 @@ direcciones de estos registros (dos de los cuales no se usan, están reservados)
 \end{longtable}
 
 Estos registros controlan 54 pines, que a su vez están agrupados
-en 6 grupos funcionales de 9 pines cada uno. El LED interno de la
-Raspberry se corresponde con el pin 6 del GPIO, se nombran con
-GPIO más el número de pin, en nuestro caso sería GPIO 6. Nótese
+en 6 grupos funcionales de 10 pines cada uno (excepto el último
+que es de 4). El LED interno de la
+Raspberry se corresponde con el pin 16 del GPIO, se nombran con
+GPIO más el número de pin, en nuestro caso sería GPIO 16. Nótese
 que la numeración empieza en 0, desde GPIO 0 hasta GPIO 53. De
 todos estos pines sólo diecisiete (0, 1, 4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25 y 27)
 son accesibles a través del conector, y si disponemos del modelo B+ la lista
 aumenta en nueve (5, 6, 12, 13, 16, 19, 20, 21 y 26).
 
+Así que la funcionalidad desde GPIO 0 hasta GPIO 9 se controla con
+GPFSEL0, desde GPIO 10 hasta GPIO 19 se hace con GPFSEL1 y así
+sucesivamente. Nosotros queremos cambiar la funcionalidad de GPIO 16
+que está en GPFSEL1. Leyendo más abajo en el datasheet encontramos que
+la descripción del registro GPFSEL1 contiene diez grupos funcionales
+llamados FSELx (del 10 al 19) de 3 bits cada uno, quedando los dos bits
+más altos sin usar. Nos interesa cambiar FSEL16, que serían los bits
+20, 19 y 18 de este registro. Las posibles configuraciones son:
 
+\begin{lstlisting}
+000 = GPIO Pin 16 is an input
+001 = GPIO Pin 16 is an output
+100 = GPIO Pin 16 takes alternate function 0
+101 = GPIO Pin 16 takes alternate function 1
+110 = GPIO Pin 16 takes alternate function 2
+111 = GPIO Pin 16 takes alternate function 3
+011 = GPIO Pin 16 takes alternate function 4
+010 = GPIO Pin 16 takes alternate function 5
+\end{lstlisting}
 
+Las funciones alternativas es para dotar a los pines de funciones específicas
+para implementar puertos SPI, UART, audio PCM y cosas parecidas. La lista completa
+está en la tabla 6-31 (página 102) del datasheet. Nosotros queremos una salida
+genérica, nos quedamos con el código {\tt 001}.
+
+Una vez configurado GPIO 16 como salida, ya sólo queda saber cómo poner ceros y unos
+en dicho pin, para encender y apagar el LED respectivamente (un cero enciende y un uno
+apaga el LED).
+
+Para ello tenemos los registros GPSETn y GPCLRn. En principio parece enrevesado el tener
+que usar dos registros distintos para escribir en el puerto GPIO, pero no olvidemos que
+para ahorrar recursos varios pines están empaquetados en una palabra de 32 bits. Por lo
+que si quisiéramos alterar un único pin tendríamos que leer el registro, modificar el bit
+en cuestión sin tocar los demás y escribir el resultado de nuevo en el registro. Por suerte
+esto no es necesario con registros separados para setear y resetear, tan sólo necesitamos
+una escritura en registro poniendo a 1 los bits que queramos setear/resetear y a 0 los bits
+que no queramos modificar.
+
+Leemos el datasheet y comprobamos que es así. Además los 54 pines se reparten entre dos
+registros GPSET0/GPCLR0 que contine los 32 primeros y en GPSET1/GPCLR1 están los 22
+restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1. En nuestro
+primer ejemplo de Bare Metal sólo vamos a encender el LED, por lo que emplearemos el
+registro GPCLR0.
+
+El ciclo de ensamblado y enlazado también es distinto en un programa Bare Metal. Hasta
+ahora hemos creado ejecutables, que tienen una estructura más compleja, con cabecera y
+distintas secciones en formato {\tt ELF}. Toda esta información le viene muy bien al
+sistema operativo, pero en un entorno Bare Metal no disponemos de él. Lo que se carga
+en {\tt kernel.img} es un binario sencillo, sin cabecera, que contiene directamente
+el código máquina de nuestro programa y que se cargará en la dirección de RAM {\tt 0x8000}.
+
+Lo que para un ejecutable hacíamos con esta secuencia.
+\begin{lstlisting}
+        as -o ejemplo.o ejemplo.s
+        gcc -o ejemplo ejemplo.o
+\end{lstlisting}
+
+En caso de un programa Bare Metal tenemos que cambiarla por esta otra.
+\begin{lstlisting}
+        as -o ejemplo.o ejemplo.s
+        objcopy ejemplo.o -O binary kernel.img
+\end{lstlisting}
+
+Otra característica de Bare Metal es que sólo tenemos una sección de código, que no
+necesitamos delimitarla con {\tt .text} y tampoco estamos obligados a crear la función
+{\tt main}. Al no ejecutar ninguna función no tenemos la posibilidad de salir del
+programa con {\tt bx lr}, al fin y al cabo no hay ningún sistema operativo detrás al
+que regresar. Nuestro programa debe trabajar en bucle cerrado. En caso de tener una
+tarea simple que querramos terminar, es preferible dejar el sistema colgado con un
+bucle infinito como última instrucción. Es lo que vamos a hacer en nuestro ejemplo,
+que mostramos a continuación.
+
+\begin{lstlisting}[caption={esbn2.c},label={lst:codigoPract4_2},escapeinside={@}{@}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL1,  0x04
+        .set    GPSET0,   0x1c
+        .set    GPCLR0,   0x28
+
+        ldr     r0, =GPBASE
+        ldr     r1, [r0, #GPFSEL1]
+        bic     r1, #0b00000000000111000000000000000000
+/* guia bits 20..18    xx999888777666555444333222111000*/
+        orr     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+/* guia bits 16 a 1    10987654321098765432109876543210*/
+        mov     r1, #0b00000000000000010000000000000000
+        str     r1, [r0, #GPCLR0]
+infi:   b       infi
+\end{lstlisting}
+
+El acceso a los registros lo hemos hecho usando la dirección base donde
+están mapeados los periféricos {\tt 0x20200000}. Cargamos esta dirección
+base en el registro {\tt r0} y codificamos los accesos a los registros
+E/S con direccionamiento a memoria empleando distintas constantes como
+desplazamiento en función del registro al que queramos acceder.
+
+Observamos que para escribir en 3 bits concretos de {\tt GPFSEL1} primero leemos
+el registro en {\tt r1}, luego hacemos un {\tt BIC} (queda más legible que un {\tt AND})
+para poner a cero los 3 bits que queremos (del 18 al 20) manteniendo los demás,
+más tarde con {\tt ORR} hacemos que el valor de esos 3 bits sea {\tt 001} y finalmente
+escribimos de nuevo en {\tt GPFSEL1}. Con esto hemos configurado al pin del LED como salida.
+Ya sólo queda encender el LED, enviando un cero con las dos siguientes instrucciones, para
+finalmente entrar en un bucle infinito con {\tt infi: b infi}.
+
+\section{Ejemplos de programas Bare Metal}
+
+\subsection{LED parpadeante con bucle de retardo}
+
+La teoría sobre encender y apagar el LED la sabemos. Lo más sencillo que podemos hacer ahora
+es hacer que el LED parpadee continuamente. Vamos a intruducir el siguiente programa en la
+Raspberry, antes de probarlo piensa un poco cómo se comportaría el siguiente código.
+
+\begin{lstlisting}[caption={esbn3.c},label={lst:codigoPract4_3},escapeinside={@}{@}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL1,  0x04
+        .set    GPSET0,   0x1c
+        .set    GPCLR0,   0x28
+
+        ldr     r0, =GPBASE
+        ldr     r1, [r0, #GPFSEL1]
+        bic     r1, #0b00000000000111000000000000000000
+        orr     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+bucle:  mov     r1, #0b00000000000000010000000000000000
+        str     r1, [r0, #GPSET0]
+        mov     r1, #0b00000000000000010000000000000000
+        str     r1, [r0, #GPCLR0]
+        b       bucle
+\end{lstlisting}
+
+Comprobamos que el LED no parpadea sino que está encendido con menos brillo del normal.
+En realidad sí que lo hace, sólo que nuestro ojo es demasiado lento como para percibirlo.
+Lo siguiente será ajustar la cadencia del parpadeo a un segundo para que podamos observar
+el parpadeo. La secuencia sería apagar el LED, esperar medio segundo, encender el LED,
+esperar otro medio segundo y repetir el bucle. Sabemos que el procesador de la Raspberry
+corre a 700MHz por lo que vamos a suponer que tarde un ciclo de este reloj en ejecutar
+cada instrucción. En base a esto vamos a crear dos bucles de retardo uno tras apagar el LED
+y otro tras encenderlo de 500ms cada uno. Un bucle de retardo lo único que hace es esperar
+tiempo. 
+
+\begin{lstlisting}[caption={Parte de esbn4.c},label={lst:codigoPract4_4},escapeinside={@}{@}]
+        ldr     r0, =GPBASE
+        ldr     r1, [r0, #GPFSEL1]
+        bic     r1, #0b00000000000111000000000000000000
+        orr     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000010000000000000000
+bucle:  ldr     r2, =350000000/2
+ret1:   subs    r2, #1
+        bne     ret1
+        str     r1, [r0, #GPSET0]
+        ldr     r2, =350000000/2
+ret2:   subs    r2, #1
+        bne     ret2
+        str     r1, [r0, #GPCLR0]
+        b       bucle
+\end{lstlisting}
+
+Observamos que cadencia del LED es demasiado lenta algo así como 3 segundos, lo que quiere
+decir que cada iteración del bucle de retardo tarda más de los dos ciclos que hemos supuesto.
+Probamos con cronómetro en mano distintos valores del divisor de {\tt 350000000} hasta dar con
+el valor 6, aún así no acaba de dar una cadencia exacta de un segundo. Hemos comprobado
+empíricamente que las instrucciones {\tt subs} y {\tt bne} tardan en conjunto unos 6 ciclos
+por cada iteración. Esto se debe a una dependencia de datos (ya que el flag que altera
+la orden {\tt subs} es requerido justo después por la instrucción {\tt bne}) y que los saltos
+condicionales suelen ser lentos.
+
+\subsection{LED parpadeante con temporizador interno}
+
+Viendo lo poco preciso que es temporizar con el bucle de retardo, buscamos otra alternativa.
+Lo más sencillo que encontramos es el {\tt ARM Timer} del capítulo 14 del datasheet.
+
+El temporizador lo configuramos en {\tt Free Running} (cuenta hacia delante sin parar) con el
+preescaler a 0xF9 (249) ya que la frecuencia se divide por el valor del preescaler más uno. Como
+el reloj de sistema va a 250Mhz y al pasar por el preescaler se divide entre 250, la frecuencia
+a la que se incrementa el valor del temporizador es de 1MHz. Para temporizar medio segundo lo
+único que tenemos que hacer es esperar a que el contador se incremente en medio millón. El código
+final quedaría así.
+
+\begin{lstlisting}[caption={esbn5.c},label={lst:codigoPract4_5},escapeinside={@}{@}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL1,        0x04
+        .set    GPSET0,         0x1c
+        .set    GPCLR0,         0x28
+        .set    TIMERBASE,0x2000B400
+        .set    TIMER_CTL,      0x08
+        .set    TIMER_CNT,      0x20
+
+        ldr     r0, =GPBASE
+        ldr     r1, [r0, #GPFSEL1]
+        bic     r1, #0b00000000000111000000000000000000
+        orr     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000010000000000000000
+        ldr     r2, =TIMERBASE
+        ldr     r3, =0x00f90200
+        str     r3, [r2, #TIMER_CTL]
+bucle:  bl      espera
+        str     r1, [r0, #GPSET0]
+        bl      espera
+        str     r1, [r0, #GPCLR0]
+        b       bucle
+
+/* rutina que espera medio segundo */
+espera: ldr     r3, [r2, #TIMER_CNT]
+        ldr     r4, =500000
+        add     r4, r3
+ret1:   ldr     r3, [r2, #TIMER_CNT]
+        cmp     r3, r4
+        bne     ret1
+        bx      lr
+\end{lstlisting}
 
 
 

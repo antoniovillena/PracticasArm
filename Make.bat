@@ -5,6 +5,6 @@ if 0==1 (
   copy /y   "A0.Mi Proyecto fin de carrera.pdf" "c:\Users\Yo\Google Drive"
 )
 else (
-  pdflatex  "Capitulo03.tex"
-  copy /y   "Capitulo03.pdf" "c:\Users\Yo\Google Drive"
+  pdflatex  "Capitulo04.tex"
+  copy /y   "Capitulo04.pdf" "c:\Users\Yo\Google Drive"
 )
