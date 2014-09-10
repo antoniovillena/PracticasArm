@@ -115,7 +115,7 @@ Las instrucciones {\tt ldm} y {\tt stm} tienen la siguiente sintaxis.
 
 {\bf !} Es un sufijo opcional. Si está presente, actualizamos {\tt rn} al final de la operación.
 
-{\bf cond} Una lista de uno o más registros, que serán leídos o escritos en memoria. La
+{\bf lista\_reg} Una lista de uno o más registros, que serán leídos o escritos en memoria. La
           lista va encerrada entre llaves y separada por comas. También podemos
           usar un rango de registros. En este ejemplo se almacenan los registros {\tt r3, r4,
           r5, r6, r10 y r12}.
@@ -125,8 +125,8 @@ Las instrucciones {\tt ldm} y {\tt stm} tienen la siguiente sintaxis.
 \end{lstlisting}
 
 Si tenemos en cuenta que {\tt push} predecrementa, que {\tt pop} postincrementa y que ambas
-actualizan el registro base, la traducción de las pseudoinstrucciones {\tt push \{r4, r6\}}
-y {\tt pop \{r4, r6\}} serían respectivamente.
+actualizan el registro base (que sería {\tt sp}), la traducción de las pseudoinstrucciones
+{\tt push \{r4, r6\}} y {\tt pop \{r4, r6\}} serían respectivamente.
 
 \begin{lstlisting}
     stmdb sp!, {r4, r6}    /* push */
@@ -393,7 +393,7 @@ es de 4 (dos en caso de parámetros de 64 bits), siempre en los registros desde 
 
 Las variables locales se alojan debajo del área de salvaguarda de registros, para ello hay que
 hacer espacio decrementando el puntero de pila una cierta cantidad de bytes, e incrementando esa
-misma cantidad justo antes de salir de la función. En la siguiente imágen vemos el uso de la pila
+misma cantidad justo antes de salir de la función. En la figura \ref{fig:pila} vemos el uso de la pila
 de una función genérica.
 
 \begin{figure}[h]
@@ -409,7 +409,7 @@ dos variables locales. Como la suma es de 12 bytes, que no es múltiplo de 8, re
 añadiendo una tercera variable local que no usaremos (también podríamos haber salvaguardado un
 segundo registro).
 
-Nuestro mapa particular quedaría así.
+Nuestro mapa particular lo podemos observar en la figura \ref{fig:pila2}.
 
 \begin{figure}[h]
   \centering
@@ -549,8 +549,8 @@ subrutina, tampoco hemos hecho uso de las variables locales.
 La optimización consiste en procesar la primera rama antes de las operaciones con la pila,
 de esta forma nos ahorramos algunos ciclos de reloj. Es un buen ejemplo para comprobar
 lo flexibles que pueden ser las funciones: hay funciones en las que podemos evitar tratar
-con la pila, \ref{lst:codigoPract3_3}, otros en las que no tenemos más remedio, y un último
-caso en las que podemos tener una mezcla de ambas.
+con la pila como en el listado \ref{lst:codigoPract3_3}, otras en las que no tenemos más
+remedio, y un último caso en que podemos tener una mezcla de ambas.
 
 \begin{lstlisting}[caption={Parte del código del programa subrut4.s},label={lst:codigoPract3_6},escapeinside={@}{@}]
 fibo:   cmp     r0, #2
@@ -572,7 +572,7 @@ fibo:   cmp     r0, #2
         bx      lr
 \end{lstlisting}
 
-\subsection{Funciones con muchas entradas}
+\subsection{Funciones con muchos parámetros de entrada}
 
 Lo último que nos falta por ver es cómo acceder a los parámetros de una función por pila, para
 lo cual necesitamos una función de al menos cinco parámetros. Lo más sencillo que se nos ocurre
@@ -672,10 +672,22 @@ poly3:  push    {r4}
 \end{lstlisting}
 
 Vemos como hemos usado un {\tt .equ} para facilitar la legibilidad del código, así
-accedemos al índice del quinto parámetro sin tener que hacer cálculos. Se pueden
-combinar los {\tt .equ} de variables locales con los de parámetros por pila de
-la siguiente forma.
+accedemos al índice del quinto parámetro sin tener que hacer cálculos. El mapa de la
+pila quedaría así.
 
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/pila3.png}
+  \caption{Mapa de pila de función poly3}
+  \label{fig:pila3}
+\end{figure}
+
+Se pueden combinar los {\tt .equ} de variables locales con los de parámetros por pila,
+por ejemplo si tuviésemos una función hipotética con 6 parámetros (dos de ellos pasados
+por pila), 3 variables locales y salvaguarda de 3 registros, lo haríamos de la
+siguiente forma.
+
+\begin{lstlisting}
       .equ    local1,   0
       .equ    local2,   4+local1
       .equ    local3,   4+local2
@@ -685,9 +697,25 @@ la siguiente forma.
 
 func: push    {r4, r5, lr}
       ...
+\end{lstlisting}
 
-Aquí tendríamos una función con 3 variables locales, 3 registros salvados y 6
-parámetros (2 de los cuales se pasan por pila).
+Y éste sería el mapa de pila de nuestra hipotética función.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/pila4.png}
+  \caption{Mapa de función hipotética}
+  \label{fig:pila4}
+\end{figure}
+
+Los números que hemos puesto números a la izquierda de cada elemento se
+corresponden con las constantes que calcula el preprocesador para el
+desplazamiento respecto al puntero de pila. De no haber empleado la lista
+de {\tt .equ} tendríamos que calcular nosotros mismos estos desplazamientos,
+y lo que es peor, el código perdería legibilidad. No es lo mismo poner
+{\tt ldr r4, [sp, \#param5]}, que por ejemplo {\tt ldr r4, [sp, \#24]}, habría
+que revisar a qué corresponde el desplazamiento {\tt \#24} o indicarlo como
+comentario.
 
 Por norma general en la arquitectura ARM se emplean muy poco las variables
 locales, ya que operar con éstas implica guardarlas y restaurarlas de memoria,
@@ -742,7 +770,7 @@ cada llamada a {\tt poly3}.
 Un detalle muy importante que no podemos observar en nuestro ejemplo, los
 parámetros que pasamos por pila lo hacemos en orden inverso desde el último
 al quinto. Esto es así porque la pila crece hacia abajo. Es más, es
-aconsejable hacerlo reusar los registros {\tt r0-r3} para introducir los
+aconsejable reusar los registros {\tt r0-r3} para introducir los
 parámetros por pila. Si tuviésemos que pasar 6 parámetros, constantes del
 1 al 6 lo haríamos así.
 
@@ -802,27 +830,28 @@ serie de puntos desde que pasamos los parámetros en el llamador hasta que resta
 la pila desde el llamador, pasando por la llamada a la función y la ejecución de la misma.
 
 \begin{itemize}
-  \item Usamos los registros {\tt r0-r3} como almacén temporal y pasamos por pila
+  \item Usamos los registros {\tt r0-r3} como almacén temporal el llamador pasa por pila
         los parámetros quinto, sexto, etc... hasta el último. Cuidado con el orden,
         especialmente si se emplea un {\tt push} múltiple. Opcional, sólo si nuestra
         función tiene más de 4 parámetros.
-  \item Escribimos los primeros 4 parámetros en {\tt r0-r3}. Opcional, nos podemos saltar
-        este paso si nuestra función no tiene parámetros.
-  \item Hacemos la llamada a la función con {\tt bl}. Este paso es obligatorio.
-  \item Salvaguardamos los registros desde {\tt r4} que emplearemos como registros
-        temporales en nuestra función. También opcional.
-  \item Decrementamos la pila para hacer hueco a las variables locales. La suma de bytes
+  \item El llamador escribe los primeros 4 parámetros en {\tt r0-r3}. Opcional, nos
+        podemos saltar este paso si nuestra función no tiene parámetros.
+  \item El llamador invoca a la función con {\tt bl}. Este paso es obligatorio.
+  \item Ya dentro de la función, lo primero que hace esta es salvaguardar los registros
+        desde {\tt r4} que se empleen más adelante como registros temporales. También opcional.
+  \item Decrementar la pila para hacer hueco a las variables locales. La suma de bytes
         entre paso de parámetros por pila, salvaguarda y variables locales debe ser
         múltiplo de 8, rellenar aquí hasta completar. Como este paso es opcional, en caso
         de no hacerlo aquí rellenar en el paso anterior.
-  \item Hacemos las operaciones necesarias para nuestra función, accediendo a parámetros
-        y variables locales mediante constantes {\tt .equ} para aportar mayor claridad
-        al código. Devolver el valor resultado en {\tt r0} (ó en {\tt r1:r0} si es doble
+  \item La función realiza las operaciones que necesite para completar su objetivo, accediendo
+        a parámetros y variables locales mediante constantes {\tt .equ} para aportar mayor claridad
+        al código. Se devuelve el valor resultado en {\tt r0} (ó en {\tt r1:r0} si es doble
         palabra).
-  \item Incrementamos pila para revertir el alojamiento de variables locales.
-  \item Recuperamos con {\tt pop} la lista de registros salvaguardados.
-  \item Retornamos la función con {\tt bx lr}
-  \item Equilibramos la pila desde el llamador en caso de haber pasado parámetros por pila.
+  \item Incrementar la pila para revertir el alojamiento de variables locales.
+  \item Recuperar con {\tt pop} la lista de registros salvaguardados.
+  \item Retornar la función con {\tt bx lr} volviendo al código llamador, exactamente a la
+        instrucción que hay tras el {\tt bl}. 
+  \item El llamador equilibra la pila en caso de haber pasado parámetros por ella.
 \end{itemize}
 
 \section{Ejercicios}
@@ -874,46 +903,9 @@ menor que la variable.
 \end{myfbox}
 \end{center}
 
-Una vez hecho el ejercicio observa lo molesto que resulta el tener que
-comprobar la longitud del vector cada vez que añadimos y eliminamos un
-elemento. ¿Cómo resolverias este problema en C empleando {\tt sizeof}?
+\subsection{Media aritmética, macros y conteo de ciclos}
 
-Ahora convierte a ensamblador la función {\tt main} anterior. ¿Se te
-ocurre alguna alternativa para el {\tt sizeof}?.
-
-\begin{center}
-\begin{myfbox}
-\small
-\begin{minipage}{0.92\linewidth}
-\begin{center}
-\colorbox[gray]{1}{\rule{0cm}{4.5cm}\rule{11cm}{0cm}}
-\end{center}
-\end{minipage}
-\end{myfbox}
-\end{center}
-
-Nota de ayuda: El preprocesador del {\bf as} no es muy potente pero
-suficiente para realizar cálculos aritméticos sencillos sobre constantes
-y etiquetas. Recuerda que las sumas y restas tienen menos prioridad que
-las multiplicaciones y divisiones, ante la duda usa siempre los paréntesis.
-Al ser la aritmética sólo de enteros, la división nunca devuelve
-decimales, lo que se hace es truncar el valor. Truncar es redondear hacia
-abajo al entero más cercano, de tal forma que {\tt 7/8} vale {\tt 1} a
-pesar de que su resultado real esté más cerca del {\tt 2}.
-
-En caso de trabajar con potencias de 2 podemos reemplazar las
-multiplicaciones y divisiones por desplazamientos, y los módulos por
-{\tt and} lógicos.
-
-\begin{lstlisting}
-        mov     r1, #(fin-ini)/16
-        mov     r1, #(fin-ini)>>4
-        ...
-        mov     r2, # 1234 % 8
-        mov     r2, # 1234 & 7
-\end{lstlisting}
-
-\subsection{Media aritmética de dos números}
+\subsubsection{Media aritmética}
 
 Escribe una función en ensamblador que calcule la media aritmética (truncada porque
 trabajamos con enteros) de dos números. Escribe también la función {\tt main} con 
@@ -939,6 +931,8 @@ subrutina. La única excepción es {\tt bl printf}, que debes contar como un ún
 Haz lo mismo pero usando la herramienta {\tt gdb} para comprobar el resultado anterior.
 Recuerda no meterte dentro de los printf con {\tt ni}, en las llamadas a la función
 {\tt abs} usa {\tt si}.
+
+\subsubsection{Macros}
 
 Hay una forma de acelerar las funciones, aunque sólo es práctica para funciones pequeñas
 que se utilicen mucho. Se trata de escribir el contenido de la función en lugar de
@@ -1002,7 +996,12 @@ start / si 6 / ni / si 5 / ni /
 6+1+(5+1)*3+2 = 27
 \end{lstlisting}
 
-Usa las macros en el ejercicio de la media y rellena la siguiente tabla.
+Reescribe el ejercicio anterior de la media aritmética empleando macros en vez de
+funciones.
+
+\subsubsection{Conteo de ciclos}
+
+Completa la siguiente tabla usando los dos tipos de conteo que acabamos de explicar.
 
 \begin{center}
 \small
