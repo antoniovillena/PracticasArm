@@ -1,4 +1,6 @@
-\input{hackcapitulo.tex}
+%\input{hackcapitulo.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \chapterbegin{Subrutinas y paso de parámetros}
 \label{chp:Subrut}
 \minitoc
@@ -830,7 +832,7 @@ serie de puntos desde que pasamos los parámetros en el llamador hasta que resta
 la pila desde el llamador, pasando por la llamada a la función y la ejecución de la misma.
 
 \begin{itemize}
-  \item Usamos los registros {\tt r0-r3} como almacén temporal el llamador pasa por pila
+  \item Usando los registros {\tt r0-r3} como almacén temporal, el llamador pasa por pila
         los parámetros quinto, sexto, etc... hasta el último. Cuidado con el orden,
         especialmente si se emplea un {\tt push} múltiple. Opcional, sólo si nuestra
         función tiene más de 4 parámetros.
@@ -1086,4 +1088,4 @@ en ensamblador.
 \chapterend{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\end{document}
+%\end{document}

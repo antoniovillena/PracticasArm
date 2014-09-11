@@ -1,4 +1,6 @@
-\input{hackcapitulo.tex}
+%\input{hackcapitulo.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \chapterbegin{E/S a bajo nivel}
 \label{chp:Subrut}
 \minitoc
@@ -166,7 +168,28 @@ en cuestión de segundos.
 
 En las dos últimas opciones lo que se almacena en el kernel.img de la SD es un bootloader
 que lee continuamente del puerto serie y en el momento en que recibe un archivo lo carga
-en RAM y lo ejecuta. Para más información sobre estos métodos recomendamos que sigan los
+en RAM y lo ejecuta. El protocolo de transferencia que emplea el bootloader se llama XMODEM,
+y los parámetros del puerto serie son: 8 bits de datos, sin paridad, 1 bit de parada, sin
+flujo de control y velocidad de transferencia de 115200 baudios. Son todos parámetros por
+defecto excepto la velocidad, por lo que hay que asegurarse de cambiar la velocidad antes
+de proceder a transferir el archivo en nuestro programa terminal. En Windows tenemos varias
+alternativas, como {\tt HyperTerminal} o {\tt Tera Term}. En Linux tenemos utilidades equivalentes
+como {\tt minicom}, sin embargo hay una forma de automatizar el proceso en línea de comandos
+con el comando {\tt sx}, que es creando el siguiente script {\tt enviar}.
+
+\begin{lstlisting}
+stty -F /dev/ttyAMA0 115200
+sx $1 < /dev/ttyAMA0 > /dev/ttyAMA0
+\end{lstlisting}
+
+Para enviar un archivo con este script, lo único que tenemos que hacer es escribir lo siguiente
+bajo línea de comandos.
+
+\begin{lstlisting}
+./enviar kernel.img
+\end{lstlisting}
+
+Para más información sobre estos métodos recomendamos que sigan los
 README del siguiente repositorio \footnote{\url{https://github.com/dwelch67/raspberrypi}}.
 
 \subsection{Acceso a periféricos}
@@ -330,6 +353,16 @@ base en el registro {\tt r0} y codificamos los accesos a los registros
 E/S con direccionamiento a memoria empleando distintas constantes como
 desplazamiento en función del registro al que queramos acceder.
 
+Los registros a los que accedemos para encender y apagar el LED interno vienen indicados
+en la figura \ref{fig:led}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/led.png}
+  \caption{Registros LED}
+  \label{fig:led}
+\end{figure}
+
 Observamos que para escribir en 3 bits concretos de {\tt GPFSEL1} primero leemos
 el registro en {\tt r1}, luego hacemos un {\tt BIC} (queda más legible que un {\tt AND})
 para poner a cero los 3 bits que queremos (del 18 al 20) manteniendo los demás,
@@ -447,9 +480,26 @@ ret1:   ldr     r3, [r2, #TIMER_CNT]
         bx      lr
 \end{lstlisting}
 
+\section{Ejercicios}
 
+\subsection{Cadencia variable con bucle de retardo}
+
+Usando la técnica del bucle de retardo, haz que el LED parpadee
+cada vez más rápido, hasta que la cadencia sea de 1/4 de segundo.
+Una vez llegues a esta cadencia salta de golpe a la cadencia
+original de 1 segundo. El tiempo que se tarda en pasar de una
+cadencia a otra puede ser el que quieras, siempre que sea
+suficiente para poder apreciar el efecto.
+
+\subsection{Cadencia variable con temporizador}
+
+Repite el ejercicio anterior pero empleando el temporizador
+interno. Durante los 10 primeros segundos aumentamos la cadencia
+del LED desde 1 segundo hasta los 250ms, y en los últimos 10
+segundos disminuimos la cadencia al mismo ritmo de tal forma
+que el ciclo completo se repite cada 20 segundos.
 
 \chapterend{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\end{document}
+%\end{document}
