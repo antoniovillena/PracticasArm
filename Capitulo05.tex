@@ -1,0 +1,176 @@
+\input{hackcapitulo.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapterbegin{Interrupciones hardware}
+\label{chp:Interrupciones}
+\minitoc
+
+{\bf Objetivos}: En esta sesión vamos a realizar programas que
+utilizan dispositivos de E/S haciendo uso del sistema de
+interrupciones hardware. Para poder programar los distintos parámetros
+que configuran el entorno de las interrupciones es necesario conocer de
+forma detallada cómo funcionan los registros asociados, ya que
+éste es el mecanismo mediante el cual el procesador se
+comunica con los periféricos.
+
+Hacemos incapié en lo de {\it hardware} porque las
+{\it interrupciones software} no son más que las llamadas a sistema
+que vimos en el capítulo anterior. Ambas comparten vector de interrupciones,
+pero las {\it interrupciones software} son más bien llamadas a subrutinas.
+
+\section{Lectura previa}
+
+\subsection{Hardware necesario}
+
+Como vamos a seguir trabajando en {\it Bare Metal} y la complejidad
+de los ejemplos va en aumento, no nos queda más remedio que
+recurrir a hardware externo a la Raspberry para poder seguir. Se
+trata de una placa sencilla, con 2 pulsadores, 6 LEDs y un altavoz
+piezoeléctrico.
+
+\begin{longtable}{ p{1.8cm} | p{1.2cm} | p{2cm} | p{5cm}}
+\hline
+{\bf Nombre} & {\bf GPIO} & {\bf Tipo} & {\bf Descripción} \\ \hline
+LED1 & 0 & Salida & Diodo led color rojo \\ \hline
+LED2 & 1 & Salida & Diodo led color rojo \\ \hline
+LED3 & 17 & Salida & Diodo led color amarillo \\ \hline
+LED4 & 22 & Salida & Diodo led color amarillo \\ \hline
+LED5 & 10 & Salida & Diodo led color verde \\ \hline
+LED6 & 11 & Salida & Diodo led color verde \\ \hline
+BOT1 & 21 & Entrada & Pulsador izquierdo \\ \hline
+BOT2 & 9 & Entrada & Pulsador derecho \\ \hline
+ALT & 4 & Salida & Altavoz piezoeléctrico \\ \hline
+\end{longtable}
+
+Es un circuito sencillo y se puede montar en una protoboard sin
+problemas, el esquema es el siguiente.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/circuito.png}
+  \caption{Esquema del circuito}
+  \label{fig:circuito}
+\end{figure}
+
+También se pueden adquirir por internet tarjetas similares, aunque cableadas
+a distintos puertos GPIO, por lo que habría que hacer los respectivos cambios
+en el código de los ejemplos.
+
+\subsection{Conceptos previos}
+
+Una interrupción es una petición que se hace a la CPU para que detenga el
+trabajo que esté realizando y ejecute una rutina determinada. Es uno de los
+dos métodos que hay para comunicarse con los periféricos. El otro método,
+que ya hemos usado en el capítulo anterior, se llama {\it Polling} y no es
+más que una consulta constante sobre el estado de un periférico o un envío
+continuo de información.
+
+Existe otro concepto llamado {\it Excepción} que es muy ambiguo. Normalmente
+una excepción es una situación de error detectada por la CPU mientras ejecuta
+una instrucción, que requiere tratamiento por parte del sistema operativo.
+Sin embargo en lo que a arquitectura ARM se refiere, el concepto {\it Excepción}
+es diferente. Se trata de un caso general y abarca interrupciones hardware,
+interrupciones software y el caso particular de {\it excepción} que explicamos
+antes.
+
+Por último tenemos el vector de excepciones, que no es más que una serie de
+direcciones a las que la CPU saltará según el tipo de excepción que se produzca.
+Lo más normal es que la base del vector de excepciones sea la dirección {\tt 0x00000000},
+o sea la dirección más baja de memoria, aunque se puede cambiar dicha dirección base.
+La lista del vector de excepciones es la siguiente.
+
+\begin{longtable}{ p{5cm} | p{2cm} | p{4cm}}
+\hline
+{\bf Excepción} & {\bf Desplaz.} & {\bf Modo} \\ \hline
+Reset                   & {\tt 0x00} & Supervisor \\ \hline
+Instrucción no definida & {\tt 0x04} & No definido \\ \hline
+Interrupción software   & {\tt 0x08} & Supervisor \\ \hline
+Error en prefetch       & {\tt 0x0C} & Abort \\ \hline
+Error en datos          & {\tt 0x10} & Abort \\ \hline
+Reservado               & {\tt 0x14} & Reservado \\ \hline
+IRQ                     & {\tt 0x18} & IRQ \\ \hline
+FIQ                     & {\tt 0x1C} & FIQ \\ \hline
+\end{longtable}
+
+La última columna se refiere al {\it Modo de operación} que comentamos en el primer
+capítulo, es un estado en el que se encuentra el procesador con una serie de privilegios
+con respecto a otros modos y que gracias a ellos podemos construir un sistema operativo
+con diferentes capas. Cada modo tiene sus propios registros {\tt sp} y {\tt lr} de tal
+forma que no alteramos la pila de la secuencia de programa que interrumpimos. Incluso
+el modo {\tt FIQ} tiene 5 registros generales propios (desde {\tt r8} hasta {\tt r12}),
+de esta forma si los empleamos en nuestra rutina de tratamiento no tendremos que
+salvaguardarlos en pila.
+
+{\it Reset} es la excepción que se produce al forzar un reinicio en dicha máquina. La
+Raspberry no tiene pulsador de reset, pero sí un par de pines (sin montar) para que podamos
+añadir un pulsador externo. Este conector se llama {\tt P6} en la Raspberry original y
+{\tt RUN} en el modelo B+.
+
+{\it Instrucción no definida} se produce cuando en el flujo de instrucciones nos encontramos
+un código de operación que no se corresponde con ninguna instrucción. Normalmente esto se
+produce por una corrupción en la memoria de programa o bien que hemos saltado erróneamente
+a una zona donde hay datos. También se puede dar el caso de que intentemos ejecutar código
+ARM para una plataforma más moderna y nos encontremos con una instrucción no soportada por el
+procesador que tenemos.
+
+Las {\it interrupciones software} ya las hemos visto, son las que se invocan con la
+instrucción {\tt swi \#n}.
+
+Luego tenemos los errores en {\it prefetch} y {\it datos}. Un error de {\it prefetch} se produce
+cuando tratamos de ejecutar una instrucción que momentos antes hemos modificado. Es poco
+frecuente y para que se produzca debemos escribir código que sea automodificable, que es
+una práctica no deseable y apenas utilizada en dicha arquitectura. Los errores de {\it datos}
+son generados normalmente por el manejador de memoria y responden a fallos de alineación, de
+traslación, de dominio o de permisos.
+
+Lo siguiente es una entrada reservada, no tiene ninguna funcionalidad ahora
+pero es probable que en futuras extensiones sí que la tenga.
+
+Por último están las excepciones que nos interesan y que trataremos en este capítulo, que son
+las interrupciones normales {\tt IRQ} y las interrupciones rápidas {\tt FIQ}.
+
+\subsection{Rutina de tratamiento de interrupción}
+
+Es el segmento de código que se ejecuta para atender a una interrupción. Una vez se ejecute
+dicha rutina, retomamos la ejecución normal de nuestro programa, justo en la instrucción en
+donde lo habíamos interrumpido. Cada rutina de tratamiento debe atender a todas las posibles
+fuentes de interrupción de su mismo tipo, con lo que al comienzo de la interrupción se suelen
+acceder a los registros asociados para detectar qué periférico ha causado la excepción y
+actuar en consecuencia.
+
+Como sólo nos interesan {\tt IRQ} y {\tt FIQ}, a lo sumo sólo tendremos que escribir dos
+rutinas de tratamiento distintas. Si se produce una {\tt IRQ}, se ejecutará el código
+que se encuentre en la dirección {\tt 0x0018}, mientras que si lo que salta es una {\tt IRQ},
+la dirección a ejecutar será {\tt 0x001C}. Una ventaja que tienen las interrupciones rápidas
+{\tt FIQ} es que al estar al final del vector de excepciones no es necesario hacer un salto,
+podemos ubicar la rutina de tratamiento de interrupción (en adelante RTI) directamente en
+la dirección {\tt 0x001C}. El resto de excepciones requieren un salto para acceder a su
+correspondiente RTI. En nuestros ejemplos pondremos un salto también en el caso de {\tt FIQ}
+para no tener que reubicar código. Recuerda que nuestro programa Bare Metal comienza en
+{\tt 0x8000} por lo que tendríamos que mover nuestro vector de excepciones a la dirección
+{\tt 0x0000}.
+
+En el siguiente ejemplo en las etiquetas {\tt lxxxx} las equis hacen referencia a su dirección
+final. En las entradadas del vector de excepciones que no utilicemos podemos poner cualquier
+cosa que ocupe 4 bytes, nosotros por sencillez pondremos un {\tt NOP}.
+
+\begin{lstlisting}
+l0000:  b   reset
+l0004:  nop
+l0008:  nop
+l000C:  nop
+l0010:  nop
+l0014:  nop
+l0018:  b   irqrti
+l001C:  b   fiqrti
+\end{lstlisting}
+
+El vector de reset podemos hacer que apunte a la primera instrucción Bare Metal, asi de
+producirse un Reset se ejecutará de nuevo todo el código. Ahora veamos cómo empezaría nuestro
+código inicial, o sea el ubicado en {\tt 0x8000}. Tenemos que 
+
+
+\chapterend{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
