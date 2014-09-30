@@ -1,5 +1,5 @@
-# gpio0  led1
-# gpio1  led2
+# gpio2  led1
+# gpio3  led2
 # gpio17 led3
 # gpio22 led4
 # gpio10 led5
@@ -19,7 +19,7 @@
         .set    TIMER_CNT,      0x20
 
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000000000000001000000001001
+        ldr     r1, =0b00000000000000000001001001000000
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -29,9 +29,9 @@
         ldr     r3, =0x00f90200
         str     r3, [r2, #TIMER_CTL]
 
-bucle:  ldr     r1, =0b00000000000000000000001
+bucle:  ldr     r1, =0b00000000000000000000100
         bl      secuen
-        ldr     r1, =0b00000000000000000000010
+        ldr     r1, =0b00000000000000000001000
         bl      secuen
         ldr     r1, =0b00000100000000000000000
         bl      secuen
@@ -50,6 +50,6 @@ secuen: str     r1, [r0, #GPSET0]
 ret1:   ldr     r3, [r2, #TIMER_CNT]
         cmp     r3, r4
         bne     ret1
-        ldr     r1, =0b00000000010000100000110000000011
+        ldr     r1, =0b00000000010000100000110000001100
         str     r1, [r0, #GPCLR0]
         bx      lr

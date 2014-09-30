@@ -131,8 +131,8 @@ las interrupciones normales {\tt IRQ} y las interrupciones rápidas {\tt FIQ}.
 
 \subsection{Rutina de tratamiento de interrupción}
 
-Es el segmento de código que se ejecuta para atender a una interrupción. Una vez se ejecute
-dicha rutina, retomamos la ejecución normal de nuestro programa, justo en la instrucción en
+Es el segmento de código que se ejecuta para atender a una interrupción. Una vez se haya
+ejecutado dicha rutina, retomamos la ejecución normal de nuestro programa, justo en la instrucción en
 donde lo habíamos interrumpido. Cada rutina de tratamiento debe atender a todas las posibles
 fuentes de interrupción de su mismo tipo, con lo que al comienzo de la interrupción se suelen
 acceder a los registros asociados para detectar qué periférico ha causado la excepción y
@@ -141,33 +141,78 @@ actuar en consecuencia.
 Como sólo nos interesan {\tt IRQ} y {\tt FIQ}, a lo sumo sólo tendremos que escribir dos
 rutinas de tratamiento distintas. Si se produce una {\tt IRQ}, se ejecutará el código
 que se encuentre en la dirección {\tt 0x0018}, mientras que si lo que salta es una {\tt IRQ},
-la dirección a ejecutar será {\tt 0x001C}. Una ventaja que tienen las interrupciones rápidas
-{\tt FIQ} es que al estar al final del vector de excepciones no es necesario hacer un salto,
-podemos ubicar la rutina de tratamiento de interrupción (en adelante RTI) directamente en
-la dirección {\tt 0x001C}. El resto de excepciones requieren un salto para acceder a su
-correspondiente RTI. En nuestros ejemplos pondremos un salto también en el caso de {\tt FIQ}
-para no tener que reubicar código. Recuerda que nuestro programa Bare Metal comienza en
-{\tt 0x8000} por lo que tendríamos que mover nuestro vector de excepciones a la dirección
-{\tt 0x0000}.
+la dirección a ejecutar será {\tt 0x001C}. La diferencia entre una {\tt IRQ} y una
+{\tt FIQ} es que esta última tiene sus propios registros desde {\tt r8} hasta {\tt r12}
+asociados al modo de operación, con lo que podemos prescindir del salvado y recuperación
+de estos registros en la RTI, ahorrando un tiempo que en determinadas aplicaciones de
+tiempo real puede ser decisivo.
 
-En el siguiente ejemplo en las etiquetas {\tt lxxxx} las equis hacen referencia a su dirección
-final. En las entradadas del vector de excepciones que no utilicemos podemos poner cualquier
-cosa que ocupe 4 bytes, nosotros por sencillez pondremos un {\tt NOP}.
+El esqueleto de una RTI es el siguiente.
 
 \begin{lstlisting}
-l0000:  b   reset
-l0004:  nop
-l0008:  nop
-l000C:  nop
-l0010:  nop
-l0014:  nop
-l0018:  b   irqrti
-l001C:  b   fiqrti
+irq_handler:
+        push    {lista registros}
+        ...
+        pop     {lista registros}
+        subs    pc, lr, #4
 \end{lstlisting}
 
-El vector de reset podemos hacer que apunte a la primera instrucción Bare Metal, asi de
-producirse un Reset se ejecutará de nuevo todo el código. Ahora veamos cómo empezaría nuestro
-código inicial, o sea el ubicado en {\tt 0x8000}. Tenemos que 
+Vemos que a diferencia de las subrutinas donde salíamos con {\tt lr}, en una RTI salimos
+con {\tt lr-4}, a ello se debe la última instrucción. ¿Y porqué hay un sufijo {\tt s} al final
+de la instrucción {\tt sub}? Pues porque se trata de instrucción especial que sirve para
+restaurar el registro {\tt cpsr} que había antes de la interrupción.
+
+Cada modo de operación tiene 3 registros replicados: {\tt sp}, {\tt lr} y {\tt spsr}. Cuando
+ocurre una interrupción pasamos de modo supervisor a modo IRQ. Los registros {\tt sp}
+y {\tt lr} del modo supervisor no se tocan para nada, con lo que tenemos nuestra propia pila
+de interrupciones IRQ. El registro {\tt lr} (asociado a IRQ) se carga apuntando a la
+instrucción que va después de donde se ha producido la excepción. Además se hace una copia
+del registro {\tt cpsr} a otro llamado {\tt spsr} (Saved Program Status Register), porque
+dentro de la RTI es probable que queramos modificar {\tt cpsr} y también porque el hecho
+de cambiar de modo de operación a IRQ ya ha modificado el registro {\tt cpsr}.
+
+Al terminar la interrupción restauramos {\tt pc} partiendo {\tt lr} y {\tt cpsr} del registro
+{\tt spsr}. Al cambiar de modo volvemos al {\tt sp} y {\tt lr} que teníamos en dicho modo,
+el resto de registros es responsabilidad nuestra devolverlos al valor que tenían al entrar
+en la RTI. Con todo esto conseguimos volver exactamente al punto del que partíamos minimizando las
+operaciones que tiene que hacer la RTI y por tanto el retardo asociado. En otras arquitecturas
+además de delegar en la RTI este trabajo, se usa la misma pila de programa, lo que puede
+ocasionar problemas si nos importa lo que hay debajo de ésta.
+
+\subsection{Inicialización en programa principal}
+
+En realidad la inicialización es lo único que vamos a tener en nuestro programa principal,
+puesto que una vez configuradas las interrupciones vamos a controlar el comportamiento del
+programa con las mismas. Es decir, nuestro programa principal tras la inicialización será una
+instrucción que salta a sí misma continuamente, la misma {\tt infi: b infi} del capítulo
+anterior salvo que esta vez no la usamos para dejar al sistema colgado.
+
+El orden recomendado es el siguiente, aunque se pueden cambiar el mismo salvo el último punto.
+
+\begin{itemize}
+  \item Escribimos en el vector de excepciones de la dirección de comienzo de la RTI que vayamos
+        a usar. En nuestros ejemplos tendremos IRQs y FIQs, por lo que como mucho haremos dos
+        escrituras (para dos RTIs distintas).
+  \item Inicializamos el puntero de pila (registro {\tt sp}) en todos los modos de operación.
+        Tienen que apuntar a zonas distintas dondo sepamos que no habrá conflictos con la
+        memoria de programa. En todos los ejemplos que veremos inicializamos la pila de FIQ
+        a {\tt 0x4000}, la de IRQ a {\tt 0x8000} y la del modo Supervisor a {\tt 0x8000000}.
+  \item Escribimos código de inicialización ajeno al proceso de interrupción, como por ejemplo
+        configurar los GPIOs a salidas donde queramos que actúe un LED.
+  \item Ahora viene la inicialización de las interrupciones. Aquí le decimos al sistema qué fuentes
+        pueden provocar interrupciones, escribiendo en los registros asociados. 
+  \item El último paso es habilitar las interrupciones globalmente escribiendo en el registro
+        {\tt cpsr}. Lo hacemos indirectamente vía otro registro, y la instrucción tiene otro
+        nombre pero hace lo mismo que un {\tt mov}. En concreto se llama {\tt msr}, y también hay
+        otra equivalente {\tt mrs} si lo que queremos es leer de {\tt cpsr} a un registro.
+  \item Después de esto se acaba la inicialización y tendríamos el bucle infinito del que consta
+        nuestro programa principal. Si todo ha ido bien las rutinas de tratamiento de interrupción
+        se encargarán de hacer funcionar nuestro programa como queramos.
+\end{itemize}
+
+
+
+
 
 
 \chapterend{}

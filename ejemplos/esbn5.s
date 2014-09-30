@@ -5,7 +5,7 @@
         .set    TIMERBASE,0x2000B400
         .set    TIMER_CTL,      0x08
         .set    TIMER_CNT,      0x20
-
+.text
         ldr     r0, =GPBASE
         ldr     r1, [r0, #GPFSEL1]
         bic     r1, #0b00000000000111000000000000000000

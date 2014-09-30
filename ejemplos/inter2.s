@@ -1,5 +1,5 @@
-# gpio0  led1
-# gpio1  led2
+# gpio2  led1
+# gpio3  led2
 # gpio17 led3
 # gpio22 led4
 # gpio10 led5
@@ -14,36 +14,61 @@
         .set    GPFSEL2,        0x08
         .set    GPSET0,         0x1c
         .set    GPCLR0,         0x28
-        .set    GPLEV0,         0x34
-        .set    GPPUD,          0x94
-        .set    GPPUDCLK0,      0x98
- 
+        .set    STBASE,   0x20003000
+        .set    STCS,           0x00
+        .set    STCLO,          0x04
+        .set    STC0,           0x0c
+        .set    INTBASE,  0x2000b000
+        .set    INTIRQP1,      0x204
+        .set    INTENIRQ1,     0x210
+.text
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000000000000001000000001001
+        ldr     r1, =0b00000000000000000001001001000000
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
         mov     r1, #0b00000000000000000000000001000000
         str     r1, [r0, #GPFSEL2]
+        ldr     r0, =INTBASE
+        mov     r1, #1
+        str     r1, [r0, #INTENIRQ1]
+        mov     r0, #0x53     @SVC mode, IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
 
-        mov     r1, #2
-        str     r1, [r0, #GPPUD]
-        ldr     r1, =0b00000000001000000000001000000000
-        str     r1, [r0, #GPPUDCLK0]
-
-bucle:  ldr     r1, =0b00000000010000100000110000000011
-        str     r1, [r0, #GPCLR0]
-        ldr     r1, [r0, #GPLEV0]
-        mov     r3, #0
-        tst     r1, #0b00000000000000000000001000000000
-        orrne   r3, #1
-        tst     r1, #0b00000000001000000000000000000000
-        orrne   r3, #2
-        str     r3, [r0, #GPSET0]
-        bl      cyc150
-        b       bucle
-
-cyc150: mov     r12, #50
-cyc151: subs    r12, #1
-        bne     cyc151
+add_exception:
+        sub     r1, r0
+        lsr     r1, #2
+        sub     r1, #2
+        orr     r1, #0xea000000
+        str     r1, [r0]
         bx      lr
+
+irq_handler:
+        push    {r0, r1, r2}
+        ldr     r0, =ledst
+        ldr     r1, [r0]
+        eors    r1, #1
+        str     r1, [r0]
+        ldr     r0, =GPBASE
+        ldr     r1, =0b00000000010000100000110000001100
+        streq   r1, [r0, #GPSET0]
+        strne   r1, [r0, #GPCLR0]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        ldr     r2, =500000
+        add     r1, r2
+        str     r1, [r0, #STC0]
+        pop     {r0, r1, r2}
+        subs    pc, lr, #4
+
+ledst:  .word   0
