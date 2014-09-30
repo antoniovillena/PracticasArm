@@ -31,15 +31,16 @@ piezoeléctrico.
 \begin{longtable}{ p{1.8cm} | p{1.2cm} | p{2cm} | p{5cm}}
 \hline
 {\bf Nombre} & {\bf GPIO} & {\bf Tipo} & {\bf Descripción} \\ \hline
-LED1 & 0 & Salida & Diodo led color rojo \\ \hline
-LED2 & 1 & Salida & Diodo led color rojo \\ \hline
+LED1 & 0/2 & Salida & Diodo led color rojo \\ \hline
+LED2 & 1/3 & Salida & Diodo led color rojo \\ \hline
 LED3 & 17 & Salida & Diodo led color amarillo \\ \hline
 LED4 & 22 & Salida & Diodo led color amarillo \\ \hline
 LED5 & 10 & Salida & Diodo led color verde \\ \hline
 LED6 & 11 & Salida & Diodo led color verde \\ \hline
-BOT1 & 21 & Entrada & Pulsador izquierdo \\ \hline
+BOT1 & 21/27 & Entrada & Pulsador izquierdo \\ \hline
 BOT2 & 9 & Entrada & Pulsador derecho \\ \hline
 ALT & 4 & Salida & Altavoz piezoeléctrico \\ \hline
+\label{tab:berry}
 \end{longtable}
 
 Es un circuito sencillo y se puede montar en una protoboard sin
@@ -210,9 +211,332 @@ El orden recomendado es el siguiente, aunque se pueden cambiar el mismo salvo el
         se encargarán de hacer funcionar nuestro programa como queramos.
 \end{itemize}
 
+Existen mucha formas de escribir en el vector de excepciones. Se puede rellenar toda la tabla
+y hacer un copiado, o ir escribiendo uno a uno los vectores. También hay varias formas de hacer
+los saltos dentro de la tabla, mediante un salto sencillo que está limitado a +/- 32Mb, o usando
+la instrucción {\tt ldr pc, =valor}. Esta última requiere 4 bytes adicionales, pero a su favor
+tiene que no hay limitaciones en el salto y que podemos escribir directamente la dirección
+absuluta de nuestra RTI.
 
+Nosotros vamos a emplear una función que recibe dos parámetros (dirección de vector y dirección de
+RTI) y que se encargará él mismo de introducir una instrucción de salto en el lugar adecuado.
 
+\begin{lstlisting}
+add_exception:
+        sub     r1, r0
+        lsr     r1, #2
+        sub     r1, #2
+        orr     r1, #0xea000000
+        str     r1, [r0]
+        bx      lr
+\end{lstlisting}
 
+Habría que hacer tantas llamadas a esta función como tipos de excepciones tengamos. Luego tenemos
+que inicializar los punteros de pila de los distintos modos de operación. Desde el punto de vista
+del ensamblador todos los registros se llaman igual, no podemos acceder a ellos por los sufijos.
+Queremos inicializar {\tt r13\_svc (sp\_svc)}, {\tt r13\_fiq (sp\_fiq)} y {\tt r13\_svc (sp\_fiq)}, y
+de estos dos últimos sólo el que vayamos a emplear en nuestro programa. En la figura 
+\ref{fig:tablareg} tenemos los distintos registros.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/tablaregistros.png}
+  \caption{Registros según modo de operación}
+  \label{fig:tablareg}
+\end{figure}
+
+La única forma de acceder a ellos es cambiando de modo y modificando el registro {\tt sp}. En
+modo {\tt Bare Metal} nos olvidamos del modo Usuario, el sistema arranca en modo Supervisor y
+nosotros nos mantenemos en dicho modo a no ser que haya una interrupción, o querramos cambiar
+un registro particular del modo como es el caso.
+
+El modo viene indicado en la parte más baja del registro {\tt cpsr}, el cual modificaremos
+con la instrucción especial {\tt msr}. Como sólo nos interesa cambiar el byte más bajo del
+registro, añadimos el sufijo {\tt c} precedido de un guión bajo. Los otros 3 bytes se acceden
+con {\tt x}, {\tt s} y {\tt f} respectivamente. En la figura \ref{fig:cpsr} vemos el contenido
+completo del registro {\tt cpsr}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/cpsr.png}
+  \caption{Registro cpsr}
+  \label{fig:cpsr}
+\end{figure}
+
+Y en la siguiente tabla vemos cómo se codifica el modo de operación.
+
+\begin{longtable}{ p{1.8cm} | p{2cm} | p{5cm} | p{1cm} | p{1cm} }
+\hline
+{\bf Hex} & {\bf Binario} & {\bf Modo de operación} \\ \hline
+0x10 & 10000 & Usuario        \\ \hline
+0x11 & 10001 & FIQ            \\ \hline
+0x12 & 10010 & IRQ            \\ \hline
+0x13 & 10011 & Supervisor     \\ \hline
+0x16 & 10110 & Monitor seguro \\ \hline
+0x17 & 10111 & Abort          \\ \hline
+0x1B & 11011 & Indefinido     \\ \hline
+0x1F & 11111 & Sistema        \\ \hline
+\end{longtable}
+
+Finalmente tenemos que el código que inicializa los punteros de pila es el siguiente.
+
+\begin{lstlisting}
+        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x4000
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
+\end{lstlisting}
+
+En concreto a {\tt 0x4000}, {\tt 0x8000} y {\tt 0x8000000} para los modos {\tt FIQ}, {\tt IRQ} y
+{\tt Supervisor} respectivamente.
+
+La inicialización de las interrupciones es bastante específica, por lo que la veremos en los
+respectivos ejemplos. Y por último tenemos que habilitar las interrupciones globalmente, poniendo
+a cero el bit correspondiente en {\tt cpsr}, y que en el caso de habilitar IRQs sería así.
+
+\begin{lstlisting}
+        mov     r0, #0x53     @SVC mode, IRQ enable
+        msr     cpsr_c, r0
+\end{lstlisting}
+
+\subsection{Ejemplos de aplicación}
+
+Todos los ejemplos que vamos a listar son para la placa que usaremos en el laboratorio
+y para los siguientes modelos de Raspberry.
+
+\begin{itemize}
+  \item Modelo A.
+  \item Modelo B revisión 2.0.
+  \item Modelo B+ (empleando la parte izquierda del conector).
+\end{itemize}
+
+El modelo B revisión 1.0 tiene una asignación de pines ligeramente distinta, cambiando 3 de
+los pines. Si dispones de esta versión tendrías que modificar el código de los ejemplos
+según la tabla \ref{tab:berry}.
+
+\subsection{Parpadeo de todos los LEDs}
+
+Sería hacer lo mismo que en la lección anterior pero empleando interrupciones y aplicando
+la salida simultáneamente a los 6 LEDs de la placa externa en lugar del LED que incluye
+la Raspberry. La cadencia debe ser de un segundo.
+
+Vamos a emplear otro temporizador, el {\tt System Timer}, distinto al de la lección anterior
+que era el {\tt ARM Timer}. Los registros asociados al temporizador son los de la figura
+\ref{fig:systim}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/systemtimer.png}
+  \caption{System Timer}
+  \label{fig:systim}
+\end{figure}
+
+Básicamente con un contador de 64 bits y cuatro comparadores. El temporizador funciona a 1MHz,
+por lo que cada microsegundo se incrementa la cuenta del contador. Está dividido en dos partes,
+la parte baja {\tt CLO} y la parte alta {\tt CHI}. La parte alta no nos resulta interesante,
+porque tarda poco más de una hora en incrementarse y no va asociado a ningún comparador. Los
+comparadores son registros que se pueden modificar y se comparan con {\tt CLO}, en el momento
+que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
+comparador, se produce una interrupción y se activa el correspondiente {\tt Mx}
+asociado a {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
+En nuestro ejemplo vamos a usar el primer comparador o {\tt C0}.
+
+El temporizador ya está, luego tenemos los registros asociados a las interrupciones en la figura
+\ref{fig:interrupciones}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/interrupciones.png}
+  \caption{Interrupciones}
+  \label{fig:interrupciones}
+\end{figure}
+
+En este caso las {\tt FIQs} sólo tienen un registro de control asociado, quedando todo el detalle
+en las {\tt IRQs}. Nosotros vamos a usar las {\tt IRQs} en este ejemplo. Hay tres grupos de tres
+registros cada uno. El primer grupo sirve para indicar que hay una interrupción pendiente, el
+segundo es para habilitar las interrupciones y el tercero para deshabilitarlas. Dentro de cada
+grupo tenemos un registro básico que tiene una mezcla de todo y otros dos registros que
+indican con más detalle la fuente de la interrupción. Dentro de la mezcla del registro básico
+hay fuentes individuales {\tt GPU IRQ x} y bits que engloban a varias fuentes {\tt Bits in PR1},
+que por ejemplo indica que el origen hay que buscarlo en el registro 1. En el registro 1 están
+las primeras 32 posiciones de la tabla de interrupciones, mientras que en el registro 2 están
+las 32 últimas.
+
+La documentación oficial sobre la tabla de interrupciones está incompleta, pero buscando un poco
+por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
+controlan con los 4 primeros bits de la tabla (uno para cada comparador).
+
+Ya estamos en condiciones para mostrar el código del ejemplo.
+
+\begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL0,        0x00
+        .set    GPFSEL1,        0x04
+        .set    GPFSEL2,        0x08
+        .set    GPSET0,         0x1c
+        .set    GPCLR0,         0x28
+        .set    STBASE,   0x20003000
+        .set    STCLO,          0x04
+        .set    STC0,           0x0c
+        .set    INTBASE,  0x2000b000
+        .set    INTENIRQ1,     0x210
+.text
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
+        ldr     r0, =GPBASE
+        ldr     r1, =0b00000000000000000000001001000000
+        str     r1, [r0, #GPFSEL0]
+        ldr     r1, =0b00000000001000000000000000001001
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
+        ldr     r0, =INTBASE
+        mov     r1, #1
+        str     r1, [r0, #INTENIRQ1]
+        mov     r0, #0x53     @SVC mode, IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
+
+add_exception:
+        sub     r1, r0
+        lsr     r1, #2
+        sub     r1, #2
+        orr     r1, #0xea000000
+        str     r1, [r0]
+        bx      lr
+
+irq_handler:
+        push    {r0, r1, r2}
+        ldr     r0, =ledst
+        ldr     r1, [r0]
+        eors    r1, #1
+        str     r1, [r0]
+        ldr     r0, =GPBASE
+        ldr     r1, =0b00000000010000100000110000001100
+        streq   r1, [r0, #GPSET0]
+        strne   r1, [r0, #GPCLR0]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        ldr     r2, =500000
+        add     r1, r2
+        str     r1, [r0, #STC0]
+        pop     {r0, r1, r2}
+        subs    pc, lr, #4
+
+ledst:  .word   0
+\end{lstlisting}
+
+Y vamos enumerando, por orden, los pasos que hemos seguido. En primer lugar apuntamos a nuestra
+RTI en el vector de excepciones.
+
+\begin{lstlisting}
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq_handler
+        bl      add_exception
+\end{lstlisting}
+
+Luego inicializamos los punteros de pila.
+
+\begin{lstlisting}
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
+\end{lstlisting}
+
+Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
+
+\begin{lstlisting}
+        ldr     r0, =GPBASE
+        mov     r1, #0b00000000000000000000001001000000
+        str     r1, [r0, #GPFSEL0]
+        ldr     r1, =0b00000000001000000000000000001001
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
+\end{lstlisting}
+
+Para después habilitar las interrupciones asociadas al primer comparador {\tt C0}.
+
+\begin{lstlisting}
+        ldr     r0, =INTBASE
+        mov     r1, #1
+        str     r1, [r0, #INTENIRQ1]
+\end{lstlisting}
+
+Y finalmente habilitar las interrupciones {\tt IRQ} globalmente, entrando luego en
+el bucle infinito.
+
+\begin{lstlisting}
+        mov     r0, #0x53     @SVC mode, IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
+\end{lstlisting}
+
+Ya hemos terminado con el programa principal, que como veremos más adelante va a ser
+siempre muy parecido.
+
+Lo interesante está en la RTI, que es donde hacemos parpadear los LEDs y configuramos
+el comparador para la siguiente interrupción.
+
+El estado de los LEDs (si están apagados o encendidos) lo guardamos en la variable
+{\tt ledst}, que conmutamos entre cero y uno mediante un {\tt OR} exclusivo. Al
+actualizar los {\tt flags} tras esta operación, tenemos que si el resultado fue
+cero nos lo indica el {\tt flag Z} activo, mientras que estará inactivo en el
+caso contrario (resultado 1). Mediante las instrucciones de ejecución condicional
+{\tt streq} y {\tt strne} enviamos la orden al puerto que enciende los LEDs o al
+puerto que los apaga, respectivamente.
+
+\begin{lstlisting}
+irq_handler:
+        push    {r0, r1, r2}
+        ldr     r0, =ledst
+        ldr     r1, [r0]
+        eors    r1, #1
+        str     r1, [r0]
+        ldr     r0, =GPBASE
+        ldr     r1, =0b00000000010000100000110000001100
+        streq   r1, [r0, #GPSET0]
+        strne   r1, [r0, #GPCLR0]
+\end{lstlisting}
+
+Luego tenemos que actualizar el registro comparador, de lo contrario tardará poco más
+de una hora en cambiar de estado el LED (es lo que tarda el contador en dar una vuelta
+completa). Para ello leemos el contador ({\tt CLO}) y le añadimos 500000 al valor leído. Como cada
+cuenta equivale a un microsegundo, este añadido al contador supone medio segundo, lo
+que nos da la cadencia de un segundo que buscamos. El resultado de la suma lo escribimos
+en el comparador ({\tt C0}), restauramos los registros utilizados y salimos de la RTI. 
+
+Por último tenemos la definición de la variable {\tt ledst}, como no tenemos sección de datos
+aparte la ponemos al final del código.
+
+\begin{lstlisting}
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        ldr     r2, =500000
+        add     r1, r2
+        str     r1, [r0, #STC0]
+        pop     {r0, r1, r2}
+        subs    pc, lr, #4
+
+ledst:  .word   0
+\end{lstlisting}
+
+\subsection{Parpadeo secuencial de LEDs con sonido por altavoz}
 
 
 \chapterend{}
