@@ -27,13 +27,10 @@
         str     r1, [r0, #GPFSEL1]
         mov     r1, #0b00000000000000000000000001000000
         str     r1, [r0, #GPFSEL2]
-
-
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
         add     r1, #1
         str     r1, [r0, #STC1]
-
         ldr     r0, =INTBASE
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]

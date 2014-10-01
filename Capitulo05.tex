@@ -344,7 +344,8 @@ comparadores son registros que se pueden modificar y se comparan con {\tt CLO}, 
 que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
 comparador, se produce una interrupción y se activa el correspondiente {\tt Mx}
 asociado a {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
-En nuestro ejemplo vamos a usar el primer comparador o {\tt C0}.
+Los comparadores {\tt C0} y {\tt C2} los emplea la GPU internamente, por lo que en nuestros
+ejemplos nos ceñiremos a los comparadores {\tt C1} y {\tt C3}.
 
 El temporizador ya está, luego tenemos los registros asociados a las interrupciones en la figura
 \ref{fig:interrupciones}.
@@ -381,31 +382,36 @@ Ya estamos en condiciones para mostrar el código del ejemplo.
         .set    GPSET0,         0x1c
         .set    GPCLR0,         0x28
         .set    STBASE,   0x20003000
+        .set    STCS,           0x00
         .set    STCLO,          0x04
-        .set    STC0,           0x0c
+        .set    STC1,           0x10
         .set    INTBASE,  0x2000b000
         .set    INTENIRQ1,     0x210
 .text
         mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        ldr     r1, =irq\_handler
+        bl      add\_exception
+        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
-        mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
-        msr     cpsr_c, r0
-        mov     sp, #0x8000000
+        mov     sp, \#0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x8000000
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000000000000000001001000000
-        str     r1, [r0, #GPFSEL0]
+        mov     r1, \#0b00000000000000000000001001000000
+        str     r1, [r0, \#GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
-        str     r1, [r0, #GPFSEL1]
-        mov     r1, #0b00000000000000000000000001000000
-        str     r1, [r0, #GPFSEL2]
+        str     r1, [r0, \#GPFSEL1]
+        mov     r1, \#0b00000000000000000000000001000000
+        str     r1, [r0, \#GPFSEL2]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, \#STCLO]
+        add     r1, \#1
+        str     r1, [r0, \#STC1]
         ldr     r0, =INTBASE
-        mov     r1, #1
-        str     r1, [r0, #INTENIRQ1]
-        mov     r0, #0x53     @SVC mode, IRQ enable
+        mov     r1, \#0b0010
+        str     r1, [r0, \#INTENIRQ1]
+        mov     r0, \#0x53     @SVC mode, IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
 
@@ -429,11 +435,13 @@ irq_handler:
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
-        ldr     r2, =500000
+        ldr     r2, =500000       @1 Hz
         add     r1, r2
-        str     r1, [r0, #STC0]
+        str     r1, [r0, \#STC1]
+        mov     r1, \#0b0010
+        str     r1, [r0, \#STCS]
         pop     {r0, r1, r2}
-        subs    pc, lr, #4
+        subs    pc, lr, \#4
 
 ledst:  .word   0
 \end{lstlisting}
@@ -470,11 +478,21 @@ Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
         str     r1, [r0, #GPFSEL2]
 \end{lstlisting}
 
-Para después habilitar las interrupciones asociadas al primer comparador {\tt C0}.
+Preparamos el comparador {\tt C1} para que al cabo de un microsegundo nos proporcione la primera
+interrupción.
+
+\begin{lstlisting}
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        add     r1, #1
+        str     r1, [r0, #STC1]
+\end{lstlisting}
+
+Para después habilitar las interrupciones asociadas al comparador {\tt C1}.
 
 \begin{lstlisting}
         ldr     r0, =INTBASE
-        mov     r1, #1
+        mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
 \end{lstlisting}
 
@@ -519,17 +537,30 @@ de una hora en cambiar de estado el LED (es lo que tarda el contador en dar una 
 completa). Para ello leemos el contador ({\tt CLO}) y le añadimos 500000 al valor leído. Como cada
 cuenta equivale a un microsegundo, este añadido al contador supone medio segundo, lo
 que nos da la cadencia de un segundo que buscamos. El resultado de la suma lo escribimos
-en el comparador ({\tt C0}), restauramos los registros utilizados y salimos de la RTI. 
-
-Por último tenemos la definición de la variable {\tt ledst}, como no tenemos sección de datos
-aparte la ponemos al final del código.
+en el comparador ({\tt C1}).
 
 \begin{lstlisting}
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
-        ldr     r2, =500000
+        ldr     r2, =500000       @1 Hz
         add     r1, r2
-        str     r1, [r0, #STC0]
+        str     r1, [r0, #STC1]
+\end{lstlisting}
+
+Luego escribimos un 1 en el {\tt M1} de {\tt CS}, para resetear el estado de coincidencia, ya
+que de lo contrario el gestor de interrupciones verá el bit siempre a 1 y no lanzará más
+interrupciones. Resulta confuso tener que escribir un 1 en el registro para almacenar un 0, pero
+de un modo similar a lo que ocurre con el registro {\tt GPCLR0} del GPIO es para ahorrar
+operaciones y que la RTI sea más rápida. Así no hay que leer el registro, aplicar una máscara y
+volver a escribir en el mismo registro, con una escritura es suficiente.
+
+Por último restauramos los registros utilizados y salimos de la RTI. Más abajo tenemos la
+definición de la variable {\tt ledst}, como no tenemos sección de datos aparte la ponemos
+al final del código.
+
+\begin{lstlisting}
+        mov     r1, #0b0010
+        str     r1, [r0, #STCS]
         pop     {r0, r1, r2}
         subs    pc, lr, #4
 
@@ -537,6 +568,279 @@ ledst:  .word   0
 \end{lstlisting}
 
 \subsection{Parpadeo secuencial de LEDs con sonido por altavoz}
+
+Vamos a complicar un poco las cosas. En la RTI anterior sabíamos de antemano que la única fuente
+de interrupción es {\tt C1} del {\tt System Timer}. Por eso directamente hacíamos conmutar el
+LED sin comprobar nada más, esto es porque sabemos que ningún otro evento provocará una {\tt IRQ}.
+
+Ahora vamos a meter una segunda fuente de interrupción para controlar el altavoz. Sacar un tono
+puro por el altavoz es equivalente a hacer parpadear un LED, lo único que cambia es que usamos
+otro pin distinto {\tt GPIO 4} y aumentamos la frecuencia para que sea audible (a 1Hz el oído
+humano no captaría sonido alguno). Utilizaremos la frecuencia estándar de afinación
+de 440 Hz, que coincide con el tono de espera de marcado en la telefonía fija.
+
+Por otro lado en lugar de hacer parpadear todos los LEDs lo que haremos es repetir una
+secuencia de 6 posiciones en la que en todo momento sólo uno de los 6 LEDs está encendido, que
+va cambiando de izquierda a derecha (aparentando movimiento) y cuando se llegue al sexto LED
+comenzamos de nuevo desde el primero. Para dar más sensación de movimiento disminuimos el periodo
+a 200 milisegundos.
+
+La clave de todo está en saber cuál de los dos comparadores ha producido la interrupción (se
+puede dar el caso en que salten los dos a la vez). Ésto se puede hacer de dos formas distintas:
+o bien leemos el bit asociado {\tt systim\_cx} en el registro {\tt IRQ pending 1}, o bien leemos
+el {\tt Mx} del registro {\tt CS}. Elegimos el segundo caso, así no gastamos otro registro más
+para almacenar {\tt INTBASE}.
+
+El código completo del ejemplo es el siguiente.
+
+\begin{lstlisting}[caption={inter2.c},label={lst:codigoPract5_2},escapeinside={@}{@}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL0,        0x00
+        .set    GPFSEL1,        0x04
+        .set    GPFSEL2,        0x08
+        .set    GPSET0,         0x1c
+        .set    GPCLR0,         0x28
+        .set    STBASE,   0x20003000
+        .set    STCS,           0x00
+        .set    STCLO,          0x04
+        .set    STC1,           0x10
+        .set    STC3,           0x18
+        .set    INTBASE,  0x2000b000
+        .set    INTENIRQ1,     0x210
+.text
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq\_handler
+        bl      add\_exception
+        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x8000000
+        ldr     r0, =GPBASE
+        mov     r1, \#0b00000000000000000001001001000000
+        str     r1, [r0, \#GPFSEL0]
+        ldr     r1, =0b00000000001000000000000000001001
+        str     r1, [r0, \#GPFSEL1]
+        mov     r1, \#0b00000000000000000000000001000000
+        str     r1, [r0, \#GPFSEL2]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, \#STCLO]
+        add     r1, \#1
+        str     r1, [r0, \#STC1]
+        str     r1, [r0, \#STC3]
+        ldr     r0, =INTBASE
+        mov     r1, \#0b1010
+        str     r1, [r0, \#INTENIRQ1]
+        mov     r0, \#0x53     @SVC mode, IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
+
+add_exception:
+        sub     r1, r0
+        lsr     r1, #2
+        sub     r1, #2
+        orr     r1, #0xea000000
+        str     r1, [r0]
+        bx      lr
+
+irq_handler:
+        push    {r0, r1, r2, r3}
+        ldr     r0, =STBASE
+        ldr     r1, =GPBASE
+        ldr     r2, [r0, #STCS]
+        ands    r2, #0b0010
+        beq     sonido
+        ldr     r2, =cuenta
+        ldr     r3, =0b00000000010000100000110000001100
+        str     r3, [r1, #GPCLR0]
+        ldr     r3, [r2]          @cuenta
+        subs    r3, \#1
+        movmi   r3, \#5
+        str     r3, [r2], \#4      @cuenta
+        ldr     r3, [r2, +r3, LSL #2]
+        str     r3, [r1, #GPSET0]
+        ldr     r3, [r0, #STCLO]
+        ldr     r2, =200000       @5 Hz
+        add     r3, r2
+        str     r3, [r0, \#STC1]
+        mov     r3, \#0b0010
+        str     r3, [r0, \#STCS]
+        ldr     r3, [r0, \#STCS]
+        ands    r3, \#0b0100
+        beq     final
+sonido: ldr     r2, =bitson
+        ldr     r3, [r2]
+        eors    r3, \#1
+        str     r3, [r2]
+        mov     r3, \#0b10000      @altavoz
+        streq   r3, [r1, \#GPSET0]
+        strne   r3, [r1, \#GPCLR0]
+        ldr     r3, [r0, \#STCLO]
+        ldr     r2, =1136         @440 Hz
+        add     r3, r2
+        str     r3, [r0, \#STC3]
+        mov     r3, \#0b1000
+        str     r3, [r0, \#STCS]
+final:  pop     {r0, r1, r2, r3}
+        subs    pc, lr, \#4
+
+bitson: .word   0
+cuenta: .word   0
+secuen: .word   0b00000000000100000000000
+        .word   0b00000000000010000000000
+        .word   0b10000000000000000000000
+        .word   0b00000100000000000000000
+        .word   0b00000000000000000001000
+        .word   0b00000000000000000000100
+\end{lstlisting}
+
+Como es muy parecido al ejemplo de antes, sólo vamos a comentar las diferencias que encontremos.
+La primera de ellas es que además de los 6 GPIOs de los LEDs, configuramos como salida un séptimo
+pin, el GPIO 4, para manejar el altavoz.
+
+\begin{lstlisting}
+        ldr     r0, =GPBASE
+        mov     r1, #0b00000000000000000001001001000000
+        str     r1, [r0, #GPFSEL0]
+\end{lstlisting}
+
+El siguiente código es para incluir el comparador {\tt C3}, tanto para proporcionar la primera
+interrupción como para habilitarla individualmente.
+
+\begin{lstlisting}
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        add     r1, #1
+        str     r1, [r0, #STC1]
+        str     r1, [r0, #STC3]
+        ldr     r0, =INTBASE
+        mov     r1, #0b1010
+\end{lstlisting}
+
+Ya hemos acabado con el programa principal, veamos ahora la RTI. Primero explicamos mostramos
+el esquema general y luego las rutinas individuales tanto para el manejo de LEDs como para el
+altavoz.
+
+\begin{lstlisting}
+irq_handler:
+        push    {r0, r1, r2, r3}
+        ldr     r0, =STBASE
+        ldr     r1, =GPBASE
+        ldr     r2, [r0, #STCS]
+        ands    r2, #0b0010
+        beq     sonido
+
+        [ manejo de LEDs ]
+
+        str     r3, [r0, #STCS]
+        ldr     r3, [r0, #STCS]
+        ands    r3, #0b0100
+        beq     final
+sonido:
+        [ manejo de altavoz ]
+
+final:  pop     {r0, r1, r2, r3}
+        subs    pc, lr, #4
+\end{lstlisting}
+
+Los registros {\tt r0} y {\tt r1} los hacemos apuntar a la base del {\tt System Timer} y del
+{\tt GPIO} y no tocamos dichos valores durante toda la interrupción, vamos a estar
+constantemente leyendo y escribiendo registros y no es plan de tener que cargar la
+base cada vez.
+
+Es un error muy habitual suponer que la fuente de la interrupción sólo ha sido una, aunque
+más del 99% de las veces sea así se puede dar el caso de que coincidan los dos comparadores
+a la vez. De la misma forma si sabemos que sólo hay dos fuentes y una de ellas no ha
+provocado la interrupción, por fuerzas ha tenido que ser la otra, podemos ahorrarnos la
+comprobación.
+
+Así que el flujo es así, leemos {\tt M1} para ver si la interrupción la ha provocado el
+comparador de {\tt C1}, si ha sido así ejecutamos el código de manejo de LEDs. Si no,
+saltamos directamente al manejo del altavoz (sabemos seguro que la fuente viene de ahí).
+
+Tras el código del manejo de LEDs leemos {\tt M3} para saber si además de {\tt C1} ha
+saltado también el comparador {\tt C3}. Si no ha saltado, lo más normal, salimso por
+{\tt final}; si lo ha hecho, procesamos la interrupción con el código de manejo del altavoz
+para luego salir de la RTI.
+
+Estos programas no son fáciles de crear y nunca funcionan a la primera. Es una buena práctica
+hacer funcionar por separado el código de los LEDs y el código del altavoz, y una vez
+comprobemos que funcionan, aglutinarlo en una única RTI. De esta forma aislamos lo máximo
+posible los errores que podamos cometer, es muy fácil equivocarse en una tontería y estar
+dándole vueltas al código sin encontrar el fallo. A diferencia de los primeros capítulos
+que disponíamos de {\tt gdb}, en Bare Metal no tenemos acceso a ningún depurador.
+
+Prosigamos ahora con el código de manejo de LEDs. Recordemos que hemos complicado un poco
+las cosas para emitir una secuencia en lugar de un simple parpadeo. Para ello mostramos
+el código seguido de las variables empleadas en el mismo.
+
+\begin{lstlisting}
+        ldr     r2, =cuenta
+        ldr     r3, =0b00000000010000100000110000001100
+        str     r3, [r1, #GPCLR0]
+        ldr     r3, [r2]          @cuenta
+        subs    r3, #1
+        movmi   r3, #5
+        str     r3, [r2], #4      @cuenta
+        ldr     r3, [r2, +r3, LSL #2]
+        str     r3, [r1, #GPSET0]
+        ldr     r3, [r0, #STCLO]
+        ldr     r2, =200000       @5 Hz
+        add     r3, r2
+        str     r3, [r0, #STC1]
+        [...]
+cuenta: .word   0
+secuen: .word   0b00000000000100000000000
+        .word   0b00000000000010000000000
+        .word   0b10000000000000000000000
+        .word   0b00000100000000000000000
+        .word   0b00000000000000000001000
+        .word   0b00000000000000000000100
+\end{lstlisting}
+
+En la variable {\tt cuenta} almacenamos un contador que va desde 5 hasta 0, que actua
+índice para el array {\tt secuen}. Al decrementar aprovechamos la propia instrucción de
+resta para comprobar que se ha llegado al final de la cuenta (-1), y en dicho caso
+restablecemos la cuenta a 5 mediante la instrucción de ejecución condicional {\tt movmi}.
+
+Nótese que al escribir en la variable {\tt cuenta} hacemos un postincremento de 4, con el
+cual apuntamos al array {\tt secuen} sin necesidad de una instrucción de suma específica.
+En dicho array tenemos almacenadas las posiciones que corresponden los LEDs dentro del
+registro {\tt GPSET0}, cada posición del array es para encender un LED en concreto. Antes
+de esto hemos apagado todos los LEDs enviando el valor que codifica todos los LEDs al
+registro {\tt GPCLR0}.
+
+A parte de sacar la secuencia correspondiente debemos especificar cuándo será la siguiente
+interrupción. Como hicimos en el ejemplo anterior, esto se resuelve leyendo el valor del
+registro {\tt STCLO}, sumándole 200000 (200 milisegundos) y escribiéndolo en el comparador
+{\tt STC1}.
+
+Acabado el código de manejo de LEDs, ya sólo falta por explicar el manejo del altavoz.
+
+\begin{lstlisting}
+sonido: ldr     r2, =bitson
+        ldr     r3, [r2]
+        eors    r3, #1
+        str     r3, [r2]
+        mov     r3, #0b10000      @altavoz
+        streq   r3, [r1, #GPSET0]
+        strne   r3, [r1, #GPCLR0]
+        ldr     r3, [r0, #STCLO]
+        ldr     r2, =1136         @440 Hz
+        add     r3, r2
+        str     r3, [r0, #STC3]
+        mov     r3, #0b1000
+        str     r3, [r0, #STCS]
+        [...]
+bitson: .word   0
+\end{lstlisting}
+
+Es un calco de la rutina que hacía parpadear todos los LEDs en la lección anterior, cambiando
+el valor que se envia a {\tt GPCLR0/GPSET0}, el comparador que es {\tt C3} en lugar de {\tt C1},
+y el valor que sumamos al temporizador, que se corresponde a 440Hz en vez de 1Hz.
+
+\subsection{Ejemplo cos pulsadores y FIQs}
 
 
 \chapterend{}

@@ -28,13 +28,11 @@
         str     r1, [r0, #GPFSEL1]
         mov     r1, #0b00000000000000000000000001000000
         str     r1, [r0, #GPFSEL2]
-
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
         add     r1, #1
         str     r1, [r0, #STC1]
         str     r1, [r0, #STC3]
-
         ldr     r0, =INTBASE
         mov     r1, #0b1010
         str     r1, [r0, #INTENIRQ1]
@@ -57,7 +55,6 @@ irq_handler:
         ldr     r2, [r0, #STCS]
         ands    r2, #0b0010
         beq     sonido
-
         ldr     r2, =cuenta
         ldr     r3, =0b00000000010000100000110000001100
         str     r3, [r1, #GPCLR0]
@@ -76,7 +73,6 @@ irq_handler:
         ldr     r3, [r0, #STCS]
         ands    r3, #0b0100
         beq     final
-
 sonido: ldr     r2, =bitson
         ldr     r3, [r2]
         eors    r3, #1
@@ -95,10 +91,9 @@ final:  pop     {r0, r1, r2, r3}
 
 bitson: .word   0
 cuenta: .word   0
-secuen: .word   0b00000000000000000000100
-        .word   0b00000000000000000001000
-        .word   0b00000100000000000000000
-        .word   0b10000000000000000000000
+secuen: .word   0b00000000000100000000000
         .word   0b00000000000010000000000
-        .word   0b00000000000100000000000
-
+        .word   0b10000000000000000000000
+        .word   0b00000100000000000000000
+        .word   0b00000000000000000001000
+        .word   0b00000000000000000000100
