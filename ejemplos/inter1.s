@@ -29,7 +29,7 @@
         str     r1, [r0, #GPFSEL2]
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
-        add     r1, #1
+        add     r1, #2
         str     r1, [r0, #STC1]
         ldr     r0, =INTBASE
         mov     r1, #0b0010
@@ -57,12 +57,12 @@ irq_handler:
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
+        mov     r1, #0b0010
+        str     r1, [r0, #STCS]
         ldr     r1, [r0, #STCLO]
         ldr     r2, =500000       @1 Hz
         add     r1, r2
         str     r1, [r0, #STC1]
-        mov     r1, #0b0010
-        str     r1, [r0, #STCS]
         pop     {r0, r1, r2}
         subs    pc, lr, #4
 
