@@ -372,7 +372,8 @@ La documentación oficial sobre la tabla de interrupciones está incompleta, per
 por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
 controlan con los 4 primeros bits de la tabla (uno para cada comparador).
 
-Ya estamos en condiciones para mostrar el código del ejemplo.
+Ya estamos en condiciones para mostrar el código del ejemplo. En este primer ejemplo incluimos
+la sección de constantes del fichero, en el resto listaremos a partir del {\tt .text}.
 
 \begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
         .set    GPBASE,   0x20200000
@@ -406,7 +407,7 @@ Ya estamos en condiciones para mostrar el código del ejemplo.
         str     r1, [r0, \#GPFSEL2]
         ldr     r0, =STBASE
         ldr     r1, [r0, \#STCLO]
-        add     r1, \#1
+        add     r1, \#2
         str     r1, [r0, \#STC1]
         ldr     r0, =INTBASE
         mov     r1, \#0b0010
@@ -434,12 +435,12 @@ irq_handler:
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
+        mov     r1, \#0b0010
+        str     r1, [r0, \#STCS]
         ldr     r1, [r0, #STCLO]
         ldr     r2, =500000       @1 Hz
         add     r1, r2
         str     r1, [r0, \#STC1]
-        mov     r1, \#0b0010
-        str     r1, [r0, \#STCS]
         pop     {r0, r1, r2}
         subs    pc, lr, \#4
 
@@ -478,13 +479,13 @@ Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
         str     r1, [r0, #GPFSEL2]
 \end{lstlisting}
 
-Preparamos el comparador {\tt C1} para que al cabo de un microsegundo nos proporcione la primera
+Preparamos el comparador {\tt C1} para que al cabo de dos microsegundos nos proporcione la primera
 interrupción.
 
 \begin{lstlisting}
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
-        add     r1, #1
+        add     r1, #2
         str     r1, [r0, #STC1]
 \end{lstlisting}
 
@@ -532,20 +533,6 @@ irq_handler:
         strne   r1, [r0, #GPCLR0]
 \end{lstlisting}
 
-Luego tenemos que actualizar el registro comparador, de lo contrario tardará poco más
-de una hora en cambiar de estado el LED (es lo que tarda el contador en dar una vuelta
-completa). Para ello leemos el contador ({\tt CLO}) y le añadimos 500000 al valor leído. Como cada
-cuenta equivale a un microsegundo, este añadido al contador supone medio segundo, lo
-que nos da la cadencia de un segundo que buscamos. El resultado de la suma lo escribimos
-en el comparador ({\tt C1}).
-
-\begin{lstlisting}
-        ldr     r0, =STBASE
-        ldr     r1, [r0, #STCLO]
-        ldr     r2, =500000       @1 Hz
-        add     r1, r2
-        str     r1, [r0, #STC1]
-\end{lstlisting}
 
 Luego escribimos un 1 en el {\tt M1} de {\tt CS}, para resetear el estado de coincidencia, ya
 que de lo contrario el gestor de interrupciones verá el bit siempre a 1 y no lanzará más
@@ -554,13 +541,31 @@ de un modo similar a lo que ocurre con el registro {\tt GPCLR0} del GPIO es para
 operaciones y que la RTI sea más rápida. Así no hay que leer el registro, aplicar una máscara y
 volver a escribir en el mismo registro, con una escritura es suficiente.
 
+\begin{lstlisting}
+        ldr     r0, =STBASE
+        mov     r1, #0b0010
+        str     r1, [r0, #STCS]
+\end{lstlisting}
+
+Luego tenemos que actualizar el registro comparador, de lo contrario tardará poco más
+de una hora en cambiar de estado el LED (es lo que tarda el contador en dar una vuelta
+completa). Para ello leemos el contador ({\tt CLO}) y le añadimos 500000 al valor leído. Como cada
+cuenta equivale a un microsegundo, este añadido al contador supone medio segundo, lo
+que nos da la cadencia de un segundo que buscamos. El resultado de la suma lo escribimos
+en el comparador ({\tt C1}).
+
+\begin{lstlisting}
+        ldr     r1, [r0, #STCLO]
+        ldr     r2, =500000       @1 Hz
+        add     r1, r2
+        str     r1, [r0, #STC1]
+\end{lstlisting}
+
 Por último restauramos los registros utilizados y salimos de la RTI. Más abajo tenemos la
 definición de la variable {\tt ledst}, como no tenemos sección de datos aparte la ponemos
 al final del código.
 
 \begin{lstlisting}
-        mov     r1, #0b0010
-        str     r1, [r0, #STCS]
         pop     {r0, r1, r2}
         subs    pc, lr, #4
 
@@ -593,20 +598,7 @@ para almacenar {\tt INTBASE}.
 
 El código completo del ejemplo es el siguiente.
 
-\begin{lstlisting}[caption={inter2.c},label={lst:codigoPract5_2},escapeinside={@}{@}]
-        .set    GPBASE,   0x20200000
-        .set    GPFSEL0,        0x00
-        .set    GPFSEL1,        0x04
-        .set    GPFSEL2,        0x08
-        .set    GPSET0,         0x1c
-        .set    GPCLR0,         0x28
-        .set    STBASE,   0x20003000
-        .set    STCS,           0x00
-        .set    STCLO,          0x04
-        .set    STC1,           0x10
-        .set    STC3,           0x18
-        .set    INTBASE,  0x2000b000
-        .set    INTENIRQ1,     0x210
+\begin{lstlisting}[caption={Parte de inter2.c},label={lst:codigoPract5_2},escapeinside={@}{@}]
 .text
         mov     r0, #0x18     @IRQ vector
         ldr     r1, =irq\_handler
@@ -626,7 +618,7 @@ El código completo del ejemplo es el siguiente.
         str     r1, [r0, \#GPFSEL2]
         ldr     r0, =STBASE
         ldr     r1, [r0, \#STCLO]
-        add     r1, \#1
+        add     r1, \#2
         str     r1, [r0, \#STC1]
         str     r1, [r0, \#STC3]
         ldr     r0, =INTBASE
@@ -660,12 +652,12 @@ irq_handler:
         str     r3, [r2], \#4      @cuenta
         ldr     r3, [r2, +r3, LSL #2]
         str     r3, [r1, #GPSET0]
+        mov     r3, \#0b0010
+        str     r3, [r0, \#STCS]
         ldr     r3, [r0, #STCLO]
         ldr     r2, =200000       @5 Hz
         add     r3, r2
         str     r3, [r0, \#STC1]
-        mov     r3, \#0b0010
-        str     r3, [r0, \#STCS]
         ldr     r3, [r0, \#STCS]
         ands    r3, \#0b0100
         beq     final
@@ -676,12 +668,12 @@ sonido: ldr     r2, =bitson
         mov     r3, \#0b10000      @altavoz
         streq   r3, [r1, \#GPSET0]
         strne   r3, [r1, \#GPCLR0]
+        mov     r3, \#0b1000
+        str     r3, [r0, \#STCS]
         ldr     r3, [r0, \#STCLO]
         ldr     r2, =1136         @440 Hz
         add     r3, r2
         str     r3, [r0, \#STC3]
-        mov     r3, \#0b1000
-        str     r3, [r0, \#STCS]
 final:  pop     {r0, r1, r2, r3}
         subs    pc, lr, \#4
 
@@ -711,11 +703,12 @@ interrupción como para habilitarla individualmente.
 \begin{lstlisting}
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
-        add     r1, #1
+        add     r1, #2
         str     r1, [r0, #STC1]
         str     r1, [r0, #STC3]
         ldr     r0, =INTBASE
         mov     r1, #0b1010
+        str     r1, [r0, #INTENIRQ1]
 \end{lstlisting}
 
 Ya hemos acabado con el programa principal, veamos ahora la RTI. Primero explicamos mostramos
@@ -733,7 +726,6 @@ irq_handler:
 
         [ manejo de LEDs ]
 
-        str     r3, [r0, #STCS]
         ldr     r3, [r0, #STCS]
         ands    r3, #0b0100
         beq     final
@@ -785,6 +777,8 @@ el código seguido de las variables empleadas en el mismo.
         str     r3, [r2], #4      @cuenta
         ldr     r3, [r2, +r3, LSL #2]
         str     r3, [r1, #GPSET0]
+        mov     r3, #0b0010
+        str     r3, [r0, #STCS]
         ldr     r3, [r0, #STCLO]
         ldr     r2, =200000       @5 Hz
         add     r3, r2
@@ -826,12 +820,12 @@ sonido: ldr     r2, =bitson
         mov     r3, #0b10000      @altavoz
         streq   r3, [r1, #GPSET0]
         strne   r3, [r1, #GPCLR0]
+        mov     r3, #0b1000
+        str     r3, [r0, #STCS]
         ldr     r3, [r0, #STCLO]
         ldr     r2, =1136         @440 Hz
         add     r3, r2
         str     r3, [r0, #STC3]
-        mov     r3, #0b1000
-        str     r3, [r0, #STCS]
         [...]
 bitson: .word   0
 \end{lstlisting}
@@ -840,10 +834,448 @@ Es un calco de la rutina que hacía parpadear todos los LEDs en la lección ante
 el valor que se envia a {\tt GPCLR0/GPSET0}, el comparador que es {\tt C3} en lugar de {\tt C1},
 y el valor que sumamos al temporizador, que se corresponde a 440Hz en vez de 1Hz.
 
-\subsection{Ejemplo cos pulsadores y FIQs}
+\subsection{Manejo de FIQs y sonidos distintos para cada LED}
 
+Este ejemplo es muy parecido al anterior pero con cambios sutiles. El hecho de cambiar una de
+las dos IRQs por una FIQ incluso simplifica el código, ya que tienen distintas RTIs y en cada
+una la fuente de interrupción es única, por lo que no hay que comprobar nada ni hacer saltos.
+
+Empecemos con el programa principal. Aquí sí que hay cambios porque tenemos que agregar un
+elemento nuevo al vector de excepciones, inicializar el puntero de pila del modo FIQ y activar
+la fuente de interrupción FIQ local y globalmente.
+
+\begin{lstlisting}[caption={Programa principal de inter3.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+.text
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq\_handler
+        bl      add\_exception
+        mov     r0, \#0x1c     @FIQ vector
+        ldr     r1, =fiq_handler
+        bl      add_exception
+        mov     r0, #0xd1     @FIQ mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x4000
+        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x8000000
+        ldr     r0, =GPBASE
+        mov     r1, \#0b00000000000000000001001001000000
+        str     r1, [r0, \#GPFSEL0]
+        ldr     r1, =0b00000000001000000000000000001001
+        str     r1, [r0, \#GPFSEL1]
+        mov     r1, \#0b00000000000000000000000001000000
+        str     r1, [r0, \#GPFSEL2]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, \#STCLO]
+        add     r1, \#2
+        str     r1, [r0, \#STC1]
+        str     r1, [r0, \#STC3]
+        ldr     r0, =INTBASE
+        mov     r1, \#0b0010
+        str     r1, [r0, \#INTENIRQ1]
+        mov     r1, \#0x80 | 3
+        str     r1, [r0, \#INTFIQCON]
+        mov     r0, \#0x13     @SVC mode, FIQ&IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
+\end{lstlisting}
+
+Lo único nuevo es la activación local de las interrupciones para el comparador {\tt C3} del
+{\tt System Timer}, lo hacemos sobre un registro {\tt FIQ control ó INTFIQCON} que hemos
+mostrado en la figura \ref{fig:interrupciones}, sin embargo falta saber cuál es la lista
+de fuentes de interrupción.
+
+\begin{longtable}{ p{2cm} | p{6cm}}
+\hline
+{\bf Índice} & {\bf Fuente} \\ \hline
+0-63  & Interrupciones IRQ 1 y 2 (ver figura \ref{fig:interrupciones})  \\ \hline
+64    & ARM Timer  \\ \hline
+65    & ARM Mailbox \\ \hline
+66    & ARM Doorbell 0 \\ \hline
+67    & ARM Doorbell 1 \\ \hline
+68    & GPU0 detenida \\ \hline
+69    & GPU1 detenida \\ \hline
+70    & Acceso ilegal de tipo 1 \\ \hline
+71    & Acceso ilegal de tipo 2 \\ \hline
+\end{longtable}
+
+Son las mismas fuentes que en IRQ pero condensadas en un único registro. De 0 a 31 coincide
+con la tabla {\tt IRQ 1}, de 32 a 63 con {\tt IRQ 2} y de 64 en adelante con {\tt IRQ Basic}.
+Nosotros queremos {\tt C3}, que es el bit 3 del {\tt IRQ 1}, por tanto índice 3 para la fuente
+{\tt FIQ}. Como veis, la única pega que tienen las FIQ es que sólo admite una fuente de
+interrupción. Además del índice ponemos el bit 7 a uno para indicar que queremos habilitar
+dicha fuente {\tt 0x80 | 3}.
+
+Ahora veamos el manejador IRQ (la RTI), que como hemos adelantado, es más sencilla que en el
+ejemplo anterior.
+
+\begin{lstlisting}
+irq_handler:
+        push    {r0, r1, r2}
+        ldr     r0, =GPBASE
+        ldr     r1, =cuenta
+        ldr     r2, =0b00000000010000100000110000001100
+        str     r2, [r0, #GPCLR0]
+        ldr     r2, [r1]        @cuenta
+        subs    r2, #1
+        movmi   r2, #5
+        str     r2, [r1], #4    @cuenta
+        ldr     r2, [r1, +r2, LSL #3]
+        str     r2, [r0, #GPSET0]
+        ldr     r0, =STBASE
+        mov     r2, #0b0010
+        str     r2, [r0, #STCS]
+        ldr     r2, [r0, #STCLO]
+        ldr     r1, =500000     @2 Hz
+        add     r2, r1
+        str     r2, [r0, #STC1]
+        pop     {r0, r1, r2}
+        subs    pc, lr, #4
+\end{lstlisting}
+
+Observamos que al acceder a la tabla {\tt secuen} multiplicamos el índice por 8 en lugar de
+por 4. Esto es así porque hemos incluído en dicha tabla el valor de la longitud de onda (inverso
+de la frecuencia) con la que queremos que suene cada LED, la zona de datos es ésta.
+
+\begin{lstlisting}
+bitson: .word   0
+cuenta: .word   0
+secuen: .word   0b00000000000100000000000
+        .word   716
+        .word   0b00000000000010000000000
+        .word   758
+        .word   0b10000000000000000000000
+        .word   851
+        .word   0b00000100000000000000000
+        .word   956
+        .word   0b00000000000000000001000
+        .word   1012
+        .word   0b00000000000000000000100
+        .word   1136
+\end{lstlisting}
+
+Serían las notas puras que van después del LA estándar de 440Hz (1136), cuyos semitonos se
+obtienen multiplicando la frecuencia por raíz duodécima de 2, que es aproximadamente 1,05946.
+Las notas serían, en hercios: LA (440), SI (493,88), DO (523,25), RE (587,33), MI (659,26) y
+FA (698,46).
+
+Finalmente tenemos el manejador de FIQ asociado al altavoz. La elección de la fuente de
+interrupción es arbitraria, hemos escogido FIQ para el altavoz porque se ejecutará más veces
+que el cambio de LEDs, concretamente 220 veces más con la nota más grave. En estos ejemplos
+no importa, pero en casos reales donde el tiempo de CPU es un recurso limitado, los ciclos
+que nos ahorramos con una FIQ en un proceso crítico pueden ser determinantes.
+
+\begin{lstlisting}
+fiq_handler:
+        ldr     r8, =GPBASE
+        ldr     r9, =bitson
+        ldr     r10, [r9]
+        eors    r10, #1
+        str     r10, [r9], #4
+        ldr     r10, [r9], #8
+        ldr     r9, [r9, +r10, LSL #3]
+        mov     r10, #0b10000   @altavoz
+        streq   r10, [r8, #GPSET0]
+        strne   r10, [r8, #GPCLR0]
+        ldr     r8, =STBASE
+        mov     r10, #0b1000
+        str     r10, [r8, #STCS]
+        ldr     r10, [r8, #STCLO]
+        add     r10, r9
+        str     r10, [r8, #STC3]
+        subs    pc, lr, #4
+\end{lstlisting}
+
+El código sería idéntico al de una IRQ si no fuera porque empleamos registros a partir de
+{\tt r8} en lugar de a partir de {\tt r0}, y no los salvaguardamos con las instrucciones
+{\tt push/pop}. La razón es que el modo de operación FIQ es el único que tiene sus propios
+registros {\tt r8-r12} (ver figura \ref{fig:tablareg}) con el objetivo de no perder el tiempo
+guardando y recuperando datos de la pila. En situaciones más críticas podemos incluso ubicar
+la RTI justo al final del vector de excepciones. Esta tabla no contiene datos, sino instrucciones,
+y lo que hace la CPU cuando ocurre una excepción es saltar (ejecutar) a la dirección asociada en
+dicho vector. Así que cada elemento es una instrucción de salto que apunta a su RTI
+correspondiente, de no ser un salto se solaparía con el siguiente elemento del vector. Excepto
+el último elemento del vector, que no se solaparía con nada y que corresponde a las
+interrupciones FIQ. Se ha escogido intencionalmente así para ahorrarse el salto inicial.
+
+Ya hemos visto casi todos los elementos de la placa externa. Lo único que nos falta por ver
+son los pulsadores, eso es lo que veremos en el siguiente ejemplo.
+
+\subsection{Control de luces/sonido con pulsadores en lugar temporizadores}
+
+Los pulsadores izquierdo y derecho de nuestra placa externa están asociados a los
+puertos {\tt GPIO 21} y {\tt GPIO 9} respectivamente. Veremos cómo se genera una
+interrupción al pulsar cualquiera de los mismos, aunque desde un punto de vista
+práctico lo que se hace normalmente es leer todas las entradas a la vez períodicamente
+(puede ser una RTI asociada a un temporizador) y almacenarlas en un array.
+
+Desde un punto de vista eléctrico un pulsador no es más que un interruptor que deja pasar
+la corriente cuando está pulsado y se queda en circuito abierto en su posición de reposo
+(sin pulsar). De los dos contactos que tiene, uno se conecta a masa y el otro al pin de
+entrada de la Raspberry. Así que cuando lo pulsamos hacemos un corto que llevaría los cero
+voltios de la masa al pin de entrada (enviamos un cero lógico), pero cuando está sin pulsar
+no enviamos nada al pin, éste se queda en lo que se denomina alta impedancia.
+
+Para solventar ésto hay dos opciones, o conectar externamente una resistencia entre el pin y
+los 3.3V de la alimentación, o bien configurar el puerto GPIO para que lo haga internamente
+(dentro del chip) con algo equivalente a una resistencia. Como nuestro circuito pulsador no
+tiene resistencia externa, en nuestro ejemplo no tenemos más remedio que configurar la interna.
+
+Las entradas no hay que configurarlas, o mejor dicho, cuando escribimos en los registros
+{\tt GPFSELx} lo hacemos rellenando con valores a {\tt 000} los pines que no usamos, que se
+corresponde con la función de entrada.
+
+Nuestro programa principal tendrá lo de siempre, más la configuración de las resistencias
+{\tt pull-up} (se llaman así cuando se conectan a alimentación, cuando lo hacen a masa se
+llamarían {\tt pull-down}) y por último cambiamos la fuente de interrupción que antes se
+encargaba de cambiar el estado de las luces. Si antes teníamos un temporizador que
+incrementaba la secuencia de luces, ahora tenemos dos pulsadores, uno para incrementar y
+otro para decrementar la secuencia.
+
+Vamos al datasheet de periféricos del BCM2835 y observamos en la tabla (se corresponde con
+IRQ 2) las siguientes entradas.
+
+\begin{lstlisting}
+gpio_int[0]
+gpio_int[1]
+gpio_int[2]
+gpio_int[3]
+\end{lstlisting}
+
+Y como es habitual, no se explica nada más. Podríamos ponernos a probar nosotros mismos, pero
+una simple búsqueda en internet damos con un usuario (cdbrown) en los foros de raspberry.org
+que se ha encontrado con el mismo problema, y ha hecho un simple experimento forzando
+interrupciones sobre los puertos GPIO 4, 17, 30, 31 y 47. La tabla de resultados es ésta.
+
+\begin{lstlisting}
+GPIO pin:         4    17   30   31   47
+gpio_irq0 (49)    Y    Y    Y    Y    N
+gpio_irq1 (50)    N    N    Y    Y    N
+gpio_irq2 (51)    N    N    N    N    Y
+gpio_irq3 (52)    Y    Y    Y    Y    Y
+\end{lstlisting}
+
+Una {\tt Y} indica que se produce la interrupción. Podemos concluir que si queremos una fuente
+que salte con cualquier interrupción (ya la configuraremos individualmente en los registros GPIO)
+esa es la {\tt gpio\_irq3}.
+
+Por suerte la parte de documentación que afecta a la configuración de los pull-ups está más
+completa.
+
+{\it
+The GPIO Pull-up/down Clock Registers control the actuation of internal pull-downs on 
+the respective GPIO pins. These registers must be used in conjunction with the GPPUD 
+register  to  effect  GPIO  Pull-up/down  changes.  The  following  sequence  of  events  is 
+required: 
+1.  Write to GPPUD to set the required control signal(i.e. Pull-up or Pull-Down or neither 
+to remove the current Pull-up/down) 
+2.  Wait 150 cycles – this provides the required set-up time for the control signal 
+3.  Write to GPPUDCLK0/1 to clock the control signal into the GPIO pads you wish to 
+modify – NOTE only the pads which receive a clock will bemodified, all others will 
+retain their previous state. 
+4.  Wait 150 cycles – this provides the required hold time for the control signal 
+5.  Write to GPPUD to remove the control signal 
+6.  Write to GPPUDCLK0/1 to remove the clock}
+
+Una de las cosas que tenemos que hacer es esperar 150 ciclos (como mínimo). Como
+sabemos que un salto condicional tarda al menos dos ciclos en ejecutarse, nuestra rutina
+de retardo sería la siguiente.
+
+\begin{lstlisting}
+wait:   mov     r2, #50
+wait1:  subs    r2, #1
+        bne     wait1
+        bx      lr
+\end{lstlisting}
+
+Y por último, el programa principal quedaría así.
+
+\begin{lstlisting}[caption={Programa principal de inter4.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+.text
+        mov     r0, #0x18     @IRQ vector
+        ldr     r1, =irq\_handler
+        bl      add\_exception
+        mov     r0, \#0x1c     @FIQ vector
+        ldr     r1, =fiq\_handler
+        bl      add\_exception
+        mov     r0, #0xd1     @FIQ mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x4000
+        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, \#0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
+        msr     cpsr\_c, r0
+        mov     sp, \#0x8000000
+        ldr     r0, =GPBASE
+        mov     r1, \#0b00000000000000000001001001000000
+        str     r1, [r0, \#GPFSEL0]
+        ldr     r1, =0b00000000001000000000000000001001
+        str     r1, [r0, \#GPFSEL1]
+        mov     r1, \#0b00000000000000000000000001000000
+        str     r1, [r0, \#GPFSEL2]
+        mov     r1, \#0b00000000000000000000100
+        str     r1, [r0, \#GPSET0]
+        mov     r1, \#2
+        str     r1, [r0, \#GPPUD]
+        bl      wait
+        ldr     r1, =0b00001000000000000000001000000000
+        str     r1, [r0, \#GPPUDCLK0]
+        bl      wait
+        mov     r2, \#0
+        str     r2, [r0, \#GPPUD]
+        str     r1, [r0, \#GPREN0]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, \#STCLO]
+        add     r1, \#2
+        str     r1, [r0, \#STC1]
+        ldr     r0, =INTBASE
+        mov     r1, \#0b00000000000100000000000000000000
+        str     r1, [r0, \#INTENIRQ2]
+        mov     r1, \#0x80 | 1
+        str     r1, [r0, \#INTFIQCON]
+        mov     r0, \#0x13     @SVC mode, FIQ&IRQ enable
+        msr     cpsr_c, r0
+bucle:  b       bucle
+\end{lstlisting}
+
+El valor escrito en {\tt GPPUD} es un 2, que se corresponde con {\tt pull-ups} (para pull-downs
+sería un 1 y para desactivarlo un 0). En {\tt GPPUDCLK0} indicamos que queremos conectar esas
+resistencias a los puertos GPIO 9 y 21 (pulsadores), y en {\tt GPREN0} le decimos al controlador
+de interrupciones que esos pines serán los únicos que provoquen interrupciones, concretamente
+flancos con de subida síncronos (justo en el momento en que el botón toca fondo).
+
+El manejador FIQ es idéntico al de la lección anterior, saca el sonido que corresponde al LED
+por el altavoz, lo único que empleando {\tt C1} en lugar de {\tt C3}.
+
+Lo más relevante de este ejemplo está en la RTI asociada a la IRQ, que es la siguiente.
+
+\begin{lstlisting}
+irq_handler:
+        push    {r0, r1, r2}
+        ldr     r0, =GPBASE
+        ldr     r1, =cuenta
+        ldr     r2, =0b00000000010000100000110000001100
+        str     r2, [r0, #GPCLR0]
+        ldr     r2, [r0, #GPEDS0]
+        ands    r2, #0b00000000000000000000001000000000
+        beq     incre
+        str     r2, [r0, #GPEDS0]
+        ldr     r2, [r1]        @cuenta
+        subs    r2, #1
+        movmi   r2, #5
+        b       conti
+incre:  mov     r2, #0b00001000000000000000000000000000
+        str     r2, [r0, #GPEDS0]
+        ldr     r2, [r1]        @cuenta
+        add     r2, #1
+        cmp     r2, #6
+        moveq   r2, #0
+conti:  str     r2, [r1], #4    @cuenta
+        ldr     r2, [r1, +r2, LSL #3]
+        str     r2, [r0, #GPSET0]
+        pop     {r0, r1, r2}
+        subs    pc, lr, #4
+\end{lstlisting}
+
+Tenemos una bifurcación (saltos condicionales) debido a que cada botón es una fuente distinta
+de interrupción y tenemos que distinguir qué botón se ha pulsado. Aquí por suerte tenemos
+un registro totalmente análogo al {\tt STCS} de los temporizadores. Se llama {\tt GPEDS0}
+(también hay otro {\tt GPEDS1} para los GPIOs de 32 a 53 que no necesitamos) y sirve tanto
+para saber qué fuente ha producido la interrupción como para resetear su estado (y así permitir
+volver a ser interrumpidos por el mismo pin GPIO).
+
+Con la instrucción {\tt ands} comprobamos si un determinado bit está a 1 y lo indicamos en el
+flag Z. También podría valer la instrucción {\tt tst}, que tiene la ventaja de no destruir
+el registro a la salida (de la misma forma que {\tt cmp} es el equivalente no destructivo de
+{\tt subs}).
+
+Y por último tenemos que sacar la secuencia inversa a la que teníamos para que al pulsar el
+botón izquierdo las luces vayan hacia la izquierda y que con el botón derecho vayan hacia
+el otro lado. Si la secuencia de izquierda a derecha era  (5, 4, 3, 2, 1, 0, 5, 4...), la
+inversa sería (0, 1, 2, 3, 4, 5, 0, 1...). Es decir, incrementamos y cuando llegamos al 6
+lo convertimos en un cero. Ésto se hace con el siguiente fragmento.
+
+\begin{lstlisting}
+        add     r2, #1
+        cmp     r2, #6
+        moveq   r2, #0
+\end{lstlisting}
+
+Nótese que aquí la opción destructiva {\tt subs} no nos vale porque necesitamos el valor del
+registro después. Sí que podemos cambiarlo por un {\tt teq} (la alternativa no destructiva
+de {\tt eors}).
+
+\section{Ejercicios}
+
+\subsection{Todo con IRQs}
+
+Modifica el último ejemplo ({\tt inter4.c}) para controlar el altavoz también con IRQs,
+prescindiendo totalmente de las interrupciones FIQs.
+
+\subsection{Alargar secuencia a 10 y parpadeo}
+
+Partiendo de {\tt inter4.c} (o del resultado del ejercicio anterior) haz las siguientes
+modificaciones. Si te resulta más cómodo, realízalas por orden.
+
+\begin{itemize}
+  \item Sacar de la secuencia el LED 6 (el de más a la derecha) y ponerlo a parpadear
+        continuamente con una cadencia de un segundo. En este momento tendrás que acortar
+        la secuencia a 5.
+  \item Duplica la secuencia a 10. Para ello utiliza el código Morse aplicado a los dígitos
+        (todos tienen longitud 5). Cambia el punto (tono corto) por LED apagado y el guión
+        (tono largo) por LED encendido. Por supuesto los nuevos códigos tendrán su sonido
+        asociado, sigue las notas (saltándote sostenidos y bemoles) para completar la tabla.
+\end{itemize}
+
+\subsection{Tope de secuencia y limitar sonido}
+
+Partiendo de {\tt inter4.c} (o del resultado del ejercicio anterior) haz las siguientes
+modificaciones. Si te resulta más cómodo, realízalas por orden.
+
+\begin{itemize}
+  \item Hasta ahora si llegamos al límite de la secuencia hemos comenzado por el principio,
+        haciendo que la secuencia sea circular tanto en un sentido como en otro. Pues bien,
+        ahora tienes que detectar dichos límites (tanto superior como inferior), poniendo
+        una especie de tope al llegar al límite, que impida avanzar más. En caso de intentar
+        avanzar en el sentido prohibido al llegar a un tope, en lugar de sacar el sonido que
+        corresponda por el altavoz, auméntalo una escala (tope superior) o disminúyelo también
+        una escala (tope inferior).
+  \item Como habrás observado el sonido continuo resulta un tanto molesto después de un tiempo.
+        Y con la indicación de los LEDs tenemos información suficiente para saber en qué
+        posición de la secuencia estamos. Altera el programa para que sólamente suene el altavoz
+        mientras el botón está pulsado, o lo que es lo mismo, para el sonido del altavoz cuando
+        detectes un flanco de bajada en la señal GPIO correspondiente.
+\end{itemize}
+
+\subsection{Reproductor de melodía sencilla}
+
+Escoge una melodía sencilla y trata de interpretarla. Emplea los LEDs a tu gusto para que
+cambien según la nota que esté sonando. Implementa las siguientes funciones en los pulsadores.
+
+\begin{itemize}
+  \item \textbf{Pulsador izquierdo.} Cambio de tempo. La melodía debe comenzar a tempo normal (llamémoslo 1),
+        y variar desde tempo lento (0) y tempo rápido (2) según la secuencia (0, 1, 2, 0...) cada
+        vez que pulsemos dicho botón.
+  \item \textbf{Pulsador derecho.} Iniciar/Parar/Reanudar. La melodía tiene una duración determinada y
+        cuando acaba deja de sonar, no suena en modo bucle todo el tiempo. Si pulsamos dicho botón
+        cuando está en silencio después que haya sonado la melodía, la función correspondiente
+        sería la de iniciarla. Si lo pulsamos durante la reproducción actuaría a modo de pause
+        (los LEDs se quedan congelados en el estado en el que estén), parando y reanudando la
+        reproducción de la música.
+\end{itemize}
+
+En este ejemplo puedes profundizar todo lo que quieras. Por ejemplo empieza codificando los
+silencios, éstos son muy importantes y también forman parte de la melodía. Un segundo paso sería
+codificar la duración de las notas, si no lo has hecho ya. También es posible tener varios
+instrumentos sonando a la vez, aunque sólo dispongamos de un altavoz, busca por internet {\tt
+1-bit music} o {\tt beeper music} si quieres saber cómo se hace.
 
 \chapterend{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}
+
