@@ -281,13 +281,13 @@ Y en la siguiente tabla vemos cómo se codifica el modo de operación.
 Finalmente tenemos que el código que inicializa los punteros de pila es el siguiente.
 
 \begin{lstlisting}
-        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
+        mov     r0, #0xd1     \@FIQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x4000
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0xd2     \@IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     \@SVC mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 \end{lstlisting}
@@ -300,7 +300,7 @@ respectivos ejemplos. Y por último tenemos que habilitar las interrupciones glo
 a cero el bit correspondiente en {\tt cpsr}, y que en el caso de habilitar IRQs sería así.
 
 \begin{lstlisting}
-        mov     r0, #0x53     @SVC mode, IRQ enable
+        mov     r0, #0x53     \@SVC mode, IRQ enable
         msr     cpsr_c, r0
 \end{lstlisting}
 
@@ -375,7 +375,7 @@ controlan con los 4 primeros bits de la tabla (uno para cada comparador).
 Ya estamos en condiciones para mostrar el código del ejemplo. En este primer ejemplo incluimos
 la sección de constantes del fichero, en el resto listaremos a partir del {\tt .text}.
 
-\begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00
         .set    GPFSEL1,        0x04
@@ -390,29 +390,29 @@ la sección de constantes del fichero, en el resto listaremos a partir del {\tt 
         .set    INTENIRQ1,     0x210
 .text
         mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq\_handler
-        bl      add\_exception
-        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
-        mov     sp, \#0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x8000000
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, \#0b00000000000000000000001001000000
-        str     r1, [r0, \#GPFSEL0]
+        mov     r1, #0b00000000000000000000001001000000
+        str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
-        str     r1, [r0, \#GPFSEL1]
-        mov     r1, \#0b00000000000000000000000001000000
-        str     r1, [r0, \#GPFSEL2]
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
         ldr     r0, =STBASE
-        ldr     r1, [r0, \#STCLO]
-        add     r1, \#2
-        str     r1, [r0, \#STC1]
+        ldr     r1, [r0, #STCLO]
+        add     r1, #2
+        str     r1, [r0, #STC1]
         ldr     r0, =INTBASE
-        mov     r1, \#0b0010
-        str     r1, [r0, \#INTENIRQ1]
-        mov     r0, \#0x53     @SVC mode, IRQ enable
+        mov     r1, #0b0010
+        str     r1, [r0, #INTENIRQ1]
+        mov     r0, #0x53     @SVC mode, IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
 
@@ -435,14 +435,14 @@ irq_handler:
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
-        mov     r1, \#0b0010
-        str     r1, [r0, \#STCS]
+        mov     r1, #0b0010
+        str     r1, [r0, #STCS]
         ldr     r1, [r0, #STCLO]
         ldr     r2, =500000       @1 Hz
         add     r1, r2
-        str     r1, [r0, \#STC1]
+        str     r1, [r0, #STC1]
         pop     {r0, r1, r2}
-        subs    pc, lr, \#4
+        subs    pc, lr, #4
 
 ledst:  .word   0
 \end{lstlisting}
@@ -451,7 +451,7 @@ Y vamos enumerando, por orden, los pasos que hemos seguido. En primer lugar apun
 RTI en el vector de excepciones.
 
 \begin{lstlisting}
-        mov     r0, #0x18     @IRQ vector
+        mov     r0, #0x18     \@IRQ vector
         ldr     r1, =irq_handler
         bl      add_exception
 \end{lstlisting}
@@ -598,33 +598,33 @@ para almacenar {\tt INTBASE}.
 
 El código completo del ejemplo es el siguiente.
 
-\begin{lstlisting}[caption={Parte de inter2.c},label={lst:codigoPract5_2},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte de inter2.c},label={lst:codigoPract5_2}]
 .text
         mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq\_handler
-        bl      add\_exception
-        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x8000000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, \#0b00000000000000000001001001000000
-        str     r1, [r0, \#GPFSEL0]
+        mov     r1, #0b00000000000000000001001001000000
+        str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
-        str     r1, [r0, \#GPFSEL1]
-        mov     r1, \#0b00000000000000000000000001000000
-        str     r1, [r0, \#GPFSEL2]
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
         ldr     r0, =STBASE
-        ldr     r1, [r0, \#STCLO]
-        add     r1, \#2
-        str     r1, [r0, \#STC1]
-        str     r1, [r0, \#STC3]
+        ldr     r1, [r0, #STCLO]
+        add     r1, #2
+        str     r1, [r0, #STC1]
+        str     r1, [r0, #STC3]
         ldr     r0, =INTBASE
-        mov     r1, \#0b1010
-        str     r1, [r0, \#INTENIRQ1]
-        mov     r0, \#0x53     @SVC mode, IRQ enable
+        mov     r1, #0b1010
+        str     r1, [r0, #INTENIRQ1]
+        mov     r0, #0x53     @SVC mode, IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
 
@@ -647,35 +647,35 @@ irq_handler:
         ldr     r3, =0b00000000010000100000110000001100
         str     r3, [r1, #GPCLR0]
         ldr     r3, [r2]          @cuenta
-        subs    r3, \#1
-        movmi   r3, \#5
-        str     r3, [r2], \#4      @cuenta
+        subs    r3, #1
+        movmi   r3, #5
+        str     r3, [r2], #4      @cuenta
         ldr     r3, [r2, +r3, LSL #2]
         str     r3, [r1, #GPSET0]
-        mov     r3, \#0b0010
-        str     r3, [r0, \#STCS]
+        mov     r3, #0b0010
+        str     r3, [r0, #STCS]
         ldr     r3, [r0, #STCLO]
         ldr     r2, =200000       @5 Hz
         add     r3, r2
-        str     r3, [r0, \#STC1]
-        ldr     r3, [r0, \#STCS]
-        ands    r3, \#0b0100
+        str     r3, [r0, #STC1]
+        ldr     r3, [r0, #STCS]
+        ands    r3, #0b0100
         beq     final
 sonido: ldr     r2, =bitson
         ldr     r3, [r2]
-        eors    r3, \#1
+        eors    r3, #1
         str     r3, [r2]
-        mov     r3, \#0b10000      @altavoz
-        streq   r3, [r1, \#GPSET0]
-        strne   r3, [r1, \#GPCLR0]
-        mov     r3, \#0b1000
-        str     r3, [r0, \#STCS]
-        ldr     r3, [r0, \#STCLO]
+        mov     r3, #0b10000      @altavoz
+        streq   r3, [r1, #GPSET0]
+        strne   r3, [r1, #GPCLR0]
+        mov     r3, #0b1000
+        str     r3, [r0, #STCS]
+        ldr     r3, [r0, #STCLO]
         ldr     r2, =1136         @440 Hz
         add     r3, r2
-        str     r3, [r0, \#STC3]
+        str     r3, [r0, #STC3]
 final:  pop     {r0, r1, r2, r3}
-        subs    pc, lr, \#4
+        subs    pc, lr, #4
 
 bitson: .word   0
 cuenta: .word   0
@@ -844,41 +844,41 @@ Empecemos con el programa principal. Aquí sí que hay cambios porque tenemos qu
 elemento nuevo al vector de excepciones, inicializar el puntero de pila del modo FIQ y activar
 la fuente de interrupción FIQ local y globalmente.
 
-\begin{lstlisting}[caption={Programa principal de inter3.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Programa principal de inter3.c},label={lst:codigoPract5_1}]
 .text
         mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq\_handler
-        bl      add\_exception
-        mov     r0, \#0x1c     @FIQ vector
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0x1c     @FIQ vector
         ldr     r1, =fiq_handler
         bl      add_exception
-        mov     r0, #0xd1     @FIQ mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x4000
-        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x4000
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x8000000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, \#0b00000000000000000001001001000000
-        str     r1, [r0, \#GPFSEL0]
+        mov     r1, #0b00000000000000000001001001000000
+        str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
-        str     r1, [r0, \#GPFSEL1]
-        mov     r1, \#0b00000000000000000000000001000000
-        str     r1, [r0, \#GPFSEL2]
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
         ldr     r0, =STBASE
-        ldr     r1, [r0, \#STCLO]
-        add     r1, \#2
-        str     r1, [r0, \#STC1]
-        str     r1, [r0, \#STC3]
+        ldr     r1, [r0, #STCLO]
+        add     r1, #2
+        str     r1, [r0, #STC1]
+        str     r1, [r0, #STC3]
         ldr     r0, =INTBASE
-        mov     r1, \#0b0010
-        str     r1, [r0, \#INTENIRQ1]
-        mov     r1, \#0x80 | 3
-        str     r1, [r0, \#INTFIQCON]
-        mov     r0, \#0x13     @SVC mode, FIQ&IRQ enable
+        mov     r1, #0b0010
+        str     r1, [r0, #INTENIRQ1]
+        mov     r1, #0x80 | 3
+        str     r1, [r0, #INTFIQCON]
+        mov     r0, #0x13     @SVC mode, FIQ&IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
 \end{lstlisting}
@@ -1093,51 +1093,51 @@ wait1:  subs    r2, #1
 
 Y por último, el programa principal quedaría así.
 
-\begin{lstlisting}[caption={Programa principal de inter4.c},label={lst:codigoPract5_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Programa principal de inter4.c},label={lst:codigoPract5_1}]
 .text
         mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq\_handler
-        bl      add\_exception
-        mov     r0, \#0x1c     @FIQ vector
-        ldr     r1, =fiq\_handler
-        bl      add\_exception
-        mov     r0, #0xd1     @FIQ mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x4000
-        mov     r0, \#0xd2     @IRQ mode, FIQ&IRQ disable
+        ldr     r1, =irq_handler
+        bl      add_exception
+        mov     r0, #0x1c     @FIQ vector
+        ldr     r1, =fiq_handler
+        bl      add_exception
+        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
-        mov     sp, \#0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ\&IRQ disable
-        msr     cpsr\_c, r0
-        mov     sp, \#0x8000000
+        mov     sp, #0x4000
+        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000
+        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        msr     cpsr_c, r0
+        mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, \#0b00000000000000000001001001000000
-        str     r1, [r0, \#GPFSEL0]
+        mov     r1, #0b00000000000000000001001001000000
+        str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
-        str     r1, [r0, \#GPFSEL1]
-        mov     r1, \#0b00000000000000000000000001000000
-        str     r1, [r0, \#GPFSEL2]
-        mov     r1, \#0b00000000000000000000100
-        str     r1, [r0, \#GPSET0]
-        mov     r1, \#2
-        str     r1, [r0, \#GPPUD]
+        str     r1, [r0, #GPFSEL1]
+        mov     r1, #0b00000000000000000000000001000000
+        str     r1, [r0, #GPFSEL2]
+        mov     r1, #0b00000000000000000000100
+        str     r1, [r0, #GPSET0]
+        mov     r1, #2
+        str     r1, [r0, #GPPUD]
         bl      wait
         ldr     r1, =0b00001000000000000000001000000000
-        str     r1, [r0, \#GPPUDCLK0]
+        str     r1, [r0, #GPPUDCLK0]
         bl      wait
-        mov     r2, \#0
-        str     r2, [r0, \#GPPUD]
-        str     r1, [r0, \#GPREN0]
+        mov     r2, #0
+        str     r2, [r0, #GPPUD]
+        str     r1, [r0, #GPREN0]
         ldr     r0, =STBASE
-        ldr     r1, [r0, \#STCLO]
-        add     r1, \#2
-        str     r1, [r0, \#STC1]
+        ldr     r1, [r0, #STCLO]
+        add     r1, #2
+        str     r1, [r0, #STC1]
         ldr     r0, =INTBASE
-        mov     r1, \#0b00000000000100000000000000000000
-        str     r1, [r0, \#INTENIRQ2]
-        mov     r1, \#0x80 | 1
-        str     r1, [r0, \#INTFIQCON]
-        mov     r0, \#0x13     @SVC mode, FIQ&IRQ enable
+        mov     r1, #0b00000000000100000000000000000000
+        str     r1, [r0, #INTENIRQ2]
+        mov     r1, #0x80 | 1
+        str     r1, [r0, #INTFIQCON]
+        mov     r0, #0x13     @SVC mode, FIQ&IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
 \end{lstlisting}
@@ -1278,4 +1278,3 @@ instrumentos sonando a la vez, aunque sólo dispongamos de un altavoz, busca por
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}
-
