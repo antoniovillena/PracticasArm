@@ -58,11 +58,21 @@ que se ejecuta en nuestro programa ensamblador y dentro de la librería) no
 tenemos privilegios suficientes como para acceder a la zona de memoria que
 mapea los periféricos.
 
+En la figura \ref{fig:capas} podemos ver el código llamador junto con las dos
+capas.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/capas.png}
+  \caption{Funcionamiento de una llamada a printf}
+  \label{fig:capas}
+\end{figure}
+
 Ahora veremos un ejemplo en el cual nos saltamos la capa intermedia para
 comunicarnos directamente con el kernel vía llamada al sistema. En este ejemplo
 vamos a escribir una simple cadena por pantalla, en concreto "Hola Mundo!".
 
-\begin{lstlisting}[caption={esbn1.c},label={lst:codigoPract4_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={esbn1.s},label={lst:codigoPract4_1},escapeinside={@}{@}]
 .data
 
 cadena: .asciz "Hola Mundo!\n"
@@ -85,7 +95,7 @@ main:   push    {r7, lr}           /* preservamos reg.*/
 La instrucción que ejecuta la llamada al sistema es {\tt swi \#0},
 siempre tendrá cero como valor inmediato. El código numérico de
 la llamada y el número de parámetros podemos buscarlo en cualquier
-manual de Linux, buscando "Linux system call table" en Google. En
+manual de Linux, buscando ``Linux system call table'' en Google. En
 nuestro caso la llamada {\tt write} se corresponde con el código
 4 y acepta tres parámetros: manejador de fichero, dirección de
 los datos a escribir (nuestra cadena) y longitud de los datos.
@@ -109,6 +119,34 @@ muy sencillas como encender un LED hasta programar desde cero nuestro propio
 sistema operativo.
 
 \subsection{Ejecutar código en Bare Metal}
+
+El ciclo de ensamblado y enlazado es distinto en un programa Bare Metal. Hasta
+ahora hemos creado ejecutables, que tienen una estructura más compleja, con cabecera y
+distintas secciones en formato {\tt ELF}. Toda esta información le viene muy bien al
+sistema operativo, pero en un entorno Bare Metal no disponemos de él. Lo que se carga
+en {\tt kernel.img} es un binario sencillo, sin cabecera, que contiene directamente
+el código máquina de nuestro programa y que se cargará en la dirección de RAM {\tt 0x8000}.
+
+Lo que para un ejecutable hacíamos con esta secuencia.
+\begin{lstlisting}
+        as -o ejemplo.o ejemplo.s
+        gcc -o ejemplo ejemplo.o
+\end{lstlisting}
+
+En caso de un programa Bare Metal tenemos que cambiarla por esta otra.
+\begin{lstlisting}
+        as -o ejemplo.o ejemplo.s
+        ld -e 0 -Ttext=0x8000 -o ejemplo.elf ejemplo.o
+        objcopy ejemplo.elf -O binary kernel.img
+\end{lstlisting}
+
+Otra característica de Bare Metal es que sólo tenemos una sección de código (la sección
+.text), y no estamos obligados a crear la función
+{\tt main}. Al no ejecutar ninguna función no tenemos la posibilidad de salir del
+programa con {\tt bx lr}, al fin y al cabo no hay ningún sistema operativo detrás al
+que regresar. Nuestro programa debe trabajar en bucle cerrado. En caso de tener una
+tarea simple que querramos terminar, es preferible dejar el sistema colgado con un
+bucle infinito como última instrucción.
 
 El proceso de arranque de la Raspberry Pi es el siguiente:
 
@@ -210,6 +248,8 @@ Este dispositivo tiene puertos accesibles al exterior mediante un conector de do
 pines en la esquina superior izquierda de la Raspberry, por lo que podemos conseguir los
 mismos resultados conectando LEDs sobre diferentes pines de este conector.
 
+\subsubsection{GPIO}
+
 El datasheet que tenemos que buscar es el siguiente
 \footnote{\url{http://www.raspberrypi.org/wp-content/uploads/2012/02/BCM2835-ARM-Peripherals.pdf}},
 ya que el dispositivo GPIO se encuentra en el propio chip (el mismo que contiene CPU y GPU).
@@ -301,36 +341,7 @@ restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1. En 
 primer ejemplo de Bare Metal sólo vamos a encender el LED, por lo que emplearemos el
 registro GPCLR0.
 
-El ciclo de ensamblado y enlazado también es distinto en un programa Bare Metal. Hasta
-ahora hemos creado ejecutables, que tienen una estructura más compleja, con cabecera y
-distintas secciones en formato {\tt ELF}. Toda esta información le viene muy bien al
-sistema operativo, pero en un entorno Bare Metal no disponemos de él. Lo que se carga
-en {\tt kernel.img} es un binario sencillo, sin cabecera, que contiene directamente
-el código máquina de nuestro programa y que se cargará en la dirección de RAM {\tt 0x8000}.
-
-Lo que para un ejecutable hacíamos con esta secuencia.
-\begin{lstlisting}
-        as -o ejemplo.o ejemplo.s
-        gcc -o ejemplo ejemplo.o
-\end{lstlisting}
-
-En caso de un programa Bare Metal tenemos que cambiarla por esta otra.
-\begin{lstlisting}
-        as -o ejemplo.o ejemplo.s
-        ld -e 0 -Ttext=0x8000 -o ejemplo.elf ejemplo.o
-        objcopy ejemplo.elf -O binary kernel.img
-\end{lstlisting}
-
-Otra característica de Bare Metal es que sólo tenemos una sección de código (la sección
-.text), y no estamos obligados a crear la función
-{\tt main}. Al no ejecutar ninguna función no tenemos la posibilidad de salir del
-programa con {\tt bx lr}, al fin y al cabo no hay ningún sistema operativo detrás al
-que regresar. Nuestro programa debe trabajar en bucle cerrado. En caso de tener una
-tarea simple que querramos terminar, es preferible dejar el sistema colgado con un
-bucle infinito como última instrucción. Es lo que vamos a hacer en nuestro ejemplo,
-que mostramos a continuación.
-
-\begin{lstlisting}[caption={esbn2.c},label={lst:codigoPract4_2},escapeinside={@}{@}]
+\begin{lstlisting}[caption={esbn2.s},label={lst:codigoPract4_2},escapeinside={@}{@}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL1,  0x04
         .set    GPSET0,   0x1c
@@ -355,13 +366,13 @@ E/S con direccionamiento a memoria empleando distintas constantes como
 desplazamiento en función del registro al que queramos acceder.
 
 Los registros a los que accedemos para encender y apagar el LED interno vienen indicados
-en la figura \ref{fig:led}.
+en la figura \ref{fig:gpio1}.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/led.png}
+    \includegraphics[width=14cm]{graphs/gpio1.png}
   \caption{Registros LED}
-  \label{fig:led}
+  \label{fig:gpio1}
 \end{figure}
 
 Observamos que para escribir en 3 bits concretos de {\tt GPFSEL1} primero leemos
@@ -372,6 +383,51 @@ escribimos de nuevo en {\tt GPFSEL1}. Con esto hemos configurado al pin del LED 
 Ya sólo queda encender el LED, enviando un cero con las dos siguientes instrucciones, para
 finalmente entrar en un bucle infinito con {\tt infi: b infi}.
 
+Estos son los registros que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
+más registros. En la figura \ref{fig:gpio2} tenemos los siguientes.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/gpio2.png}
+  \caption{Otros registros del GPIO}
+  \label{fig:gpio2}
+\end{figure}
+
+\begin{itemize}
+  \item {\tt GPLEVn} Estos registros devuelven el valor del pin respectivo. Si dicho pin está
+        en torno a 0V devolverá un cero, si está en torno a 3.3V devolverá un 1.
+  \item {\tt GPEDSn} Sirven para detectar qué pin ha provocado una interrupción es caso de
+        usarlo como lectura. Al escribir en ellos también podemos notificar que ya hemos procesado
+        la interrupción y que por tanto estamos listos para que nos vuelvan a interrumpir sobre
+        los pines que indiquemos.
+  \item {\tt GPRENn} Con estos registros enmascaramos los pines que queremos que provoquen una
+        interrupción en flanco de subida, esto es cuando hay una transición de 0 a 1 en el pin
+        de entrada.
+  \item {\tt GPFENn} Lo mismo que el anterior pero en flanco de bajada.
+\end{itemize}
+
+El resto de registros GPIO están en la figura \ref{fig:gpio3}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/gpio3.png}
+  \caption{Otros registros del GPIO}
+  \label{fig:gpio3}
+\end{figure}
+
+\begin{itemize}
+  \item {\tt GPHENn} Enmascaramos los pines que provocarán una interrupción al detectar un
+        nivel alto (3.3V) por dicho pin.
+  \item {\tt GPLENn} Lo mismo que el anterior pero para un nivel bajo (0V).
+  \item {\tt GPARENn y GPAFENn} Tienen funciones idénticas a {\tt GPRENn y GPFENn}, pero permiten
+        detectar flancos en pulsos de poca duración.
+  \item {\tt GPPUD y GPPUDCLKn} Conectan resistencias de pull-up y de pull-down sobre los pines
+        que deseemos. Para más información ver el último ejemplo del siguiente capítulo.
+\end{itemize}
+
+\subsubsection{Temporizador del sistema}
+
+
 \section{Ejemplos de programas Bare Metal}
 
 \subsection{LED parpadeante con bucle de retardo}
@@ -380,7 +436,7 @@ La teoría sobre encender y apagar el LED la sabemos. Lo más sencillo que podem
 es hacer que el LED parpadee continuamente. Vamos a intruducir el siguiente programa en la
 Raspberry, antes de probarlo piensa un poco cómo se comportaría el siguiente código.
 
-\begin{lstlisting}[caption={esbn3.c},label={lst:codigoPract4_3},escapeinside={@}{@}]
+\begin{lstlisting}[caption={esbn3.s},label={lst:codigoPract4_3},escapeinside={@}{@}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL1,  0x04
         .set    GPSET0,   0x1c
@@ -408,7 +464,7 @@ cada instrucción. En base a esto vamos a crear dos bucles de retardo uno tras a
 y otro tras encenderlo de 500ms cada uno. Un bucle de retardo lo único que hace es esperar
 tiempo. 
 
-\begin{lstlisting}[caption={Parte de esbn4.c},label={lst:codigoPract4_4},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte de esbn4.s},label={lst:codigoPract4_4},escapeinside={@}{@}]
 .text
         ldr     r0, =GPBASE
         ldr     r1, [r0, #GPFSEL1]
@@ -436,19 +492,16 @@ por cada iteración. Esto se debe a una dependencia de datos (ya que el flag que
 la orden {\tt subs} es requerido justo después por la instrucción {\tt bne}) y que los saltos
 condicionales suelen ser lentos.
 
-\subsection{LED parpadeante con temporizador interno}
+\subsection{LED parpadeante con temporizador}
 
-Viendo lo poco preciso que es temporizar con el bucle de retardo, buscamos otra alternativa.
-Lo más sencillo que encontramos es el {\tt ARM Timer} del capítulo 14 del datasheet.
+Viendo lo poco preciso que es temporizar con el bucle de retardo, vamos a sincronizar leyendo
+continuamente el valor del {\tt System Timer}.
 
-El temporizador lo configuramos en {\tt Free Running} (cuenta hacia delante sin parar) con el
-preescaler a 0xF9 (249) ya que la frecuencia se divide por el valor del preescaler más uno. Como
-el reloj de sistema va a 250Mhz y al pasar por el preescaler se divide entre 250, la frecuencia
-a la que se incrementa el valor del temporizador es de 1MHz. Para temporizar medio segundo lo
+Como el temporizador va a 1MHz, para temporizar medio segundo lo
 único que tenemos que hacer es esperar a que el contador se incremente en medio millón. El código
 final quedaría así.
 
-\begin{lstlisting}[caption={esbn5.c},label={lst:codigoPract4_5},escapeinside={@}{@}]
+\begin{lstlisting}[caption={esbn5.s},label={lst:codigoPract4_5},escapeinside={@}{@}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL1,        0x04
         .set    GPSET0,         0x1c
