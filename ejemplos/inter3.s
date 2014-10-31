@@ -1,3 +1,8 @@
+      .macro    ADDEXC  par1, par2
+        ldr     r1, =(\par2-\par1+0xA7FFFFFB)
+        ror     r1, #2
+        str     r1, [r0, #\par1]
+      .endm
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00
         .set    GPFSEL1,        0x04
@@ -13,12 +18,9 @@
         .set    INTFIQCON,     0x20c
         .set    INTENIRQ1,     0x210
 .text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0x1c     @FIQ vector
-        ldr     r1, =fiq_handler
-        bl      add_exception
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        ADDEXC  0x1c, fiq_handler
         mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x4000
@@ -29,7 +31,7 @@
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -48,14 +50,6 @@
         mov     r0, #0x13     @SVC mode, FIQ&IRQ enable
         msr     cpsr_c, r0
 bucle:  b       bucle
-
-add_exception:
-        sub     r1, r0
-        lsr     r1, #2
-        sub     r1, #2
-        orr     r1, #0xea000000
-        str     r1, [r0]
-        bx      lr
 
 fiq_handler:
         ldr     r8, =GPBASE
@@ -80,7 +74,7 @@ irq_handler:
         push    {r0, r1, r2}
         ldr     r0, =GPBASE
         ldr     r1, =cuenta
-        ldr     r2, =0b00000000010000100000110000001100
+        ldr     r2, =0b00000000010000100000110000001111
         str     r2, [r0, #GPCLR0]
         ldr     r2, [r1]        @cuenta
         subs    r2, #1
@@ -108,7 +102,7 @@ secuen: .word   0b00000000000100000000000
         .word   851
         .word   0b00000100000000000000000
         .word   956
-        .word   0b00000000000000000001000
+        .word   0b00000000000000000001010
         .word   1012
-        .word   0b00000000000000000000100
+        .word   0b00000000000000000000101
         .word   1136

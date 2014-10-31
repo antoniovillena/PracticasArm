@@ -1,3 +1,8 @@
+      .macro    ADDEXC  par1, par2
+        ldr     r1, =(\par2-\par1+0xA7FFFFFB)
+        ror     r1, #2
+        str     r1, [r0, #\par1]
+      .endm
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00
         .set    GPFSEL1,        0x04
@@ -17,12 +22,9 @@
         .set    INTFIQCON,     0x20c
         .set    INTENIRQ2,     0x214
 .text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0x1c     @FIQ vector
-        ldr     r1, =fiq_handler
-        bl      add_exception
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        ADDEXC  0x1c, fiq_handler
         mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x4000
@@ -33,18 +35,18 @@
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
         mov     r1, #0b00000000000000000000000001000000
         str     r1, [r0, #GPFSEL2]
-        mov     r1, #0b00000000000000000000100
+        mov     r1, #0b00000000000000000000101
         str     r1, [r0, #GPSET0]
         mov     r1, #2
         str     r1, [r0, #GPPUD]
         bl      wait
-        ldr     r1, =0b00001000000000000000001000000000
+        ldr     r1, =0b00001000001000000000001000000000
         str     r1, [r0, #GPPUDCLK0]
         bl      wait
         mov     r2, #0
@@ -66,14 +68,6 @@ bucle:  b       bucle
 wait:   mov     r2, #50
 wait1:  subs    r2, #1
         bne     wait1
-        bx      lr
-
-add_exception:
-        sub     r1, r0
-        lsr     r1, #2
-        sub     r1, #2
-        orr     r1, #0xea000000
-        str     r1, [r0]
         bx      lr
 
 fiq_handler:
@@ -99,7 +93,7 @@ irq_handler:
         push    {r0, r1, r2}
         ldr     r0, =GPBASE
         ldr     r1, =cuenta
-        ldr     r2, =0b00000000010000100000110000001100
+        ldr     r2, =0b00000000010000100000110000001111
         str     r2, [r0, #GPCLR0]
         ldr     r2, [r0, #GPEDS0]
         ands    r2, #0b00000000000000000000001000000000
@@ -109,7 +103,7 @@ irq_handler:
         subs    r2, #1
         movmi   r2, #5
         b       conti
-incre:  mov     r2, #0b00001000000000000000000000000000
+incre:  mov     r2, #0b00001000001000000000000000000000
         str     r2, [r0, #GPEDS0]
         ldr     r2, [r1]        @cuenta
         add     r2, #1
@@ -122,7 +116,7 @@ conti:  str     r2, [r1], #4    @cuenta
         subs    pc, lr, #4
 
 bitson: .word   0
-cuenta: .word   0
+cuenta: .word   5
 secuen: .word   0b00000000000100000000000
         .word   716
         .word   0b00000000000010000000000
@@ -131,7 +125,7 @@ secuen: .word   0b00000000000100000000000
         .word   851
         .word   0b00000100000000000000000
         .word   956
-        .word   0b00000000000000000001000
+        .word   0b00000000000000000001010
         .word   1012
-        .word   0b00000000000000000000100
+        .word   0b00000000000000000000101
         .word   1136

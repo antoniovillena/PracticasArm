@@ -1,3 +1,8 @@
+      .macro    ADDEXC  par1, par2
+        ldr     r1, =(\par2-\par1+0xA7FFFFFB)
+        ror     r1, #2
+        str     r1, [r0, #\par1]
+      .endm
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00
         .set    GPFSEL1,        0x04
@@ -11,9 +16,8 @@
         .set    INTBASE,  0x2000b000
         .set    INTENIRQ1,     0x210
 .text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
         mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
         msr     cpsr_c, r0
         mov     sp, #0x8000
@@ -21,7 +25,7 @@
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000000001001000000
+        ldr     r1, =0b00000000000000000000001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -38,14 +42,6 @@
         msr     cpsr_c, r0
 bucle:  b       bucle
 
-add_exception:
-        sub     r1, r0
-        lsr     r1, #2
-        sub     r1, #2
-        orr     r1, #0xea000000
-        str     r1, [r0]
-        bx      lr
-
 irq_handler:
         push    {r0, r1, r2}
         ldr     r0, =ledst
@@ -53,7 +49,7 @@ irq_handler:
         eors    r1, #1
         str     r1, [r0]
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000010000100000110000001100
+        ldr     r1, =0b00000000010000100000110000001111
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
