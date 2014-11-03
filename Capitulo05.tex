@@ -75,15 +75,12 @@ FIQ                     & 7 & {\tt 0x1C} & FIQ \\ \hline
 La última columna se refiere al {\it Modo de operación} que comentamos en el primer
 capítulo, es un estado en el que se encuentra el procesador con una serie de privilegios
 con respecto a otros modos y que gracias a ellos podemos construir un sistema operativo
-con diferentes capas. Cada modo tiene sus propios registros {\tt sp} y {\tt lr} de tal
-forma que no alteramos la pila de la secuencia de programa que interrumpimos. Incluso
+con diferentes capas. Cada modo tiene sus propios registros {\tt sp}, {\tt lr} y {\tt spsr} de tal
+forma que no alteramos la pila ni los flags de la secuencia de programa que interrumpimos. Incluso
 el modo {\tt FIQ} tiene 5 registros generales propios (desde {\tt r8} hasta {\tt r12}),
 de esta forma si los empleamos en nuestra rutina de tratamiento no tendremos que
-salvaguardarlos en pila.
-
-En la figura \ref{fig:tablareg} observamos los registros propios que contiene cada modo.
-Como podemos ver todos los modos tienen como registros propios {\tt sp}, {\tt lr} y {\tt spsr}.
-El modo {\tt FIQ} además tienes los 5 registros antes mencionados.
+salvaguardarlos en pila. En la figura \ref{fig:tablareg} observamos los registros propios
+mencionados marcados con un triángulo.
 
 \begin{figure}[h]
   \centering
@@ -92,46 +89,48 @@ El modo {\tt FIQ} además tienes los 5 registros antes mencionados.
   \label{fig:tablareg}
 \end{figure}
 
-{\it Reset} es la excepción que se produce al forzar un reinicio en dicha máquina. La
-Raspberry no tiene pulsador de reset, pero sí un par de pines (sin montar) para que podamos
-añadir un pulsador externo. Este conector se llama {\tt P6} en la Raspberry original y
-{\tt RUN} en el modelo B+.
+\begin{itemize}
+  \item {\it Reset} es la excepción que permitiría un reset en caliente dentro de la CPU.
+Desgraciadamente en la Raspberry no hay forma conocida de forzar esta excepción. Los pines
+del conector {\tt P6} en la Raspberry 2.0 y {\tt RUN} en el modelo B+ provocan una secuencia
+completa de arranque, la que comienza con el bootloader de la GPU y acaba cediendo el control
+a la CPU en la dirección 0x8000.
 
-{\it Instrucción no definida} se produce cuando en el flujo de instrucciones nos encontramos
+  \item {\it Instrucción no definida} se produce cuando en el flujo de instrucciones nos encontramos
 un código de operación que no se corresponde con ninguna instrucción. Normalmente esto se
 produce por una corrupción en la memoria de programa o bien que hemos saltado erróneamente
 a una zona donde hay datos. También se puede dar el caso de que intentemos ejecutar código
 ARM para una plataforma más moderna y nos encontremos con una instrucción no soportada por el
 procesador que tenemos.
 
-Las {\it interrupciones software} son subrutinas que se incluyen en el
+  \item Las {\it interrupciones software} son subrutinas que se incluyen en el
 sistema operativo y que son llamadas desde el programa ejecutando la
 instrucción {\tt swi \#n}. No interrumpen realmente nada, pero se
 denominan así porque el mecanismo de funcionamiento es el mismo que en
 las hardware.
 
-Luego tenemos los errores en {\it prefetch} y {\it datos}. Un error de {\it prefetch} se produce
+  \item Luego tenemos los errores en {\it prefetch} y {\it datos}. Un error de {\it prefetch} se produce
 cuando tratamos de ejecutar una instrucción que momentos antes hemos modificado. Es poco
 frecuente y para que se produzca debemos escribir código que sea automodificable, que es
 una práctica no deseable y apenas utilizada en dicha arquitectura. Los errores de {\it datos}
 son generados normalmente por el manejador de memoria y responden a fallos de alineación, de
 traslación, de dominio o de permisos.
 
-Lo siguiente es una entrada reservada, no tiene ninguna funcionalidad ahora
+  \item Lo siguiente es una entrada reservada, no tiene ninguna funcionalidad ahora
 pero es probable que en futuras extensiones sí que la tenga.
 
-Por último están las excepciones que nos interesan y que trataremos en este capítulo, que son
+  \item Por último están las excepciones que nos interesan y que trataremos en este capítulo, que son
 las interrupciones normales {\tt IRQ} y las interrupciones rápidas {\tt FIQ}.
+\end{itemize}
 
 Puesto que cada interrupción, $NI$, lleva asociada una rutina, de
 alguna forma, se le debe indicar a la CPU en qué parte de la tabla de
 vectores de interrupción se encuentra el vector de interrupción
-asociado (es decir, la instrucción de salto a la rutina que debe
-ejecutar cuando se produce la interrupción). La forma de hacerlo es multiplicar por
+asociado, que contiene la instrucción de salto a la rutina que debe
+ejecutar cuando se produce la interrupción. La forma de hacerlo es multiplicar por
 cuatro el número de interrupción para obtener un desplazamiento
 ($NI$*4). Se multiplica por 4 porque cada vector de interrupción
-ocupa 4 bytes (es lo que ocupa una instrucción en ARM) y el primer
-vector de interrupción que se almacena es el correspondiente al Reset.
+ocupa 4 bytes (es lo que ocupa una instrucción en ARM).
 
 Cuando se activa una interrupción, la CPU detiene su trabajo para
 atenderla. Después, continúa su trabajo donde lo dejó. Los pasos a
@@ -241,16 +240,15 @@ una rutina que dibuja la pantalla en el programa principal, mientras que se acep
 interrupciones para registrar las pulsaciones del teclado.
 
 Sin embargo nuestro programa principal tras la inicialización será una
-instrucción que salta a sí misma continuamente, la misma {\tt infi: b infi} del capítulo
-anterior salvo que esta vez no la usamos para dejar al sistema colgado.
+instrucción que salta a sí misma continuamente, {\tt bucle: b bucle}.
 
-El orden recomendado es el siguiente, aunque se pueden cambiar el mismo salvo el último punto.
+El orden recomendado es el siguiente, aunque se puede cambiar el mismo salvo el último punto.
 
 \begin{enumerate}
   \item Escribimos en el vector de excepciones la instrucción de salto necesaria a nuestra RTI.
         Nosotros emplearemos una macro llamada {\tt ADDEXC} que tiene 2 parámetros, offset y
         dirección de la RTI. A grandes rasgos la macro genera y escribe el código de operación
-        del salto, para ver los detalles consultar apéndice.
+        del salto, para ver los detalles consultar apéndice XXX.
         En nuestros ejemplos tendremos IRQs y FIQs, por lo que como mucho haremos dos
         invocaciones a dicha macro (para dos RTIs distintas).
   \item Inicializamos el puntero de pila (registro {\tt sp}) en todos los modos de operación.
@@ -259,7 +257,16 @@ El orden recomendado es el siguiente, aunque se pueden cambiar el mismo salvo el
         a {\tt 0x4000}, la de IRQ a {\tt 0x8000} y la del modo Supervisor a {\tt 0x8000000}.
         Como la memoria de programa empieza en {\tt 0x8000} y la pila crece hacia abajo,
         tendremos 16K de pila en modo IRQ, otros 16K en modo FIQ y 128Mb a compartir entre
-        programa principal y pila de programa.
+        programa principal y pila de programa. El mapa de memoria sería el indicado en la figura
+        \ref{fig:mapamemoria}
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/mapamemoria.png}
+  \caption{Mapa de memoria en nuestros ejemplos}
+  \label{fig:mapamemoria}
+\end{figure}
+
   \item Escribimos código de inicialización ajeno al proceso de interrupción, como por ejemplo
         configurar los GPIOs a salidas donde queramos que actúe un LED.
   \item Ahora viene la inicialización de las interrupciones. Aquí le decimos al sistema qué fuentes
@@ -291,12 +298,6 @@ La única forma de acceder a ellos es cambiando de modo y modificando el registr
 nosotros nos mantenemos en dicho modo a no ser que haya una interrupción o querramos cambiar
 un registro particular del modo como es el caso.
 
-El modo viene indicado en la parte más baja del registro {\tt cpsr}, el cual modificaremos
-con la instrucción especial {\tt msr}. Como sólo nos interesa cambiar el byte más bajo del
-registro, añadimos el sufijo {\tt c} precedido de un guión bajo. Los otros 3 bytes se acceden
-con {\tt x}, {\tt s} y {\tt f} respectivamente. En la figura \ref{fig:cpsr} vemos el contenido
-completo del registro {\tt cpsr}.
-
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/cpsr.png}
@@ -304,7 +305,18 @@ completo del registro {\tt cpsr}.
   \label{fig:cpsr}
 \end{figure}
 
-Y en la siguiente tabla vemos cómo se codifica el modo de operación.
+El modo viene indicado en la parte más baja del registro {\tt cpsr}, el cual modificaremos
+con la instrucción especial {\tt msr}. En la figura \ref{fig:cpsr} vemos el contenido completo
+del registro {\tt cpsr}. Como {\tt cpsr} es un registro muy heterogéneo, usamos
+sufijos para acceder a partes concretas de él. En nuestro caso queremos acceder al sólo nos
+interesa cambiar el byte bajo del registro, añadimos el sufijo {\tt \_c} llamándolo {\tt cpsr\_c},
+para no alterar el resto del registro. Esta parte comprende el modo de operación
+y las máscaras globales de las interrupciones. Otra referencia útil es {\tt cpsr\_f} que modifica
+únicamente la parte de flags (byte alto). Las otras 3 referencias restantes apenas se usan y
+son {\tt cpsr\_s} (Status) para el tercer byte, {\tt cpsr\_x} (eXtended) para el segundo byte y
+{\tt cpsr\_csxf} para modificar los 4 bytes a la vez.
+
+En la siguiente tabla vemos cómo se codifica el modo de operación.
 
 \begin{longtable}{ p{1.8cm} | p{2cm} | p{5cm} | p{1cm} | p{1cm} }
 \hline
@@ -358,7 +370,7 @@ El caso más recurrente en nuestros ejemplos es el de asignar el sentido a los p
 \subsubsection{4. Inicializamos interrupciones localmente}
 
 Consiste en escribir en los registros asociados dependiendo de las fuentes que querramos
-activar. En este ejemplo habilitamos el comparador
+activar. En el primer ejemplo que veremos habilitamos el comparador
 {\tt C1} del temporizador como fuente de interrupción.
 
 \begin{lstlisting}
@@ -366,6 +378,30 @@ activar. En este ejemplo habilitamos el comparador
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
 \end{lstlisting}
+
+Los registros que componen el controlador de interrupciones son los siguientes.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/interrupciones.png}
+  \caption{Interrupciones}
+  \label{fig:interrupciones}
+\end{figure}
+
+Las {\tt FIQs} sólo tienen un registro de control asociado, quedando todo el detalle
+en las {\tt IRQs}. Hay tres grupos de tres
+registros cada uno. El primer grupo sirve para indicar que hay una interrupción pendiente, el
+segundo es para habilitar las interrupciones y el tercero para deshabilitarlas. Dentro de cada
+grupo tenemos un registro básico que tiene una mezcla de todo y otros dos registros que
+indican con más detalle la fuente de la interrupción. Dentro de la mezcla del registro básico
+hay fuentes individuales {\tt GPU IRQ x} y bits que engloban a varias fuentes {\tt Bits in PR1},
+que por ejemplo indica que el origen hay que buscarlo en el registro 1. En el registro 1 están
+las primeras 32 posiciones de la tabla de interrupciones, mientras que en el registro 2 están
+las 32 últimas.
+
+La documentación oficial sobre la tabla de interrupciones está incompleta, pero buscando un poco
+por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
+controlan con los 4 primeros bits de la tabla (uno para cada comparador).
 
 \subsubsection{5. Habilitamos interrupciones globalmente}
 
@@ -388,78 +424,123 @@ bucle:  b       bucle
 
 \subsection{Ejemplos de aplicación}
 
-Todos los ejemplos que vamos a listar son para la placa que usaremos en el laboratorio
-y para los siguientes modelos de Raspberry.
+Vamos a crear un archivo {\tt inter.inc} donde guardaremos las constantes
+asociadas a los registros y también la macro {\tt ADDEXC}, esta última
+se explica en detalle en el apéndice XXX. De esta forma evitamos escribir
+siempre las mismas constantes, haciendo el código más sencillo de mantener.
 
-\begin{itemize}
-  \item Modelo A.
-  \item Modelo B revisión 2.0.
-  \item Modelo B+ (empleando la parte izquierda del conector).
-\end{itemize}
-
-El modelo B revisión 1.0 tiene una asignación de pines ligeramente distinta, cambiando 3 de
-los pines. Si dispones de esta versión tendrías que modificar el código de los ejemplos
-según la tabla \ref{tab:berry}.
-
-\subsection{Parpadeo de todos los LEDs}
-
-Sería hacer lo mismo que en la lección anterior pero empleando interrupciones y aplicando
-la salida simultáneamente a los 6 LEDs de la placa externa en lugar del LED que incluye
-la Raspberry. La cadencia debe ser de un segundo.
-
-El temporizador ya está, luego tenemos los registros asociados a las interrupciones en la figura
-\ref{fig:interrupciones}.
-
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=14cm]{graphs/interrupciones.png}
-  \caption{Interrupciones}
-  \label{fig:interrupciones}
-\end{figure}
-
-En este caso las {\tt FIQs} sólo tienen un registro de control asociado, quedando todo el detalle
-en las {\tt IRQs}. Nosotros vamos a usar las {\tt IRQs} en este ejemplo. Hay tres grupos de tres
-registros cada uno. El primer grupo sirve para indicar que hay una interrupción pendiente, el
-segundo es para habilitar las interrupciones y el tercero para deshabilitarlas. Dentro de cada
-grupo tenemos un registro básico que tiene una mezcla de todo y otros dos registros que
-indican con más detalle la fuente de la interrupción. Dentro de la mezcla del registro básico
-hay fuentes individuales {\tt GPU IRQ x} y bits que engloban a varias fuentes {\tt Bits in PR1},
-que por ejemplo indica que el origen hay que buscarlo en el registro 1. En el registro 1 están
-las primeras 32 posiciones de la tabla de interrupciones, mientras que en el registro 2 están
-las 32 últimas.
-
-La documentación oficial sobre la tabla de interrupciones está incompleta, pero buscando un poco
-por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
-controlan con los 4 primeros bits de la tabla (uno para cada comparador).
-
-Ya estamos en condiciones para mostrar el código del ejemplo. En este primer ejemplo incluimos
-la sección de constantes del fichero, en el resto listaremos a partir del {\tt .text}.
-
-\begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1}]
+\begin{lstlisting}[caption={inter.inc},label={lst:codigoPract5_0}]
+      .macro    ADDEXC  par1, par2
+        ldr     r1, =(\par2-\par1+0xa7fffffb)
+        ror     r1, #2
+        str     r1, [r0, #\par1]
+      .endm
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00
         .set    GPFSEL1,        0x04
         .set    GPFSEL2,        0x08
         .set    GPSET0,         0x1c
         .set    GPCLR0,         0x28
+        .set    GPEDS0,         0x40
+        .set    GPREN0,         0x58
+        .set    GPPUD,          0x94
+        .set    GPPUDCLK0,      0x98
         .set    STBASE,   0x20003000
         .set    STCS,           0x00
         .set    STCLO,          0x04
         .set    STC1,           0x10
+        .set    STC3,           0x18
         .set    INTBASE,  0x2000b000
+        .set    INTFIQCON,     0x20c
         .set    INTENIRQ1,     0x210
+        .set    INTENIRQ2,     0x214
+\end{lstlisting}
+
+El método para incluir el código fuente de un fichero dentro de otro es mediante
+la macro {\tt .include}, todos nuestros ficheros comienzarán con lo siguiente.
+
+\begin{lstlisting}
+        .include  "inter.inc"
+\end{lstlisting}
+
+\subsection{Encender un LED en aproximadamente 4 segundos}
+
+Se trata de programar el comparador y las interrupciones para que
+transcurrido un tiempo determinado se produzca una interrupción, dentro
+de la cual se encienda el LED. Es un caso muy sencillo porque sólo
+se va a producir una interrupción que viene de una única fuente, por
+lo que en la RTI básicamente lo que haremos es encender el LED.
+
+El diagrama que vamos a usar es el siguiente.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/inter1.png}
+  \caption{Interrupciones}
+  \label{fig:inter1}
+\end{figure}
+
+En el código de inicialización leeremos el valor del contador, le
+sumaremos el tiempo que queramos en microsegundos para finalmente
+escribirlo en el comparador. Por otro lado hacemos las tareas
+rutinarias en cuanto a inicialización del puerto GPIO, escritura
+en vector, habilitación de interrupciones para C1 y del bit I en {\tt cpsr}.
+
+\begin{lstlisting}[caption={inter1.c},label={lst:codigoPract5_1}]
+        .include  "inter.inc"
 .text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        ldr     r0, =GPBASE
+        ldr     r1, =0b00000000000000000000001001001001
+        str     r1, [r0, #GPFSEL0]
+        ldr     r0, =STBASE
+        ldr     r1, [r0, #STCLO]
+        add     r1, #0x400000   @4,19 segundos
+        str     r1, [r0, #STC1]
+        ldr     r0, =INTBASE
+        mov     r1, #0b0010
+        str     r1, [r0, #INTENIRQ1]
+        mov     r0, #0x53     @modo SVC, IRQ activo
+        msr     cpsr_c, r0
+bucle:  b       bucle
+
+irq_handler:
+        push    {r0, r1}
+        ldr     r0, =GPBASE
+        mov     r1, #0b00000000000000000000000000000101
+        str     r1, [r0, #GPSET0]
+        pop     {r0, r1}
+        subs    pc, lr, #4
+\end{lstlisting}
+
+En este ejemplo no hemos inicializado la pila para facilitar su lectura,
+y aunque funcione no es para nada recomendable. Al no inicializar el puntero
+de pila podemos escribir en cualquier zona no permitida y provocar un cuelgue.
+
+\subsection{Parpadeo de todos los LEDs}
+
+Sería hacer lo mismo que en la lección anterior pero empleando interrupciones y aplicando
+la salida simultáneamente a los 6 LEDs en lugar de sólo al primero. La novedad en lo
+que a interrupciones se refiere consiste en reprogramar el comparador C1 cada vez que
+se produzca una interrupción, de esta forma conseguimos interrupciones periódicas en lugar
+de una única interrupción.
+
+Veamos el código.
+
+\begin{lstlisting}[caption={inter2.c},label={lst:codigoPract5_2}]
+        .include  "inter.inc"
+.text
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000000001001000000
+        ldr     r1, =0b00000000000000000000001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -472,17 +553,9 @@ la sección de constantes del fichero, en el resto listaremos a partir del {\tt 
         ldr     r0, =INTBASE
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
-        mov     r0, #0x53     @SVC mode, IRQ enable
+        mov     r0, #0x53     @modo SVC, IRQ activo
         msr     cpsr_c, r0
 bucle:  b       bucle
-
-add_exception:
-        sub     r1, r0
-        lsr     r1, #2
-        sub     r1, #2
-        orr     r1, #0xea000000
-        str     r1, [r0]
-        bx      lr
 
 irq_handler:
         push    {r0, r1, r2}
@@ -491,7 +564,7 @@ irq_handler:
         eors    r1, #1
         str     r1, [r0]
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000010000100000110000001100
+        ldr     r1, =0b00000000010000100000110000001111
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
         ldr     r0, =STBASE
@@ -511,18 +584,17 @@ Y vamos enumerando, por orden, los pasos que hemos seguido. En primer lugar apun
 RTI en el vector de excepciones.
 
 \begin{lstlisting}
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
 \end{lstlisting}
 
 Luego inicializamos los punteros de pila.
 
 \begin{lstlisting}
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 \end{lstlisting}
@@ -531,7 +603,7 @@ Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
 
 \begin{lstlisting}
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000000001001000000
+        ldr     r1, =0b00000000000000000000001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -588,11 +660,10 @@ irq_handler:
         eors    r1, #1
         str     r1, [r0]
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000010000100000110000001100
+        ldr     r1, =0b00000000010000100000110000001111
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
 \end{lstlisting}
-
 
 Luego escribimos un 1 en el {\tt M1} de {\tt CS}, para resetear el estado de coincidencia, ya
 que de lo contrario el gestor de interrupciones verá el bit siempre a 1 y no lanzará más
@@ -638,7 +709,15 @@ Vamos a complicar un poco las cosas. En la RTI anterior sabíamos de antemano qu
 de interrupción es {\tt C1} del {\tt System Timer}. Por eso directamente hacíamos conmutar el
 LED sin comprobar nada más, esto es porque sabemos que ningún otro evento provocará una {\tt IRQ}.
 
-Ahora vamos a meter una segunda fuente de interrupción para controlar el altavoz. Sacar un tono
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/inter3.png}
+  \caption{Interrupciones}
+  \label{fig:inter3}
+\end{figure}
+
+Ahora vamos a meter una segunda fuente de interrupción para controlar el altavoz, como podemos
+observar en la figura \ref{fig:inter3}. Sacar un tono
 puro por el altavoz es equivalente a hacer parpadear un LED, lo único que cambia es que usamos
 otro pin distinto {\tt GPIO 4} y aumentamos la frecuencia para que sea audible (a 1Hz el oído
 humano no captaría sonido alguno). Utilizaremos la frecuencia estándar de afinación
@@ -658,19 +737,19 @@ para almacenar {\tt INTBASE}.
 
 El código completo del ejemplo es el siguiente.
 
-\begin{lstlisting}[caption={Parte de inter2.c},label={lst:codigoPract5_2}]
+\begin{lstlisting}[caption={inter3.c},label={lst:codigoPract5_3}]
+        .include  "inter.inc"
 .text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -684,17 +763,9 @@ El código completo del ejemplo es el siguiente.
         ldr     r0, =INTBASE
         mov     r1, #0b1010
         str     r1, [r0, #INTENIRQ1]
-        mov     r0, #0x53     @SVC mode, IRQ enable
+        mov     r0, #0x53     @modo SVC, IRQ activo
         msr     cpsr_c, r0
 bucle:  b       bucle
-
-add_exception:
-        sub     r1, r0
-        lsr     r1, #2
-        sub     r1, #2
-        orr     r1, #0xea000000
-        str     r1, [r0]
-        bx      lr
 
 irq_handler:
         push    {r0, r1, r2, r3}
@@ -704,7 +775,7 @@ irq_handler:
         ands    r2, #0b0010
         beq     sonido
         ldr     r2, =cuenta
-        ldr     r3, =0b00000000010000100000110000001100
+        ldr     r3, =0b00000000010000100000110000001111
         str     r3, [r1, #GPCLR0]
         ldr     r3, [r2]          @cuenta
         subs    r3, #1
@@ -743,8 +814,8 @@ secuen: .word   0b00000000000100000000000
         .word   0b00000000000010000000000
         .word   0b10000000000000000000000
         .word   0b00000100000000000000000
-        .word   0b00000000000000000001000
-        .word   0b00000000000000000000100
+        .word   0b00000000000000000001010
+        .word   0b00000000000000000000101
 \end{lstlisting}
 
 Como es muy parecido al ejemplo de antes, sólo vamos a comentar las diferencias que encontremos.
@@ -753,7 +824,7 @@ pin, el GPIO 4, para manejar el altavoz.
 
 \begin{lstlisting}
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
 \end{lstlisting}
 
@@ -771,8 +842,8 @@ interrupción como para habilitarla individualmente.
         str     r1, [r0, #INTENIRQ1]
 \end{lstlisting}
 
-Ya hemos acabado con el programa principal, veamos ahora la RTI. Primero explicamos mostramos
-el esquema general y luego las rutinas individuales tanto para el manejo de LEDs como para el
+Ya hemos acabado con el programa principal, veamos ahora la RTI. Primero mostramos la estructura
+del código y luego las rutinas individuales tanto para el manejo de LEDs como para el
 altavoz.
 
 \begin{lstlisting}
@@ -802,17 +873,17 @@ constantemente leyendo y escribiendo registros y no es plan de tener que cargar 
 base cada vez.
 
 Es un error muy habitual suponer que la fuente de la interrupción sólo ha sido una, aunque
-más del 99% de las veces sea así se puede dar el caso de que coincidan los dos comparadores
+más del 99\% de las veces sea así se puede dar el caso de que coincidan los dos comparadores
 a la vez. De la misma forma si sabemos que sólo hay dos fuentes y una de ellas no ha
-provocado la interrupción, por fuerzas ha tenido que ser la otra, podemos ahorrarnos la
+provocado la interrupción, por descarte ha tenido que ser la otra, podemos ahorrarnos la
 comprobación.
 
-Así que el flujo es así, leemos {\tt M1} para ver si la interrupción la ha provocado el
-comparador de {\tt C1}, si ha sido así ejecutamos el código de manejo de LEDs. Si no,
+Así que el flujo es así: leemos {\tt M1} para ver si la interrupción la ha provocado el
+comparador de {\tt C1}, si ha sido así ejecutamos el código de manejo de LEDs; si no,
 saltamos directamente al manejo del altavoz (sabemos seguro que la fuente viene de ahí).
 
 Tras el código del manejo de LEDs leemos {\tt M3} para saber si además de {\tt C1} ha
-saltado también el comparador {\tt C3}. Si no ha saltado, lo más normal, salimso por
+saltado también el comparador {\tt C3}. Si no ha saltado, lo más normal, salimos por
 {\tt final}; si lo ha hecho, procesamos la interrupción con el código de manejo del altavoz
 para luego salir de la RTI.
 
@@ -829,7 +900,7 @@ el código seguido de las variables empleadas en el mismo.
 
 \begin{lstlisting}
         ldr     r2, =cuenta
-        ldr     r3, =0b00000000010000100000110000001100
+        ldr     r3, =0b00000000010000100000110000001111
         str     r3, [r1, #GPCLR0]
         ldr     r3, [r2]          @cuenta
         subs    r3, #1
@@ -849,8 +920,8 @@ secuen: .word   0b00000000000100000000000
         .word   0b00000000000010000000000
         .word   0b10000000000000000000000
         .word   0b00000100000000000000000
-        .word   0b00000000000000000001000
-        .word   0b00000000000000000000100
+        .word   0b00000000000000000001010
+        .word   0b00000000000000000000101
 \end{lstlisting}
 
 En la variable {\tt cuenta} almacenamos un contador que va desde 5 hasta 0, que actua
@@ -860,7 +931,7 @@ restablecemos la cuenta a 5 mediante la instrucción de ejecución condicional {
 
 Nótese que al escribir en la variable {\tt cuenta} hacemos un postincremento de 4, con el
 cual apuntamos al array {\tt secuen} sin necesidad de una instrucción de suma específica.
-En dicho array tenemos almacenadas las posiciones que corresponden los LEDs dentro del
+En dicho array tenemos almacenadas las posiciones que corresponden a los LEDs dentro del
 registro {\tt GPSET0}, cada posición del array es para encender un LED en concreto. Antes
 de esto hemos apagado todos los LEDs enviando el valor que codifica todos los LEDs al
 registro {\tt GPCLR0}.
@@ -890,7 +961,7 @@ sonido: ldr     r2, =bitson
 bitson: .word   0
 \end{lstlisting}
 
-Es un calco de la rutina que hacía parpadear todos los LEDs en la lección anterior, cambiando
+Es un calco de la rutina que hacía parpadear todos los LEDs, cambiando
 el valor que se envia a {\tt GPCLR0/GPSET0}, el comparador que es {\tt C3} en lugar de {\tt C1},
 y el valor que sumamos al temporizador, que se corresponde a 440Hz en vez de 1Hz.
 
@@ -900,29 +971,32 @@ Este ejemplo es muy parecido al anterior pero con cambios sutiles. El hecho de c
 las dos IRQs por una FIQ incluso simplifica el código, ya que tienen distintas RTIs y en cada
 una la fuente de interrupción es única, por lo que no hay que comprobar nada ni hacer saltos.
 
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/inter4.png}
+  \caption{Interrupciones}
+  \label{fig:inter4}
+\end{figure}
+
 Empecemos con el programa principal. Aquí sí que hay cambios porque tenemos que agregar un
 elemento nuevo al vector de excepciones, inicializar el puntero de pila del modo FIQ y activar
 la fuente de interrupción FIQ local y globalmente.
 
-\begin{lstlisting}[caption={Programa principal de inter3.c},label={lst:codigoPract5_1}]
-.text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0x1c     @FIQ vector
-        ldr     r1, =fiq_handler
-        bl      add_exception
-        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
+\begin{lstlisting}[caption={Programa principal de inter4.c},label={lst:codigoPract5_4}]
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        ADDEXC  0x1c, fiq_handler
+        mov     r0, #0xd1     @modo FIQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x4000
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
@@ -938,7 +1012,7 @@ la fuente de interrupción FIQ local y globalmente.
         str     r1, [r0, #INTENIRQ1]
         mov     r1, #0x80 | 3
         str     r1, [r0, #INTFIQCON]
-        mov     r0, #0x13     @SVC mode, FIQ&IRQ enable
+        mov     r0, #0x13     @modo SVC, FIQ&IRQ activo
         msr     cpsr_c, r0
 bucle:  b       bucle
 \end{lstlisting}
@@ -969,7 +1043,7 @@ Nosotros queremos {\tt C3}, que es el bit 3 del {\tt IRQ 1}, por tanto índice 3
 interrupción. Además del índice ponemos el bit 7 a uno para indicar que queremos habilitar
 dicha fuente {\tt 0x80 | 3}.
 
-Ahora veamos el manejador IRQ (la RTI), que como hemos adelantado, es más sencilla que en el
+Ahora veamos el manejador IRQ (la RTI) que, como hemos adelantado, es más sencilla que en el
 ejemplo anterior.
 
 \begin{lstlisting}
@@ -977,7 +1051,7 @@ irq_handler:
         push    {r0, r1, r2}
         ldr     r0, =GPBASE
         ldr     r1, =cuenta
-        ldr     r2, =0b00000000010000100000110000001100
+        ldr     r2, =0b00000000010000100000110000001111
         str     r2, [r0, #GPCLR0]
         ldr     r2, [r1]        @cuenta
         subs    r2, #1
@@ -1011,9 +1085,9 @@ secuen: .word   0b00000000000100000000000
         .word   851
         .word   0b00000100000000000000000
         .word   956
-        .word   0b00000000000000000001000
+        .word   0b00000000000000000001010
         .word   1012
-        .word   0b00000000000000000000100
+        .word   0b00000000000000000000101
         .word   1136
 \end{lstlisting}
 
@@ -1023,7 +1097,7 @@ Las notas serían, en hercios: LA (440), SI (493,88), DO (523,25), RE (587,33), 
 FA (698,46).
 
 Finalmente tenemos el manejador de FIQ asociado al altavoz. La elección de la fuente de
-interrupción es arbitraria, hemos escogido FIQ para el altavoz porque se ejecutará más veces
+interrupción no es arbitraria, hemos escogido FIQ para el altavoz porque se ejecutará más veces
 que el cambio de LEDs, concretamente 220 veces más con la nota más grave. En estos ejemplos
 no importa, pero en casos reales donde el tiempo de CPU es un recurso limitado, los ciclos
 que nos ahorramos con una FIQ en un proceso crítico pueden ser determinantes.
@@ -1067,12 +1141,20 @@ son los pulsadores, eso es lo que veremos en el siguiente ejemplo.
 \subsection{Control de luces/sonido con pulsadores en lugar temporizadores}
 
 Los pulsadores izquierdo y derecho de nuestra placa externa están asociados a los
-puertos {\tt GPIO 21} y {\tt GPIO 9} respectivamente. Veremos cómo se genera una
-interrupción al pulsar cualquiera de los mismos, aunque desde un punto de vista
-práctico lo que se hace normalmente es leer todas las entradas a la vez períodicamente
+puertos {\tt GPIO 27 (GPIO 21 en rev1)} y {\tt GPIO 9} respectivamente. Veremos
+cómo se genera una interrupción al pulsar cualquiera de los mismos, aunque desde
+un punto de vista práctico lo que se hace normalmente cuando se lee de un teclado
+es leer todas las entradas a la vez períodicamente
 (puede ser una RTI asociada a un temporizador) y almacenarlas en un array.
 
-Desde un punto de vista eléctrico un pulsador no es más que un interruptor que deja pasar
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/inter5.png}
+  \caption{Interrupciones}
+  \label{fig:inter5}
+\end{figure}
+
+Eléctricamente un pulsador no es más que un interruptor que deja pasar
 la corriente cuando está pulsado y se queda en circuito abierto en su posición de reposo
 (sin pulsar). De los dos contactos que tiene, uno se conecta a masa y el otro al pin de
 entrada de la Raspberry. Así que cuando lo pulsamos hacemos un corto que llevaría los cero
@@ -1084,9 +1166,11 @@ los 3.3V de la alimentación, o bien configurar el puerto GPIO para que lo haga 
 (dentro del chip) con algo equivalente a una resistencia. Como nuestro circuito pulsador no
 tiene resistencia externa, en nuestro ejemplo no tenemos más remedio que configurar la interna.
 
-Las entradas no hay que configurarlas, o mejor dicho, cuando escribimos en los registros
-{\tt GPFSELx} lo hacemos rellenando con valores a {\tt 000} los pines que no usamos, que se
-corresponde con la función de entrada.
+Las entradas no hay que configurarlas, o mejor dicho, el valor {\tt 000} que se corresponde
+con una entrada en los registros {\tt GPFSELx} lo usamos indistintamente para entradas como
+para pines no usados. Desde un punto de vista eléctrico es más seguro dejar los pines no usados
+como entradas, de esta forma evitamos que un corto con alimentación u otra salida pueda estropear
+el aparato.
 
 Nuestro programa principal tendrá lo de siempre, más la configuración de las resistencias
 {\tt pull-up} (se llaman así cuando se conectan a alimentación, cuando lo hacen a masa se
@@ -1105,22 +1189,12 @@ gpio_int[2]
 gpio_int[3]
 \end{lstlisting}
 
-Y como es habitual, no se explica nada más. Podríamos ponernos a probar nosotros mismos, pero
-una simple búsqueda en internet damos con un usuario (cdbrown) en los foros de raspberry.org
-que se ha encontrado con el mismo problema, y ha hecho un simple experimento forzando
-interrupciones sobre los puertos GPIO 4, 17, 30, 31 y 47. La tabla de resultados es ésta.
-
-\begin{lstlisting}
-GPIO pin:         4    17   30   31   47
-gpio_irq0 (49)    Y    Y    Y    Y    N
-gpio_irq1 (50)    N    N    Y    Y    N
-gpio_irq2 (51)    N    N    N    N    Y
-gpio_irq3 (52)    Y    Y    Y    Y    Y
-\end{lstlisting}
-
-Una {\tt Y} indica que se produce la interrupción. Podemos concluir que si queremos una fuente
-que salte con cualquier interrupción (ya la configuraremos individualmente en los registros GPIO)
-esa es la {\tt gpio\_irq3}.
+Como es habitual no se explica nada más. Podríamos investigar nosotros mismos a qué se corresponde
+cada bit, pero con una simple búsqueda en internet nos damos cuenta de que gpio\_int0, gpio\_int1 y
+gpio\_int2 se disparan con subconjuntos de GPIOs, mientras que gpio\_int3 lo hace al activarse
+cualquier pin. Como lo que queremos es una fuente
+que salte con cualquier línea GPIO (ya la configuraremos individualmente en los registros GPIO)
+nos quedamos con el bit {\tt gpio\_int3}.
 
 Por suerte la parte de documentación que afecta a la configuración de los pull-ups está más
 completa.
@@ -1129,15 +1203,15 @@ completa.
 The GPIO Pull-up/down Clock Registers control the actuation of internal pull-downs on 
 the respective GPIO pins. These registers must be used in conjunction with the GPPUD 
 register  to  effect  GPIO  Pull-up/down  changes.  The  following  sequence  of  events  is 
-required: 
+required:\\
 1.  Write to GPPUD to set the required control signal(i.e. Pull-up or Pull-Down or neither 
-to remove the current Pull-up/down) 
-2.  Wait 150 cycles – this provides the required set-up time for the control signal 
+to remove the current Pull-up/down)\\
+2.  Wait 150 cycles – this provides the required set-up time for the control signal\\
 3.  Write to GPPUDCLK0/1 to clock the control signal into the GPIO pads you wish to 
 modify – NOTE only the pads which receive a clock will bemodified, all others will 
-retain their previous state. 
-4.  Wait 150 cycles – this provides the required hold time for the control signal 
-5.  Write to GPPUD to remove the control signal 
+retain their previous state\\
+4.  Wait 150 cycles – this provides the required hold time for the control signal\\
+5.  Write to GPPUD to remove the control signal\\
 6.  Write to GPPUDCLK0/1 to remove the clock}
 
 Una de las cosas que tenemos que hacer es esperar 150 ciclos (como mínimo). Como
@@ -1153,36 +1227,32 @@ wait1:  subs    r2, #1
 
 Y por último, el programa principal quedaría así.
 
-\begin{lstlisting}[caption={Programa principal de inter4.c},label={lst:codigoPract5_1}]
-.text
-        mov     r0, #0x18     @IRQ vector
-        ldr     r1, =irq_handler
-        bl      add_exception
-        mov     r0, #0x1c     @FIQ vector
-        ldr     r1, =fiq_handler
-        bl      add_exception
-        mov     r0, #0xd1     @FIQ mode, FIQ&IRQ disable
+\begin{lstlisting}[caption={Programa principal de inter5.c},label={lst:codigoPract5_5}]
+        mov     r0, #0        @apunto tabla excepciones
+        ADDEXC  0x18, irq_handler
+        ADDEXC  0x1c, fiq_handler
+        mov     r0, #0xd1     @modo FIQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x4000
-        mov     r0, #0xd2     @IRQ mode, FIQ&IRQ disable
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     @SVC mode, FIQ&IRQ disable
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
         ldr     r0, =GPBASE
-        mov     r1, #0b00000000000000000001001001000000
+        ldr     r1, =0b00000000000000000001001001001001
         str     r1, [r0, #GPFSEL0]
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
         mov     r1, #0b00000000000000000000000001000000
         str     r1, [r0, #GPFSEL2]
-        mov     r1, #0b00000000000000000000100
+        mov     r1, #0b00000000000000000000101
         str     r1, [r0, #GPSET0]
         mov     r1, #2
         str     r1, [r0, #GPPUD]
         bl      wait
-        ldr     r1, =0b00001000000000000000001000000000
+        ldr     r1, =0b00001000001000000000001000000000
         str     r1, [r0, #GPPUDCLK0]
         bl      wait
         mov     r2, #0
@@ -1197,28 +1267,27 @@ Y por último, el programa principal quedaría así.
         str     r1, [r0, #INTENIRQ2]
         mov     r1, #0x80 | 1
         str     r1, [r0, #INTFIQCON]
-        mov     r0, #0x13     @SVC mode, FIQ&IRQ enable
+        mov     r0, #0x13     @modo SVC, FIQ&IRQ activo
         msr     cpsr_c, r0
 bucle:  b       bucle
 \end{lstlisting}
 
 El valor escrito en {\tt GPPUD} es un 2, que se corresponde con {\tt pull-ups} (para pull-downs
 sería un 1 y para desactivarlo un 0). En {\tt GPPUDCLK0} indicamos que queremos conectar esas
-resistencias a los puertos GPIO 9 y 21 (pulsadores), y en {\tt GPREN0} le decimos al controlador
+resistencias a los puertos GPIO 9 y 27/21 (pulsadores), y en {\tt GPREN0} le decimos al controlador
 de interrupciones que esos pines serán los únicos que provoquen interrupciones, concretamente
 flancos con de subida síncronos (justo en el momento en que el botón toca fondo).
 
-El manejador FIQ es idéntico al de la lección anterior, saca el sonido que corresponde al LED
-por el altavoz, lo único que empleando {\tt C1} en lugar de {\tt C3}.
+El manejador FIQ es idéntico al del ejemplo anterior, saca el sonido que corresponde al LED
+por el altavoz, cambiando {\tt C3} por {\tt C1}.
 
 Lo más relevante de este ejemplo está en la RTI asociada a la IRQ, que es la siguiente.
 
 \begin{lstlisting}
-irq_handler:
         push    {r0, r1, r2}
         ldr     r0, =GPBASE
         ldr     r1, =cuenta
-        ldr     r2, =0b00000000010000100000110000001100
+        ldr     r2, =0b00000000010000100000110000001111
         str     r2, [r0, #GPCLR0]
         ldr     r2, [r0, #GPEDS0]
         ands    r2, #0b00000000000000000000001000000000
@@ -1228,7 +1297,7 @@ irq_handler:
         subs    r2, #1
         movmi   r2, #5
         b       conti
-incre:  mov     r2, #0b00001000000000000000000000000000
+incre:  mov     r2, #0b00001000001000000000000000000000
         str     r2, [r0, #GPEDS0]
         ldr     r2, [r1]        @cuenta
         add     r2, #1
@@ -1253,9 +1322,9 @@ flag Z. También podría valer la instrucción {\tt tst}, que tiene la ventaja d
 el registro a la salida (de la misma forma que {\tt cmp} es el equivalente no destructivo de
 {\tt subs}).
 
-Y por último tenemos que sacar la secuencia inversa a la que teníamos para que al pulsar el
-botón izquierdo las luces vayan hacia la izquierda y que con el botón derecho vayan hacia
-el otro lado. Si la secuencia de izquierda a derecha era  (5, 4, 3, 2, 1, 0, 5, 4...), la
+Y por último debemos sacar la secuencia inversa a la que teníamos para que al pulsar el
+botón izquierdo las luces vayan hacia la izquierda y que con el botón derecho vayan en el otro
+sentido. Si la secuencia de izquierda a derecha era  (5, 4, 3, 2, 1, 0, 5, 4...), la
 inversa sería (0, 1, 2, 3, 4, 5, 0, 1...). Es decir, incrementamos y cuando llegamos al 6
 lo convertimos en un cero. Ésto se hace con el siguiente fragmento.
 
@@ -1265,20 +1334,20 @@ lo convertimos en un cero. Ésto se hace con el siguiente fragmento.
         moveq   r2, #0
 \end{lstlisting}
 
-Nótese que aquí la opción destructiva {\tt subs} no nos vale porque necesitamos el valor del
-registro después. Sí que podemos cambiarlo por un {\tt teq} (la alternativa no destructiva
-de {\tt eors}).
+Nótese que aquí la opción destructiva {\tt subs} (en lugar de {\tt cmp}) no nos vale porque
+necesitamos el valor del registro después. Sí que podemos cambiarlo por un {\tt teq} (la
+alternativa no destructiva de {\tt eors}).
 
 \section{Ejercicios}
 
 \subsection{Todo con IRQs}
 
-Modifica el último ejemplo ({\tt inter4.c}) para controlar el altavoz también con IRQs,
+Modifica el último ejemplo ({\tt inter5.c}) para controlar el altavoz también con IRQs,
 prescindiendo totalmente de las interrupciones FIQs.
 
 \subsection{Alargar secuencia a 10 y parpadeo}
 
-Partiendo de {\tt inter4.c} (o del resultado del ejercicio anterior) haz las siguientes
+Partiendo de {\tt inter5.c} (o del resultado del ejercicio anterior) haz las siguientes
 modificaciones. Si te resulta más cómodo, realízalas por orden.
 
 \begin{itemize}
@@ -1293,7 +1362,7 @@ modificaciones. Si te resulta más cómodo, realízalas por orden.
 
 \subsection{Tope de secuencia y limitar sonido}
 
-Partiendo de {\tt inter4.c} (o del resultado del ejercicio anterior) haz las siguientes
+Partiendo de {\tt inter5.c} (o del resultado del ejercicio anterior) haz las siguientes
 modificaciones. Si te resulta más cómodo, realízalas por orden.
 
 \begin{itemize}
