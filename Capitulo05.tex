@@ -68,8 +68,8 @@ Error en datos          & 4 & {\tt 0x10} & Abort \\ \hline
 Reservado               & 5 & {\tt 0x14} & Reservado \\ \hline
 IRQ                     & 6 & {\tt 0x18} & IRQ \\ \hline
 FIQ                     & 7 & {\tt 0x1C} & FIQ \\ \hline
-\label{tab:excepciones}
 \caption{Vector de excepciones}
+\label{tab:excepciones}
 \end{longtable}
 
 La última columna se refiere al {\it Modo de operación} que comentamos en el primer
@@ -211,21 +211,21 @@ restaurar el registro {\tt cpsr} que había antes de la interrupción.
 Imaginemos que el programa principal está en modo supervisor y que la interrupción que
 esperamos el del tipo IRQ.
 Cada modo de operación (en particular el modo IRQ) tiene 3 registros replicados: {\tt sp}, {\tt lr} y {\tt spsr}.
-Para evitar confusiones los nombramos con los sufijos de modo {\tt _svc} y {\tt _irq} correspondientes.
+Para evitar confusiones los nombramos con los sufijos de modo {\tt \_svc} y {\tt \_irq} correspondientes.
 Cuando ocurre una interrupción pasamos de modo supervisor a modo IRQ, pero antes hemos guardado
-el registro {\tt cpsr} en {\tt spsr_irq} (Saved Program Status Register).
+el registro {\tt cpsr} en {\tt spsr\_irq} (Saved Program Status Register).
 
-Los registros {\tt sp_svc} y {\tt lr_svc} no se tocan para nada, con lo que no alteramos ni la
-pila ni el registro de retorno del modo supervisor. El registro {\tt lr_irq} se carga apuntando a la
+Los registros {\tt sp\_svc} y {\tt lr\_svc} no se tocan para nada, con lo que no alteramos ni la
+pila ni el registro de retorno del modo supervisor. El registro {\tt lr\_irq} se carga apuntando a la
 instrucción {\tt pc+4}. El resto de registros debemos salvarlos en pila si tenemos la intención
-de modificarlos en nuestra RTI, al tener registro propio {\tt sp_irq} se trata de una pila
-independiente que no interfiere con la principal {\tt sp_svc}. Luego se ejecuta el código
+de modificarlos en nuestra RTI, al tener registro propio {\tt sp\_irq} se trata de una pila
+independiente que no interfiere con la principal {\tt sp\_svc}. Luego se ejecuta el código
 particular de la RTI, empleando a nuestro antojo los registros previamente salvados, y antes de
 acabar la RTI recuperamos con su {\tt pop} correspondiente.
 
-Al terminar la interrupción restauramos {\tt pc} partiendo {\tt lr_irq} y {\tt cpsr} del registro
-{\tt spsr_irq}. Esto último fuerza un cambio de modo de IRQ a supervisor, conmutando {\tt sp} y {\tt lr}
-a sus registros propios {\tt sp_svc} y {\tt lr_svc}. Con todo esto conseguimos volver exactamente
+Al terminar la interrupción restauramos {\tt pc} partiendo {\tt lr\_irq} y {\tt cpsr} del registro
+{\tt spsr\_irq}. Esto último fuerza un cambio de modo de IRQ a supervisor, conmutando {\tt sp} y {\tt lr}
+a sus registros propios {\tt sp\_svc} y {\tt lr\_svc}. Con todo esto conseguimos volver exactamente
 al punto del que partíamos minimizando las
 operaciones que tiene que hacer la RTI y por tanto el retardo asociado. En otras arquitecturas
 además de delegar en la RTI este trabajo, se usa la misma pila de programa, lo que puede
@@ -275,16 +275,16 @@ El orden recomendado es el siguiente, aunque se pueden cambiar el mismo salvo el
 
 Veamos más detalladamente e ilustremos con código los puntos anteriores.
 
-\subsection{Escribimos en el vector de excepciones}
+\subsubsection{1. Escribimos en el vector de excepciones}
 
   Primero escribimos en {\tt r0} el valor cero que apunta al vector de excepciones.
-  Luego invocamos la macro para una IRQ, pasándole la etiqueta de nuestra RTI {\tt irq_handler}.
+  Luego invocamos la macro para una IRQ, pasándole la etiqueta de nuestra RTI {\tt irq\_handler}.
 \begin{lstlisting}
         mov     r0, #0        @apunto tabla excepciones
         ADDEXC  0x18, irq_handler
 \end{lstlisting}
 
-\subsection{Inicializamos punteros de pila}
+\subsubsection{2. Inicializamos punteros de pila}
 
 La única forma de acceder a ellos es cambiando de modo y modificando el registro {\tt sp}. En
 {\tt Bare Metal} nos olvidamos del modo Usuario, el sistema arranca en modo Supervisor y
@@ -322,13 +322,13 @@ Y en la siguiente tabla vemos cómo se codifica el modo de operación.
 Finalmente tenemos que el código que inicializa los punteros de pila es el siguiente.
 
 \begin{lstlisting}
-        mov     r0, #0xd1     \@modo FIQ, FIQ&IRQ desact
+        mov     r0, #0xd1     @modo FIQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x4000
-        mov     r0, #0xd2     \@modo IRQ, FIQ&IRQ desact
+        mov     r0, #0xd2     @modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0xd3     \@modo SVC, FIQ&IRQ desact
+        mov     r0, #0xd3     @modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 \end{lstlisting}
@@ -336,7 +336,7 @@ Finalmente tenemos que el código que inicializa los punteros de pila es el sigu
 En concreto a {\tt 0x4000}, {\tt 0x8000} y {\tt 0x8000000} para los modos {\tt FIQ}, {\tt IRQ} y
 {\tt Supervisor} respectivamente.
 
-\subsection{Código de inicialización ajeno a interrupciones}
+\subsubsection{3. Código de inicialización ajeno a interrupciones}
 
 En nuestros ejemplos se trata de configurar los periféricos, por ejemplo indicar los puertos
 GPIO de entrada y de salida, inicializar temporizadores. En casos más complejos tendríamos que
@@ -355,7 +355,7 @@ El caso más recurrente en nuestros ejemplos es el de asignar el sentido a los p
         str     r1, [r0, #GPFSEL2]
 \end{lstlisting}
 
-\subsection{Inicializamos interrupciones localmente}
+\subsubsection{4. Inicializamos interrupciones localmente}
 
 Consiste en escribir en los registros asociados dependiendo de las fuentes que querramos
 activar. En este ejemplo habilitamos el comparador
@@ -367,7 +367,7 @@ activar. En este ejemplo habilitamos el comparador
         str     r1, [r0, #INTENIRQ1]
 \end{lstlisting}
 
-\subsection{Habilitamos interrupciones globalmente}
+\subsubsection{5. Habilitamos interrupciones globalmente}
 
 Se trata de poner a cero el bit correspondiente en {\tt cpsr}. El siguiente código habilita
 interrupciones del tipo IRQ.
@@ -377,14 +377,13 @@ interrupciones del tipo IRQ.
         msr     cpsr_c, r0
 \end{lstlisting}
 
-\subsection{Resto del programa principal}
+\subsubsection{6. Resto del programa principal}
 
 Como hemos adelantado, en todos nuestros ejemplos será un bucle infinito.
 
 \begin{lstlisting}
 bucle:  b       bucle
 \end{lstlisting}
-
 
 
 \subsection{Ejemplos de aplicación}
@@ -407,28 +406,6 @@ según la tabla \ref{tab:berry}.
 Sería hacer lo mismo que en la lección anterior pero empleando interrupciones y aplicando
 la salida simultáneamente a los 6 LEDs de la placa externa en lugar del LED que incluye
 la Raspberry. La cadencia debe ser de un segundo.
-
-Vamos a emplear otro temporizador, el {\tt System Timer}, distinto al de la lección anterior
-que era el {\tt ARM Timer}. Los registros asociados al temporizador son los de la figura
-\ref{fig:systim}.
-
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=14cm]{graphs/systemtimer.png}
-  \caption{System Timer}
-  \label{fig:systim}
-\end{figure}
-
-Básicamente con un contador de 64 bits y cuatro comparadores. El temporizador funciona a 1MHz,
-por lo que cada microsegundo se incrementa la cuenta del contador. Está dividido en dos partes,
-la parte baja {\tt CLO} y la parte alta {\tt CHI}. La parte alta no nos resulta interesante,
-porque tarda poco más de una hora en incrementarse y no va asociado a ningún comparador. Los
-comparadores son registros que se pueden modificar y se comparan con {\tt CLO}, en el momento
-que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
-comparador, se produce una interrupción y se activa el correspondiente {\tt Mx}
-asociado a {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
-Los comparadores {\tt C0} y {\tt C2} los emplea la GPU internamente, por lo que en nuestros
-ejemplos nos ceñiremos a los comparadores {\tt C1} y {\tt C3}.
 
 El temporizador ya está, luego tenemos los registros asociados a las interrupciones en la figura
 \ref{fig:interrupciones}.
@@ -534,7 +511,7 @@ Y vamos enumerando, por orden, los pasos que hemos seguido. En primer lugar apun
 RTI en el vector de excepciones.
 
 \begin{lstlisting}
-        mov     r0, #0x18     \@IRQ vector
+        mov     r0, #0x18     @IRQ vector
         ldr     r1, =irq_handler
         bl      add_exception
 \end{lstlisting}
