@@ -454,13 +454,22 @@ va asociado a ningún comparador.
 
 Los comparadores son registros que se pueden modificar y se comparan con {\tt CLO}, en el momento
 que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
-comparador, se produce una interrupción y se activa el correspondiente {\tt Mx}
-asociado a {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
+comparador, se produce una interrupción y se activa el correspondiente bit {\tt Mx}
+asociado al registro {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
 Los comparadores {\tt C0} y {\tt C2} los emplea la GPU internamente, por lo que nosotros nos
 ceñiremos a los comparadores {\tt C1} y {\tt C3}.
 
 Las interrupciones las veremos en la siguiente lección, en los ejemplos de esta sólo vamos
-a acceder al registro {\tt CLO} para hacer parpadear al LED a una frecuencia determinada.
+a acceder al registro {\tt CLO} para hacer parpadear al LED a una frecuencia determinada. El
+esquema funcional del {\tt System Timer} se muestra en la figura \ref{fig:esqtim}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/esquematimer.png}
+  \caption{Esquema funcional del System Timer}
+  \label{fig:esqtim}
+\end{figure}
+
 
 \section{Ejemplos de programas Bare Metal}
 

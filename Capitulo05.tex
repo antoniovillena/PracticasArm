@@ -15,7 +15,9 @@ comunica con los periféricos.
 
 Hacemos incapié en lo de {\it hardware} porque las
 {\it interrupciones software} no son más que las llamadas a sistema
-que vimos en el capítulo anterior. Ambas comparten vector de interrupciones,
+que vimos en el capítulo anterior. Ambas comparten vector de excepciones\footnote{Como
+en este capítulo nos centramos en las interrupciones sólo usaremos el término ``excepción'' en caso de excepciones
+que no sean interrupciones y para denominar al vector de excepciones},
 pero las {\it interrupciones software} son más bien llamadas a subrutinas.
 
 \section{Lectura previa}
@@ -75,7 +77,8 @@ FIQ                     & 7 & {\tt 0x1C} & FIQ \\ \hline
 La última columna se refiere al {\it Modo de operación} que comentamos en el primer
 capítulo, es un estado en el que se encuentra el procesador con una serie de privilegios
 con respecto a otros modos y que gracias a ellos podemos construir un sistema operativo
-con diferentes capas. Cada modo tiene sus propios registros {\tt sp}, {\tt lr} y {\tt spsr} de tal
+con diferentes capas. Cada modo tiene sus propios registros {\tt sp}, {\tt lr} y {\tt spsr}
+(Saved Program Status Register) de tal
 forma que no alteramos la pila ni los flags de la secuencia de programa que interrumpimos. Incluso
 el modo {\tt FIQ} tiene 5 registros generales propios (desde {\tt r8} hasta {\tt r12}),
 de esta forma si los empleamos en nuestra rutina de tratamiento no tendremos que
@@ -124,12 +127,11 @@ las interrupciones normales {\tt IRQ} y las interrupciones rápidas {\tt FIQ}.
 \end{itemize}
 
 Puesto que cada interrupción, $NI$, lleva asociada una rutina, de
-alguna forma, se le debe indicar a la CPU en qué parte de la tabla de
-vectores de interrupción se encuentra el vector de interrupción
-asociado, que contiene la instrucción de salto a la rutina que debe
+alguna forma, debe haber una correspondencia entre este $NI$
+y la ubicación del vector asociado, que contiene la instrucción de salto a la rutina que debe
 ejecutar cuando se produce la interrupción. La forma de hacerlo es multiplicar por
 cuatro el número de interrupción para obtener un desplazamiento
-($NI$*4). Se multiplica por 4 porque cada vector de interrupción
+($NI$*4). Se multiplica por 4 porque cada vector de excepción
 ocupa 4 bytes (es lo que ocupa una instrucción en ARM).
 
 Cuando se activa una interrupción, la CPU detiene su trabajo para
@@ -178,7 +180,7 @@ Es el segmento de código que se ejecuta para atender a una interrupción. Una v
 ejecutado dicha rutina, retomamos la ejecución normal de nuestro programa, justo después de la instrucción
 donde lo habíamos interrumpido. Cada rutina de tratamiento debe atender a todas las posibles
 fuentes de interrupción de su mismo tipo, con lo que al comienzo de la interrupción se suelen
-acceder a los registros asociados para detectar qué periférico ha causado la excepción y
+acceder a los registros asociados para detectar qué periférico ha causado la interrupción y
 actuar en consecuencia.
 
 Como sólo nos interesan {\tt IRQ} y {\tt FIQ}, a lo sumo sólo tendremos que escribir dos
@@ -212,7 +214,7 @@ esperamos el del tipo IRQ.
 Cada modo de operación (en particular el modo IRQ) tiene 3 registros replicados: {\tt sp}, {\tt lr} y {\tt spsr}.
 Para evitar confusiones los nombramos con los sufijos de modo {\tt \_svc} y {\tt \_irq} correspondientes.
 Cuando ocurre una interrupción pasamos de modo supervisor a modo IRQ, pero antes hemos guardado
-el registro {\tt cpsr} en {\tt spsr\_irq} (Saved Program Status Register).
+el registro {\tt cpsr} en {\tt spsr\_irq}.
 
 Los registros {\tt sp\_svc} y {\tt lr\_svc} no se tocan para nada, con lo que no alteramos ni la
 pila ni el registro de retorno del modo supervisor. El registro {\tt lr\_irq} se carga apuntando a la
@@ -403,6 +405,15 @@ La documentación oficial sobre la tabla de interrupciones está incompleta, per
 por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
 controlan con los 4 primeros bits de la tabla (uno para cada comparador).
 
+En la figura \ref{fig:interrupcionesgrupos} vemos los registros ordenados en grupos.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=15cm]{graphs/interrupcionesgrupos.png}
+  \caption{Agrupación de registros de interrupciones}
+  \label{fig:interrupcionesgrupos}
+\end{figure}
+
 \subsubsection{5. Habilitamos interrupciones globalmente}
 
 Se trata de poner a cero el bit correspondiente en {\tt cpsr}. El siguiente código habilita
@@ -468,8 +479,8 @@ la macro {\tt .include}, todos nuestros ficheros comienzarán con lo siguiente.
 Se trata de programar el comparador y las interrupciones para que
 transcurrido un tiempo determinado se produzca una interrupción, dentro
 de la cual se encienda el LED. Es un caso muy sencillo porque sólo
-se va a producir una interrupción que viene de una única fuente, por
-lo que en la RTI básicamente lo que haremos es encender el LED.
+se va a producir una interrupción que viene de una sola fuente, por
+lo que en la RTI lo único que haremos es encender el LED.
 
 El diagrama que vamos a usar es el siguiente.
 
@@ -719,9 +730,9 @@ LED sin comprobar nada más, esto es porque sabemos que ningún otro evento prov
 Ahora vamos a meter una segunda fuente de interrupción para controlar el altavoz, como podemos
 observar en la figura \ref{fig:inter3}. Sacar un tono
 puro por el altavoz es equivalente a hacer parpadear un LED, lo único que cambia es que usamos
-otro pin distinto {\tt GPIO 4} y aumentamos la frecuencia para que sea audible (a 1Hz el oído
+otro pin distinto {\tt GPIO 4} y aumentamos la frecuencia para que sea audible (a 1 Hz el oído
 humano no captaría sonido alguno). Utilizaremos la frecuencia estándar de afinación
-de 440 Hz, que coincide con el tono de espera de marcado en la telefonía fija.
+de 440 Hz, que coincide con el tono de espera de marcado en telefonía fija.
 
 Por otro lado en lugar de hacer parpadear todos los LEDs lo que haremos es repetir una
 secuencia de 6 posiciones en la que en todo momento sólo uno de los 6 LEDs está encendido, que
@@ -828,7 +839,8 @@ pin, el GPIO 4, para manejar el altavoz.
         str     r1, [r0, #GPFSEL0]
 \end{lstlisting}
 
-El siguiente código es para incluir el comparador {\tt C3}, tanto para proporcionar la primera
+El siguiente código es para incluir el comparador {\tt C3} (además del {\tt C1} que había
+anteriormente), tanto para proporcionar la primera
 interrupción como para habilitarla individualmente.
 
 \begin{lstlisting}
@@ -869,16 +881,16 @@ final:  pop     {r0, r1, r2, r3}
 
 Los registros {\tt r0} y {\tt r1} los hacemos apuntar a la base del {\tt System Timer} y del
 {\tt GPIO} y no tocamos dichos valores durante toda la interrupción, vamos a estar
-constantemente leyendo y escribiendo registros y no es plan de tener que cargar la
+constantemente leyendo y escribiendo registros y resulta incómodo tener que cargar la
 base cada vez.
 
 Es un error muy habitual suponer que la fuente de la interrupción sólo ha sido una, aunque
-más del 99\% de las veces sea así se puede dar el caso de que coincidan los dos comparadores
+la gran mayoría de las veces sea así se puede dar el caso de que coincidan los dos comparadores
 a la vez. De la misma forma si sabemos que sólo hay dos fuentes y una de ellas no ha
 provocado la interrupción, por descarte ha tenido que ser la otra, podemos ahorrarnos la
 comprobación.
 
-Así que el flujo es así: leemos {\tt M1} para ver si la interrupción la ha provocado el
+El flujo sería el siguiente: leemos {\tt M1} para ver si la interrupción la ha provocado el
 comparador de {\tt C1}, si ha sido así ejecutamos el código de manejo de LEDs; si no,
 saltamos directamente al manejo del altavoz (sabemos seguro que la fuente viene de ahí).
 
@@ -925,7 +937,7 @@ secuen: .word   0b00000000000100000000000
 \end{lstlisting}
 
 En la variable {\tt cuenta} almacenamos un contador que va desde 5 hasta 0, que actua
-índice para el array {\tt secuen}. Al decrementar aprovechamos la propia instrucción de
+como índice para el array {\tt secuen}. Al decrementar aprovechamos la propia instrucción de
 resta para comprobar que se ha llegado al final de la cuenta (-1), y en dicho caso
 restablecemos la cuenta a 5 mediante la instrucción de ejecución condicional {\tt movmi}.
 
@@ -963,7 +975,7 @@ bitson: .word   0
 
 Es un calco de la rutina que hacía parpadear todos los LEDs, cambiando
 el valor que se envia a {\tt GPCLR0/GPSET0}, el comparador que es {\tt C3} en lugar de {\tt C1},
-y el valor que sumamos al temporizador, que se corresponde a 440Hz en vez de 1Hz.
+y el valor que sumamos al temporizador, que se corresponde a 440 Hz en vez de a 1 Hz.
 
 \subsection{Manejo de FIQs y sonidos distintos para cada LED}
 
@@ -1039,9 +1051,9 @@ de fuentes de interrupción.
 Son las mismas fuentes que en IRQ pero condensadas en un único registro. De 0 a 31 coincide
 con la tabla {\tt IRQ 1}, de 32 a 63 con {\tt IRQ 2} y de 64 en adelante con {\tt IRQ Basic}.
 Nosotros queremos {\tt C3}, que es el bit 3 del {\tt IRQ 1}, por tanto índice 3 para la fuente
-{\tt FIQ}. Como veis, la única pega que tienen las FIQ es que sólo admite una fuente de
+{\tt FIQ}. Como veis, la única pega que tienen las FIQs es que sólo admiten una fuente de
 interrupción. Además del índice ponemos el bit 7 a uno para indicar que queremos habilitar
-dicha fuente {\tt 0x80 | 3}.
+dicha fuente, siendo la constante {\tt 0x80 | 3}.
 
 Ahora veamos el manejador IRQ (la RTI) que, como hemos adelantado, es más sencilla que en el
 ejemplo anterior.
@@ -1091,7 +1103,7 @@ secuen: .word   0b00000000000100000000000
         .word   1136
 \end{lstlisting}
 
-Serían las notas puras que van después del LA estándar de 440Hz (1136), cuyos semitonos se
+Serían las notas puras que van después del LA estándar de 440 Hz (1136), cuyos semitonos se
 obtienen multiplicando la frecuencia por raíz duodécima de 2, que es aproximadamente 1,05946.
 Las notas serían, en hercios: LA (440), SI (493,88), DO (523,25), RE (587,33), MI (659,26) y
 FA (698,46).
@@ -1144,7 +1156,7 @@ Los pulsadores izquierdo y derecho de nuestra placa externa están asociados a l
 puertos {\tt GPIO 27 (GPIO 21 en rev1)} y {\tt GPIO 9} respectivamente. Veremos
 cómo se genera una interrupción al pulsar cualquiera de los mismos, aunque desde
 un punto de vista práctico lo que se hace normalmente cuando se lee de un teclado
-es leer todas las entradas a la vez períodicamente
+es muestrear todas las teclas a la vez períodicamente
 (puede ser una RTI asociada a un temporizador) y almacenarlas en un array.
 
 \begin{figure}[h]
