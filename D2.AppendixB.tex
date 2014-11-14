@@ -1,5 +1,17 @@
-\input{hackcapitulo.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Documento LaTeX                                             %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Título:   Apéndice A
+% Autor:    Ignacio Moreno Doblas
+% Fecha:    2014-02-01
+% Versión:  0.5.0
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[RE]{Apéndice} %
+\fancyhead[LO]{\nouppercase{\rightmark}}
+%\fancyhead[RE]{Parte \thepart \rightmark} %
 
 \chapterbegin{Funcionamiento de la placa auxiliar}
 \label{chp:PlacaAux}
@@ -81,7 +93,4 @@ están presionados. Cuando están en reposo los pines del GPIO correspondientes
 quedan al aire, por lo que hay que activar por software las resistencias de
 {\tt pull-up} si queremos niveles lógicos consistentes.
 
-\chapterend{}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\end{document}
+\chapterend

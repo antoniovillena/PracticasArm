@@ -13,41 +13,165 @@
 
 \begin{sinopsis}
 \label{sec:intro:sinop}
-  Éste es el capítulo de introducción, donde se explica todo lo que un lector externo necesita para entender el resto de la documentación.
-  
-  El objetivo explica lo que persigue el proyecto, su finalidad.\nli
-  El \miindex{estado del arte} explica la situación actual del entorno en el que este proyecto\footnote{En adelante, se utiliza la palabra \tit{proyecto} como sinónimo de TFG/TFM/PFC, según se aplique (Nota del autor).} se desenvuelve.\nli
-  Las metodologías y directrices seguidas se centran en qué procedimientos se han utilizado durante el desarrollo del proyecto.\nli
-  La estructura del documento describe los capítulos de los que se compone, incluyendo apéndices e información adicional.\nli
-  Por último, el ámbito de aplicación completa el entorno de utilización del proyecto.
-  
-  Aunque estos cinco apartados no son obligatorios, al menos es recomendable considerar estos conceptos en el capítulo de introducción como una guía básica.
-  
-  Tampoco es obligatorio usar el entorno \LaTeX\ \ttw{minitoc} para cada capítulo.\nli
-  En caso de no querer usarlo, tan sólo hay que comentar la línea \ttw{\textbackslash \miindex{minitoc}}.
-  
-  Igualmente, esta sección inicial de Sinopsis no es obligatoria, se puede suprimir si no se desea.
-  
-  Por extensión y en general, esta plantilla es una guía cuyo objetivo es facilitar la realización del proyecto, no un reglamento estricto ni rígido.
+El minicomputador Raspberry Pi es una placa del tamaño de una tarjeta de crédito y un
+precio de sólo 30€. El objetivo principal de sus creadores, la Fundación Raspberry Pi,
+era promover la enseñanza de conceptos básicos de informática en los colegios e institutos.
+Sin embargo, ha terminado convirtiéndose también en un pequeño computador de bajo
+coste que se destina a muy diversos usos: servidor multimedia conectado al televisor,
+estación base para domótica en el hogar, estaciones meteorológicas, servidor de discos
+en red para copias de seguridad, o como un simple ordenador que puede ejecutar
+aplicaciones de internet, juegos, ofimática, etc. Esto ha llegado a ser así gracias
+a un vertiginoso crecimiento de la comunidad de desarrolladores para Raspberry Pi,
+y que estos han explorado casi todas las posibilidades para sacar el máximo partido
+de este ordenador de 30€. Esa gran funcionalidad y el bajo coste constituyen el
+principal atractivo de esta plataforma para los estudiantes. Sin embargo, para los
+docentes del Dept. de Arquitectura de Computadores, la Raspberry Pi ofrece una excusa
+perfecta para hacer más amenos y atractivos conceptos a veces complejos, y a veces
+también áridos, de asignaturas del área.
+
+Este PFC se enmarca dentro del Proyecto de Innovación Educativa PIE13-082, ``Motivando
+al alumno de ingeniería mediante la plataforma Raspberry Pi'' cuyo principal objetivo es
+aumentar el grado de motivación del alumno que cursa asignaturas impartidas por el
+Departamento de Arquitectura de Computadores. La estrategia propuesta se apoya en el
+hecho de que muchos alumnos de Ingeniería perciben que las asignaturas de la carrera
+están alejadas de su realidad cotidiana, y que por ello, pierden cierto atractivo. Sin
+embargo, bastantes de estos alumnos han comprado o piensan comprar un minicomputador
+Raspberry Pi que se caracteriza por proporcionar una gran funcionalidad, gracias a
+estar basado en un procesador y Sistema Operativo de referencia en los dispositivos
+móviles. En este proyecto proponemos aprovechar el interés que los alumnos ya
+demuestran por la plataforma Raspberry Pi, para ponerlo a trabajar en pro del
+siguiente objetivo docente: facilitar el estudio de conceptos y técnicas impartidas
+ en varias asignaturas del Departamento. Tres de estas asignaturas son:
+
+\begin{itemize}
+  \item{Estructura de Computadores:} Asignatura obligatoria del módulo de Formación
+        Común de las titulaciones de Grado en Ingeniería Informática, Grado en
+        Ingeniería de Computadores y Grado en Ingeniería del Software. Es una asignatura
+        que se imparte en el segundo curso.
+  \item{Sistemas Operativos:} Asignatura obligatoria del módulo de Formación Común de las
+        titulaciones de Grado en Ingeniería Informática, Grado en Ingeniería de
+        Computadores y Grado en Ingeniería del Software. Se imparte en segundo curso.
+  \item{Diseño de Sistemas Operativos:} Asignatura obligatoria del módulo de Tecnologías
+        Específicas del Grado de Ingeniería de Computadores. Se imparte en tercer curso.
+\end{itemize}
+
+En esas tres asignaturas, uno de los conceptos más básicos es el de gestión de
+interrupciones a bajo nivel. En particular, en Estructura de Computadores, esos
+conceptos se ilustraban en el pasado mediante prácticas en PCs con MSDOS y programación
+en ensamblador, pero el uso de ese sistema operativo ya no tiene ningún atractivo y
+además crea problemas de seguridad en los laboratorios del departamento. Sin embargo,
+la plataforma Raspberry Pi se convierte en una herramienta adecuada para trabajar a
+nivel de sistema, es económica y ya disponemos de unidades suficientes para usarlas
+en los laboratorios (40 equipos para ser exactos).
 \end{sinopsis}
  
 \sectionx{Objetivo}
 \label{sec:intro:obj}
-  En esta sección, se describe el \miindex{objetivo del proyecto}, es decir, qué pretende, a qué aspira, cuál es su meta.\nli
-  Es importante comprender esta sección, porque de otro modo, no se entiende el resto de la documentación.
+El principal objetivo de este PFC es la creación de un conjunto de prácticas enfocadas
+al aprendizaje de la programación en ensamblador, en concreto del ARMv6 que es el
+procesador de la plataforma que se va a utilizar para el desarrollo de las prácticas,
+así como al manejo a bajo nivel de las interrupciones y la entrada/salida en dicho procesador.
 
-\sectionx{Estado del arte}
-  Un proyecto se realiza sobre un \miindex{estado de la técnica} que debe explicarse para entender mejor conceptos tales como los problemas existentes o cuáles son las soluciones que se emplean hasta la fecha actual.
+Para alcanzar este objetivo tendremos que abordar las siguientes cuestiones, siempre
+bajo la supervisión directa de los tutores, mediante reuniones frecuentes con el alumno
+que realiza el PFC:
 
-  El \miindex{estado del arte}, a veces llamado estado de la técnica, suele estar presente en este tipo de documentos.
-  
+\begin{enumerate}
+  \item Estudio de las prácticas de programación en ensamblador x86 que se vienen realizando
+        en la actualidad junto con los objetivos docente perseguidos por las mismas, para
+        desarrollar una serie de guiones de prácticas similares, pero adaptadas a las
+        peculiaridades de la arquitectura destino (Raspberry Pi). Aparte del enunciado
+        de las prácticas, se desarrollará la documentación base necesaria para que el
+        alumno pueda desarrollar las mismas.
+  \item Estudio del subsistema de entrada/salida de la plataforma Raspberry Pi y su manejo
+        a bajo nivel sin el uso de librerías (puertos de entrada/salida, interrupciones,
+        temporizadores, salida por pantalla, ...). Se elaborará documentación acerca de todo
+        este subsistema, de forma que los alumnos puedan comprender su funcionamiento para
+        el posterior desarrollo de las prácticas relacionadas con la entrada/salida. 
+  \item Estudio de las prácticas de acceso a puertos de entrada/salida y gestión de
+        interrupciones en x86 y desarrollo de prácticas similares adaptadas al subsistema
+        de entrada/salida de la Raspberry Pi. Al ser este subsistema bastante distinto
+        entre las dos plataformas, habrá que tener especial cuidado en la elaboración del
+        guión de prácticas correspondiente, con objeto de que se cumplan los objetivos
+        docentes originales y que el futuro alumno de Estructura de Computadores pueda
+        llevarlas a cabo de la manera más autónoma posible.
+  \item Estudio del subsistema gráfico (GPU) integrado en la Raspberry Pi y su utilización
+        desde el lenguaje ensamblador sin el uso de ninguna librería. Elaboración de
+        documentación del uso del sistema gráfico desde ensamblador para su uso posterior
+        por parte de los alumnos en la realización de las prácticas. 
+\end{enumerate}
+
 \sectionx{Metodología y directrices seguidas}
-  Durante la elaboración del proyecto, se siguen procedimientos que el lector necesita conocer para entender de forma integral todo el documento.
+Como se ha presentado en los objetivos de este proyecto, el aspecto principal será el
+estudio a bajo nivel del nuevo sistema hardware que se va a utilizar en las prácticas
+de laboratorio, para posteriormente, en base a ese conocimiento, desarrollar y
+documentar adecuadamente las nuevas prácticas adaptadas a dicho hardware. Para todos
+los puntos a estudiar se van a consultar principalmente las abundantes fuentes de
+información que existen en internet, lo que supondrá posteriormente una labor
+cuidadosa de selección de información y redacción de la documentación adecuada para
+el objetivo docente de las prácticas.
 
-\sectionx{Estructura del documento}
- En esta sección, se explican los posteriores capítulos u otra información adicional que el proyecto contenga.
+El aprendizaje del lenguaje ensamblador del procesador ARM usado en la Raspberry Pi
+se puede llevar a cabo leyendo la documentación disponible en internet
+\footnote{Resumen del lenguaje ensamblador para procesadores ARM\\
+\url{http://www.davespace.co.uk/arm/introduction-to-arm/}}
+y haciendo los tutoriales de
+\footnote{Tutorial con prácticas de ensamblador ARM sobre Raspberry Pi\\
+\url{http://thinkingeek.com/2013/01/09/arm-assembler-raspberry-pi-chapter-1/}}
+Para la parte más centrada en el hardware como por ejemplo entender el uso del GPIO
+(subsistema encargado de la entrada/salida general) para poder controlar los leds
+disponibles en la placa, para el control de teclado y de pantalla se consultará la
+amplia documentación disponible en internet como por ejemplo los tutoriales disponibles en
+\footnote{Baking Pi: Operating Systems Development! Course by Alex Chadwick. Version 1.0c\\
+\url{http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/introduction.html}}
+y la descripción los modos de operación de los periféricos conectados al procesador ARM
+\footnote{BCM2835 ARM Peripherals (Manual de los periféricos conectados en una Raspberry Pi)\\
+\url{http://www.raspberrypi.org/wp-content/uploads/2012/02/BCM2835-ARM-Peripherals.pdf}}
 
-\sectionx{Ámbito de aplicación}
-  Por último, completando los apartados anteriores, se explican las áreas de las que se compone el proyecto.
+\sectionx{Fases de trabajo y planificación temporal}
+Estimamos que el desarrollo completo de este Proyecto Fin de Carrera podría realizarse
+a lo largo de unos 6 meses, llevando a cabo las siguientes tareas:
+
+\begin{enumerate}
+  \item Estudio básico del lenguaje ensamblador ARM y el tool-chain para compilar de la
+        Raspberry Pi [1, 2] necesarios para el posterior desarrollo de todas las prácticas. 
+        Estimación temporal: 2 semanas.
+
+  \item Estudio de las prácticas de programación en ensamblador existentes en la actualidad,
+        adaptación de las mismas al nuevo lenguaje ensamblador y a la nueva plataforma,
+        y generación de los nuevos enunciados de las prácticas y la documentación de soporte. 
+        Estimación temporal: 2 meses.
+
+  \item Estudio del subsistema de Entrada/Salida de la nueva plataforma para poder desarrollar
+        las prácticas con la Entrada/Salida (acceso a puertos, interrupciones, temporizadores
+        ...), adaptación de dichas prácticas al nuevo sistema y generación de los nuevos
+        enunciados y documentación de soporte. 
+        Estimación temporal: 2 meses.
+
+  \item Estudio del subsistema gráfico y modo de programación a bajo nivel de la nueva
+        plataforma. Adaptación de las prácticas de acceso a pantalla, generación de los
+        nuevos enunciados y documentación de soporte. 
+        Estimación temporal: 1 mes.
+
+  \item Escritura de la memoria final del PFC. Gran parte de la memoria consistirá en los
+        nuevos guiones de prácticas, los cuales se tendrán que confeccionar en LaTeX. La
+        mayor parte del contenido de esta memoria habrá sido generado en los puntos anteriores.
+        Estimación temporal: 2 semanas.
+\end{enumerate}
+
+\sectionx{Medios materiales}
+Los medios materiales para el desarrollo de este proyecto fin de carrera son los siguientes:
+\begin{enumerate}
+  \item Plataforma hardware Raspberry Pi, destino de todas las prácticas a desarrollar.
+  \item Ordenador personal con conexión a internet para la búsqueda de información.
+  \item QEMU, software emulador con soporte ARM para poder realizar tareas sencillas
+        directamente en el PC sin tener que usar la Raspberry.
+  \item Herramientas de compilación GNU (toolchain) con soporte ARMv6, para la compilación
+        del código ensamblador ARM.
+  \item Convertidor USB-Serie para comunicarse con la Raspberry.
+  \item Placa auxiliar, construida ex profeso para el proyecto empleando un servicio online de
+        fabricación de PCBs \footnote{http://seeedstudio.com/service/index.php?r=pcb} y
+        comprando los componentes en ebay y aliexpress.
+\end{enumerate}
 
 \chapterend

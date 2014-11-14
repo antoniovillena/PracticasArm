@@ -32,34 +32,31 @@
 % Formato de documento hasta el capítulo 1 (sin incluirlo)
 \frontmatter
 
-%% Título y autor del proyecto
-%%Rellenar con el nombre real del autor, título, tutor y año.
-%%El departamento del tutor se escribe una vez en el Resumen del PFC
-%\renewcommand{\pfcauthorname}{Nombre del autor}
-%\renewcommand{\pfctitlename}{Título del proyecto}
-%\renewcommand{\pfctutorname}{Nombre del tutor}
-%\renewcommand{\pfcanno}{2014}
+%=========================   TITULO   =========================
+\thispagestyle{empty}
 
-% Los tres ficheros siguientes solamente deben descomentarse
-%  en el caso de ser un PFC del plan a extinguir.
-% En los nuevos títulos de grado, no exiten la portada, la calificación 
-%  ni el Resumen del PFC.
-% Estos tres documentos deben tomarse de la web de la ETSII.
-%
-% Portada.
-\input{B1.Portada.tex}
+\begin{center}
+\small \bf
+ GERARDO BANDERA BURGUEÑO \\[0.1cm]
+ M$^{\underline{a}}$ ÁNGELES GONZÁLEZ NAVARRO \\[0.1cm]
+ ELADIO D. GUTIÉRREZ CARRASCO \\[0.1cm]
+ JULIÁN RAMOS CÓZAR \\[0.1cm]
+ SERGIO ROMERO MONTIEL \\[0.1cm]
+ M$^{\underline{a}}$ ANTONIA TRENAS CASTRO \\[0.1cm]
+ JULIO VILLALBA MORENO\\[0.1cm]
 
-% Hoja de calificación
-\input{B2.Calificacion.tex}
+\vfill
 
-% Resumen del proyecto (formulario)
-\input{B3.ResumenPFC.tex}
+{\Large \bf PRÁCTICAS DE ESTRUCTURA DE \\[0.1cm] COMPUTADORES}
 
-% Dedicatoria.
-\input{B4.Dedicatoria.tex}
+\vfill
 
-% Acrónimos
-\input{B5.Acronimos.tex}
+\vfill
+
+{\normalsize \bf UNIVERSIDAD DE MÁLAGA / MANUALES}
+\end{center}
+
+%========================   RESTO   =========================
 
 % Tabla de contenidos, figuras y tablas.
 \input{B5.TableOfContents.tex}
@@ -69,16 +66,7 @@
 % Formato de documento durante los capítulos.
 \mainmatter
 
-% Prólogo.
-\input{B6.Prologo.tex}
-
-% Parte I. Introducción
-\part{Introducción}
-
-% Introducción y objetivo
-\input{B7.Intro.tex}
-
-\part{Desarrollo del proyecto}
+\input{Prefacio.tex}
 
 % Capítulo 01.
 \input{Capitulo01.tex}
@@ -95,11 +83,7 @@
 % Capítulo 05.
 \input{Capitulo05.tex}
 
-\part{Parte tercera.}
-\input{D0.Conclusiones.tex}
-
 % Anexos
-\part{Apéndices}
 
 \appendix
 
