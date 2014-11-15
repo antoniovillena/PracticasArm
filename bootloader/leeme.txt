@@ -1,0 +1,12 @@
+Este bootloader detecta que la placa esté insertada poniendo GPIO 4 a pull-up
+y leyendo un cero (puesto que el buzzer tiene menor resistencia a masa que el pull-up).
+
+Si la placa no está insertada se lee un uno y cargamos el programa Bare Metal que haya
+detrás, normalmente nos interesa el kernel.img del Raspbian. De esta forma podemas trabajar
+en los dos entornos (Linux y Bare Metal) sin necesidad de extraer la tarjeta.
+
+Generar el fichero final es tan sencillo como concatenar los dos archivos, el compilado en
+Bare Metal del bootloader que llamaremos bootloader.img y el kernel del raspbian que
+llamaremos kernel_raspbian.img. Para windows es así (desconozco el comando Linux equivalente):
+
+copy /b bootloader.img+kernel_raspbian.img kernel.img
