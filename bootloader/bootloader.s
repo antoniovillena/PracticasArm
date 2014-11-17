@@ -1,3 +1,4 @@
+        .set    STCLO,      0x20003004
         .set    AUXBASE,    0x20215000
         .set    AMENABLES,  0x04
         .set    AMIOREG,    0x40
@@ -17,15 +18,19 @@
         block   .req    r3
         addr    .req    r4
         crc     .req    r5
+        counter .req    r6
+        cnt     .req    r7
+        timeout .req    r8
 .text
-inicio: mov     addr, #0x8200
+inicio: mov     sp, #0x8000
+        mov     addr, #0x8200
         push    {r0-r2}
 inici1: ldr     r1, [addr], #-4
         str     r1, [addr, #-4092]
         cmp     addr, #0x8000
         bne     inici1
         b       start-0x1000
-start:  ldr     gpbas, tGPBAS
+start:  ldr     gpbas, =GPBASE
         mov     r1, #0b00000000000000010010000000000000
         str     r1, [gpbas, #GPFSEL1]
         mov     r1, #2
@@ -44,11 +49,11 @@ start:  ldr     gpbas, tGPBAS
         ldr     r1, [gpbas, #GPLEV0]
         tst     r1, #0b00000010000
         beq     star2
-star1:  ldr     r1, [addr, #final-inicio]
+star1:  ldr     r1, [addr, #final+8-inicio]
         str     r1, [addr], #4
         cmp     addr, #0x330000
         bne     star1
-        b       star4
+        b       star5
 star2:  add     auxbas, #AUXBASE-GPBASE
         mov     block, #1
         str     block, [auxbas, #AMENABLES]
@@ -56,53 +61,57 @@ star2:  add     auxbas, #AUXBASE-GPBASE
         str     r1, [auxbas, #AMLCRREG]
         add     r1, #270-0x23
         str     r1, [auxbas, #AMBAUDREG]
-star3:  ldr     r1, [auxbas, #AMLSRREG]
+        ldr     counter, =STCLO
+        ldr     cnt, [counter]
+star3:  add     timeout, cnt, #0xa000
+        mov     send, #0x15
+        str     send, [auxbas, #AMIOREG]
+star4:  ldr     cnt, [counter]
+        cmp     cnt, timeout
+        bcs     star3
+        ldr     r1, [auxbas, #AMLSRREG]
         tst     r1, #1
-        beq     star3
+        beq     star4
         ldr     recv, [auxbas, #AMIOREG]
+        add     timeout, cnt, #0xa000
         cmp     state, #1
-        bcs     star5
+        bcs     star6
         cmp     recv, #0x01
         moveq   crc, #0
-        beq     stard
+        beq     starc
         cmp     recv, #0x04
-        bne     star7
+        bne     star8
         mov     send, #0x06
         str     send, [auxbas, #AMIOREG]
-star4:  subs    addr, #1
-        bne     star4
+star5:  subs    addr, #1
+        bne     star5
         pop     {r0-r2}
         b       inicio+0x1000
-star5:  bne     stara
-        cmp     recv, block
-star6:  beq     stard
-star7:  mov     send, #0x15
-star8:  mov     state, #0
-star9:  ldr     r6, [auxbas, #AMLSRREG]
-        tst     r6, #0x20
-        beq     star9
+star6:  bne     stara
+        mov     cnt, block
+star7:  cmp     recv, cnt
+        beq     starc
+star8:  mov     send, #0x15
+star9:  mov     state, #0
         str     send, [auxbas, #AMIOREG]
-        b       star3
+        b       star4
 stara:  cmp     state, #2
+        eoreq   cnt, block, #0xff
+        beq     star7
+        cmp     state, #131
         bne     starb
-        eor     lr, block, #0xff
-        cmp     recv, lr
-        b       star6
-starb:  cmp     state, #131
-        bne     starc
         cmp     recv, crc
-        bne     star7
+        bne     star8
         mov     r1, #1
         uadd8   block, block, r1
         mov     send, #0x06
-        b       star8
-starc:  uadd8   crc, crc, recv
+        b       star9
+starb:  uadd8   crc, crc, recv
         strb    recv, [addr], #1
-stard:  add     state, #1
-        b       star3
+starc:  add     state, #1
+        b       star4
 wait:   mov     r1, #50
 wait1:  subs    r1, #1
         bne     wait1
         bx      lr
-tGPBAS: .word   GPBASE
 final:
