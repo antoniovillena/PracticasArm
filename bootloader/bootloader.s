@@ -31,6 +31,7 @@ inici1: ldr     r1, [addr], #-4
         bne     inici1
         b       start-0x1000
 start:  ldr     gpbas, =GPBASE
+        ldr     r5, [gpbas, #GPFSEL1]
         mov     r1, #0b00000000000000010010000000000000
         str     r1, [gpbas, #GPFSEL1]
         mov     r1, #2
@@ -39,16 +40,11 @@ start:  ldr     gpbas, =GPBASE
         mov     r1, #0b0000000000010000
         str     r1, [gpbas, #GPPUDCLK0]
         bl      wait
-        str     r0, [gpbas, #GPPUD]
-        str     r0, [gpbas, #GPPUDCLK0]
-        bl      wait
-        mov     r1, #0b1100000000000000
-        str     r1, [gpbas, #GPPUDCLK0]
-        bl      wait
         str     r0, [gpbas, #GPPUDCLK0]
         ldr     r1, [gpbas, #GPLEV0]
         tst     r1, #0b00000010000
         beq     star2
+        str     r5, [gpbas, #GPFSEL1]
 star1:  ldr     r1, [addr, #final+8-inicio]
         str     r1, [addr], #4
         cmp     addr, #0x330000

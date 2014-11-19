@@ -20,7 +20,8 @@ que estamos ante la máquina tal y cómo es, sin ninguna capa de abstracción de
 por medio.
 
 Veremos ejemplos de acceso directo a periféricos, en concreto al LED de la placa
-auxiliar y a los temporizadores, que son bastante sencillos de manejar.
+auxiliar (ver apéndice \ref{chp:PlacaAux}) y a los temporizadores, que son
+bastante sencillos de manejar.
 
 \section{Lectura previa}
 
@@ -29,7 +30,8 @@ auxiliar y a los temporizadores, que son bastante sencillos de manejar.
 Anteriormente hemos utilizado funciones específicas para
 comunicarnos con los periféricos. Si por ejemplo necesitamos escribir
 en pantalla, llamamos a la función {\tt printf}. Pues bien, entre
-la llamada a la función y lo que vemos en pantalla hay 2 capas de por medio.
+la llamada a la función y lo que vemos en pantalla hay 2 capas software
+de por medio.
 
 Una primera capa se encuentra en la librería runtime que acompaña al
 ejecutable, la cual incluye sólamente el fragmento de código de la
@@ -203,31 +205,10 @@ en cuestión de segundos.
         sin necesidad de tener instaladas las herramientas de compilación en el mismo.
 \end{itemize}
 
-En las dos últimas opciones lo que se almacena en el kernel.img de la SD es un bootloader
-que lee continuamente del puerto serie y en el momento en que recibe un archivo lo carga
-en RAM y lo ejecuta. El protocolo de transferencia que emplea el bootloader se llama XMODEM,
-y los parámetros del puerto serie son: 8 bits de datos, sin paridad, 1 bit de parada, sin
-flujo de control y velocidad de transferencia de 115200 baudios. Son todos parámetros por
-defecto excepto la velocidad, por lo que hay que asegurarse de cambiar la velocidad antes
-de proceder a transferir el archivo en nuestro programa terminal. En Windows tenemos varias
-alternativas, como {\tt HyperTerminal} o {\tt Tera Term}. En Linux tenemos utilidades equivalentes
-como {\tt minicom}, sin embargo hay una forma de automatizar el proceso en línea de comandos
-con el comando {\tt sx}, que es creando el siguiente script {\tt enviar}.
-
-\begin{lstlisting}
-stty -F /dev/ttyAMA0 115200
-sx $1 < /dev/ttyAMA0 > /dev/ttyAMA0
-\end{lstlisting}
-
-Para enviar un archivo con este script, lo único que tenemos que hacer es escribir lo siguiente
-bajo línea de comandos.
-
-\begin{lstlisting}
-./enviar kernel.img
-\end{lstlisting}
-
-Para más información sobre estos métodos recomendamos que sigan los
-README del siguiente repositorio \footnote{\url{https://github.com/dwelch67/raspberrypi}}.
+Las dos últimas opciones están detalladas en el apéndice \ref{chp:SerieBoot},
+básicamente se trata de meter en el kernel.img de la SD un programa especial (llamado
+bootloader) que lee continuamente del puerto serie y en el momento en que recibe
+un archivo lo carga en RAM y lo ejecuta.
 
 \subsection{Acceso a periféricos}
 
