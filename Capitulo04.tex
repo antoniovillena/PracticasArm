@@ -210,7 +210,7 @@ básicamente se trata de meter en el kernel.img de la SD un programa especial (l
 bootloader) que lee continuamente del puerto serie y en el momento en que recibe
 un archivo lo carga en RAM y lo ejecuta.
 
-\subsection{Acceso a periféricos}
+\section{Acceso a periféricos}
 
 Los periféricos se controlan leyendo y escribiendo datos a los registros asociados. No
 confundir estos registros con los registros de la CPU. Un registro asociado a un periférico
@@ -223,46 +223,62 @@ bits del mismo tienen distinto comportamiento.
 
 Como cada periférico se controla de una forma diferente, no hay más remedio que leerse
 el datasheet del mismo si queremos trabajar con él. En nuestro caso queremos encender un LED
-en la placa auxiliar, está conectada al puerto GPIO (entrada/salida de propósito general) y
-cuyo conector se encuentra en la esquina superior izquierda de la Raspberry, son dos filas
-de 13 pines cada una.
-
-\subsubsection{GPIO}
-
-Los registros del GPIO están mapeados en memoria, tomando como base la dirección 0x20200000.
-Para nuestros propósitos de esta lección nos basta con acceder a los registros GPFSELx,
-GPSETx y GPCLRx. A continuación tenemos la tabla con las direcciones de estos registros.
-
-\begin{longtable}{ p{1.8cm} | p{2cm} | p{5cm} | p{1cm} | p{1cm} }
-\hline
-{\bf Dirección} & {\bf Nombre} & {\bf Descripción} & {\bf Tam.} & {\bf Tipo} \\ \hline
-20200000 & GPFSEL0 & Selector de función 0 & 32 & R/W \\ \hline
-20200004 & GPFSEL1 & Selector de función 1 & 32 & R/W \\ \hline
-20200008 & GPFSEL2 & Selector de función 2 & 32 & R/W \\ \hline
-2020000C & GPFSEL3 & Selector de función 3 & 32 & R/W \\ \hline
-20200010 & GPFSEL4 & Selector de función 4 & 32 & R/W \\ \hline
-20200014 & GPFSEL5 & Selector de función 5 & 32 & R/W \\ \hline
-2020001C & GPSET0  & Pin a nivel alto 0  & 32 & W   \\ \hline
-20200020 & GPSET1  & Pin a nivel alto 1  & 32 & W   \\ \hline
-20200028 & GPCLR0  & Pin a nivel bajo 0 & 32 & W  \\ \hline
-2020002C & GPCLR1  & Pin a nivel bajo 1 & 32 & W  \\ \hline
-\end{longtable}
-
-El puerto GPIO consta de 54 señales, que separamos en 6
-grupos funcionales de 10 pines cada uno (excepto el último
-que es de 4) para programarlas mediante GPFSELx.
-El LED que queremos controlar se corresponde con la señal número 9 del puerto GPIO.
-Se nombran con GPIO más el número correspondiente, en nuestro caso sería GPIO 9. Nótese
-que la numeración empieza en 0, desde GPIO 0 hasta GPIO 53. De todas estas señales sólo
-17 se corresponden con pines físicos (26 si disponemos de un modelo A+ ó B+) a través
-del conector {\tt P1}.
+en la placa auxiliar, que conectaremos a la fila inferior del conector GPIO según la
+figura \ref{fig:posicionaux}.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/RaspberryGPIOaux.png}
-  \caption{Correspondencia LEDs y GPIO}
-  \label{fig:pinout}
+    \includegraphics[width=14cm]{graphs/posicionaux.png}
+  \caption{Colocación de la placa auxiliar}
+  \label{fig:posicionaux}
 \end{figure}
+
+
+\subsection{GPIO}
+
+GPIO es un conjunto de señales mediante las cuales la CPU se comunica con distintas partes
+de la Rasberry tanto internamente (audio analógico, tarjeta SD o LEDs internos) como
+externamente a través de los conectores P1 y P5. Como la mayor parte de las señales se
+encuentran en el conector P1, normalmente este conector se denomina GPIO. Nosotros
+no vamos a trabajar con señales GPIO que no pertenezcan a dicho conector, por lo que no
+habrá confusiones.
+
+En total son 54 señales, de las cuales 17 están disponibles a través del conector
+GPIO (26 en los modelos A+/B+). Como nuestra placa auxiliar emplea la fila inferior
+del conector, sólo dispondremos de 9 señales.
+
+Los registros del GPIO están mapeados en memoria, tomando como base la dirección 0x20200000.
+Para nuestros propósitos de esta lección nos basta con acceder a los registros GPFSELn,
+GPSETn y GPCLRn. A continuación tenemos la tabla con las direcciones de estos registros.
+
+\begin{table}
+\centering
+\begin{tabular}{ p{1.8cm} | p{2cm} | p{5cm} | p{1cm} }
+{\bf Dirección} & {\bf Nombre} & {\bf Descripción} & {\bf Tipo} \\
+\hline
+20200000 & GPFSEL0 & Selector de función 0 & R/W \\
+20200004 & GPFSEL1 & Selector de función 1 & R/W \\
+20200008 & GPFSEL2 & Selector de función 2 & R/W \\
+2020000C & GPFSEL3 & Selector de función 3 & R/W \\
+20200010 & GPFSEL4 & Selector de función 4 & R/W \\
+20200014 & GPFSEL5 & Selector de función 5 & R/W \\
+2020001C & GPSET0  & Pin a nivel alto 0 & W   \\
+20200020 & GPSET1  & Pin a nivel alto 1 & W   \\
+20200028 & GPCLR0  & Pin a nivel bajo 0 & W  \\
+2020002C & GPCLR1  & Pin a nivel bajo 1 & W  \\
+\end{tabular}
+\end{table}
+
+
+\subsubsection{GPFSELn}
+
+Las 54 señales las separamos en 6
+grupos funcionales de 10 pines cada uno (excepto el último
+que es de 4) para programarlas mediante GPFSELn.
+
+El LED que queremos controlar se corresponde con la señal número 9 del puerto GPIO.
+Se nombran con GPIO más el número correspondiente, en nuestro caso sería GPIO 9. Nótese
+que la numeración empieza en 0, desde GPIO 0 hasta GPIO 53.
 
 Así que la funcionalidad desde GPIO 0 hasta GPIO 9 se controla con
 GPFSEL0, desde GPIO 10 hasta GPIO 19 se hace con GPFSEL1 y así
@@ -276,7 +292,7 @@ todos los LEDs estarán apagados, incluso después de programarlos como salidas.
 El registro GPFSEL0 contiene diez grupos funcionales
 llamados FSELx (del 0 al 9) de 3 bits cada uno, quedando los dos bits
 más altos sin usar. Nos interesa cambiar FSEL9, que sería el que se corresponde
-con el rojo de más a la izquierda, el que queremos encender. Las posibles
+con el LED rojo de más a la izquierda, el que queremos encender. Las posibles
 configuraciones para cada grupo son:
 
 \begin{lstlisting}
@@ -295,6 +311,9 @@ como puertos SPI, UART, audio PCM y cosas parecidas. La lista completa
 está en la tabla 6-31 (página 102) del datasheet. Nosotros queremos una salida
 genérica, nos quedamos con el código {\tt 001}.
 
+
+\subsubsection{GPSETn y GPCLRn}
+
 Una vez configurado GPIO 9 como salida, ya sólo queda saber cómo poner un cero o un
 uno en la señal GPIO 9, para apagar y encender el primer LED respectivamente (un cero apaga
 y un uno enciende el LED).
@@ -308,9 +327,20 @@ esto no es necesario con registros separados para setear y resetear, tan sólo n
 una escritura en registro poniendo a 1 los bits que queramos setear/resetear y a 0 los bits
 que no queramos modificar.
 
+En la figura \ref{fig:pinout} vemos cómo está hecho el conexionado de la placa auxiliar.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/RaspberryGPIOaux.png}
+  \caption{Correspondencia LEDs y GPIO}
+  \label{fig:pinout}
+\end{figure}
+
 Leemos el datasheet y comprobamos que es así. Además los 54 pines se reparten entre dos
 registros GPSET0/GPCLR0, que contienen los 32 primeros, y en GPSET1/GPCLR1 están los 22
-restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1. En nuestro
+restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1.
+
+En nuestro
 primer ejemplo de Bare Metal sólo vamos a encender el primer LED de la placa auxiliar,
 por lo que emplearemos el registro GPCLR0.
 
@@ -349,20 +379,22 @@ El código simplemente escribe dos constantes en dos registros: {\tt GPFSEL0} y 
 Con la primera escritura configuramos el LED como salida y con la segunda escritura lo
 encendemos, para finalmente entrar en un bucle infinito con {\tt infi: b infi}.
 
+\subsubsection{Otros registros}
+
 Estos son los registros que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
 más registros. En la figura \ref{fig:gpio2} tenemos los siguientes.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio2.png}
-  \caption{Otros registros del GPIO}
+  \caption{Otros registros del GPIO 1}
   \label{fig:gpio2}
 \end{figure}
 
 \begin{itemize}
   \item {\tt GPLEVn} Estos registros devuelven el valor del pin respectivo. Si dicho pin está
         en torno a 0V devolverá un cero, si está en torno a 3.3V devolverá un 1.
-  \item {\tt GPEDSn} Sirven para detectar qué pin ha provocado una interrupción es caso de
+  \item {\tt GPEDSn} Sirven para detectar qué pin ha provocado una interrupción en caso de
         usarlo como lectura. Al escribir en ellos también podemos notificar que ya hemos procesado
         la interrupción y que por tanto estamos listos para que nos vuelvan a interrumpir sobre
         los pines que indiquemos.
@@ -377,7 +409,7 @@ El resto de registros GPIO están en la figura \ref{fig:gpio3}.
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio3.png}
-  \caption{Otros registros del GPIO}
+  \caption{Otros registros del GPIO 2}
   \label{fig:gpio3}
 \end{figure}
 
@@ -391,7 +423,7 @@ El resto de registros GPIO están en la figura \ref{fig:gpio3}.
         que deseemos. Para más información ver el último ejemplo del siguiente capítulo.
 \end{itemize}
 
-\subsubsection{Temporizador del sistema}
+\subsection{Temporizador del sistema}
 
 Se trata de un reloj que funciona a 1MHz y en cada paso incrementa un contador de 64bits. Nos
 viene muy bien para hacer las cuentas porque cada paso del contador se corresponde con un
@@ -521,6 +553,36 @@ bucle:  bl      espera
 /* rutina que espera medio segundo */
 espera: ldr     r3, [r2, #STCLO]
         ldr     r4, =500000
+        add     r4, r3
+ret1:   ldr     r3, [r2, #STCLO]
+        cmp     r3, r4
+        bne     ret1
+        bx      lr
+\end{lstlisting}
+
+\subsection{Sonido con temporizador}
+
+Este ejemplo es exactamente el mismo que el anterior, tan sólo hemos
+cambiado el puerto del LED (GPIO 9) al altavoz (GPIO 4) y el tiempo de espera,
+para producir un sonido audible.
+
+\begin{lstlisting}[caption={Parte de esbn6.s},label={lst:codigoPract4_6}]
+        ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000000000000001000000000000
+        str     r1, [r0, #GPFSEL0]
+/* guia bits           10987654321098765432109876543210*/
+        mov     r1, #0b00000000000000000000000000010000
+        ldr     r2, =STBASE
+bucle:  bl      espera
+        str     r1, [r0, #GPSET0]
+        bl      espera
+        str     r1, [r0, #GPCLR0]
+        b       bucle
+
+/* rutina que espera 1136 microsegundos */
+espera: ldr     r3, [r2, #STCLO]
+        ldr     r4, =1136
         add     r4, r3
 ret1:   ldr     r3, [r2, #STCLO]
         cmp     r3, r4

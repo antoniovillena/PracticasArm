@@ -18,16 +18,10 @@
         str     r1, [r0, #GPSET0]
         mov     r1, #0b00000000000000000000000000001100
         str     r1, [r0, #GPREN0]
-        ldr     r0, =STBASE
-        ldr     r1, [r0, #STCLO]
-        add     r1, #2
-        str     r1, [r0, #STC1]
         ldr     r0, =INTBASE
 /* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000100000000000000000000
         str     r1, [r0, #INTENIRQ2]
-        mov     r1, #0b10000001
-        str     r1, [r0, #INTFIQCON]
         mov     r0, #0b01010011   @modo SVC, IRQ activo
         msr     cpsr_c, r0
 bucle:  b       bucle

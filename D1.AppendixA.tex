@@ -86,14 +86,14 @@ de código, y aún así podemos solventarlo ubicando las RTI al principio.
 \section{Escribir una macro}
 
 En la primera línea ponemos la directiva {\tt .macro} seguida del nombre de la macro
-{\tt ADDEXC} y de los parámetros {\tt par1, par2} separados por coma.
+{\tt ADDEXC} y de los parámetros {\tt vector, dirRTI} separados por coma.
 
 \begin{lstlisting}
-      .macro    ADDEXC  par1, par2
+      .macro    ADDEXC  vector, dirRTI
 \end{lstlisting}
 
 Luego escribiríamos el código de la macro, indicando los parámetros con
-{\tt \textbackslash par1} y {\tt \textbackslash par2} para acabar con {\tt .endm}.
+{\tt \textbackslash vector} y {\tt \textbackslash dirRTI} para acabar con {\tt .endm}.
 
 \section{Codificación de la instrucción de salto}
 
@@ -122,12 +122,12 @@ macro con dos instrucciones. Desgraciadamente el preprocesador
 que usamos no es muy potente, con lo que usaremos una tercera
 para hacer la división.
 
-La dirección actual es {\tt \textbackslash par1}, la de la RTI
-es {\tt \textbackslash par2} y hay que restarle 8 por el
+La dirección actual es {\tt \textbackslash vector}, la de la RTI
+es {\tt \textbackslash dirRTI} y hay que restarle 8 por el
 segmentado de la CPU.
 \\
-{\it instrucción }$ = (\textbackslash par2-\textbackslash par1-8)/4 + 0xEA000000$ \\
-{\it instrucción }$ = (\textbackslash par2-\textbackslash par1)/4 + 0xE9FFFFFE$
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector-8)/4 + 0xEA000000$ \\
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector)/4 + 0xE9FFFFFE$
 
 \section{Resultado}
 
@@ -135,10 +135,10 @@ Si hacemos {\tt ror} en lugar de {\tt lsr} para dividir entre 4 nos
 ahorramos una suma, quedando el código final como sigue.
 
 \begin{lstlisting}
-      .macro    ADDEXC  par1, par2
-        ldr     r1, =(\par2-\par1+0xa7fffffb)
+      .macro    ADDEXC  vector, dirRTI
+        ldr     r1, =(\dirRTI-\vector+0xa7fffffb)
         ror     r1, #2
-        str     r1, [r0, #\par1]
+        str     r1, [r0, #\vector]
       .endm
 \end{lstlisting}
 

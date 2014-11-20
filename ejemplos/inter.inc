@@ -1,7 +1,7 @@
-      .macro    ADDEXC  par1, par2
-        ldr     r1, =(\par2-\par1+0xa7fffffb)
+      .macro    ADDEXC  vector, dirRTI
+        ldr     r1, =(\dirRTI-\vector+0xa7fffffb)
         ror     r1, #2
-        str     r1, [r0, #\par1]
+        str     r1, [r0, #\vector]
       .endm
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,        0x00

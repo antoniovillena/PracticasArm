@@ -27,7 +27,7 @@
         ldr     r0, =INTBASE
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
-        mov     r1, #0x80 | 3
+        mov     r1, #0b10000011
         str     r1, [r0, #INTFIQCON]
         mov     r0, #0b00010011   @modo SVC, FIQ&IRQ activo
         msr     cpsr_c, r0

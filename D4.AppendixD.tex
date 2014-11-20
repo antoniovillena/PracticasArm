@@ -1,0 +1,100 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Documento LaTeX                                             %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Título:   Apéndice A
+% Autor:    Ignacio Moreno Doblas
+% Fecha:    2014-02-01
+% Versión:  0.5.0
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[RE]{Apéndice} %
+\fancyhead[LO]{\nouppercase{\rightmark}}
+%\fancyhead[RE]{Parte \thepart \rightmark} %
+
+\chapterbegin{Resistencias de pull-up y pull-down}
+\label{chp:SerieBoot}
+\minitoc
+
+\section{Introducción}
+
+Eléctricamente un pulsador no es más que un interruptor que deja pasar
+la corriente cuando está pulsado y se queda en circuito abierto en su posición de reposo
+(sin pulsar). De los dos contactos que tiene, uno se conecta a masa y el otro al pin de
+entrada de la Raspberry. Así que cuando lo pulsamos hacemos un corto que llevaría los cero
+voltios de la masa al pin de entrada (enviamos un cero lógico), pero cuando está sin pulsar
+no enviamos nada al pin, éste se queda en lo que se denomina alta impedancia.
+
+Para solventar ésto hay dos opciones, o conectar externamente una resistencia entre el pin y
+los 3.3V de la alimentación, o bien configurar el puerto GPIO para que lo haga internamente
+(dentro del chip) con algo equivalente a una resistencia. Como nuestro circuito pulsador no
+tiene resistencia externa, en nuestro ejemplo no tenemos más remedio que configurar la interna.
+
+Las entradas no hay que configurarlas, o mejor dicho, el valor {\tt 000} que se corresponde
+con una entrada en los registros {\tt GPFSELx} lo usamos indistintamente para entradas como
+para pines no usados. Desde un punto de vista eléctrico es más seguro dejar los pines no usados
+como entradas, de esta forma evitamos que un corto con alimentación u otra salida pueda estropear
+el aparato.
+
+Nuestro programa principal tendrá lo de siempre, más la configuración de las resistencias
+{\tt pull-up} (se llaman así cuando se conectan a alimentación, cuando lo hacen a masa se
+llamarían {\tt pull-down}) y por último cambiamos la fuente de interrupción que antes se
+encargaba de cambiar el estado de las luces. Si antes teníamos un temporizador que
+incrementaba la secuencia de luces, ahora tenemos dos pulsadores, uno para incrementar y
+otro para decrementar la secuencia.
+
+Vamos al datasheet de periféricos del BCM2835 y observamos en la tabla (se corresponde con
+IRQ 2) las siguientes entradas.
+
+\begin{lstlisting}
+gpio_int[0]
+gpio_int[1]
+gpio_int[2]
+gpio_int[3]
+\end{lstlisting}
+
+Como es habitual no se explica nada más. Podríamos investigar nosotros mismos a qué se corresponde
+cada bit, pero con una simple búsqueda en internet nos damos cuenta de que gpio\_int0, gpio\_int1 y
+gpio\_int2 se disparan con subconjuntos de GPIOs, mientras que gpio\_int3 lo hace al activarse
+cualquier pin. Como lo que queremos es una fuente
+que salte con cualquier línea GPIO (ya la configuraremos individualmente en los registros GPIO)
+nos quedamos con el bit {\tt gpio\_int3}.
+
+Por suerte la parte de documentación que afecta a la configuración de los pull-ups está más
+completa.
+
+{\it
+The GPIO Pull-up/down Clock Registers control the actuation of internal pull-downs on 
+the respective GPIO pins. These registers must be used in conjunction with the GPPUD 
+register  to  effect  GPIO  Pull-up/down  changes.  The  following  sequence  of  events  is 
+required:\\
+1.  Write to GPPUD to set the required control signal(i.e. Pull-up or Pull-Down or neither 
+to remove the current Pull-up/down)\\
+2.  Wait 150 cycles – this provides the required set-up time for the control signal\\
+3.  Write to GPPUDCLK0/1 to clock the control signal into the GPIO pads you wish to 
+modify – NOTE only the pads which receive a clock will bemodified, all others will 
+retain their previous state\\
+4.  Wait 150 cycles – this provides the required hold time for the control signal\\
+5.  Write to GPPUD to remove the control signal\\
+6.  Write to GPPUDCLK0/1 to remove the clock}
+
+Una de las cosas que tenemos que hacer es esperar 150 ciclos (como mínimo). Como
+sabemos que un salto condicional tarda al menos dos ciclos en ejecutarse, nuestra rutina
+de retardo sería la siguiente.
+
+\begin{lstlisting}
+wait:   mov     r2, #50
+wait1:  subs    r2, #1
+        bne     wait1
+        bx      lr
+\end{lstlisting}
+
+Y por último, el programa principal quedaría así.
+
+
+El valor escrito en {\tt GPPUD} es un 2, que se corresponde con {\tt pull-ups} (para pull-downs
+sería un 1 y para desactivarlo un 0). En {\tt GPPUDCLK0} indicamos que queremos conectar esas
+resistencias a los puertos GPIO 9 y 27/21 (pulsadores), y 
+
+\chapterend
