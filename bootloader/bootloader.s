@@ -36,22 +36,17 @@ star1:  ldr     r3, [addr], #-4
         ldr     sel1bak, [gpbas, #GPFSEL1]
         mov     r3, #0b00000000000000010010000000000000
         str     r3, [gpbas, #GPFSEL1]
-        mov     r3, #2
-        str     r3, [gpbas, #GPPUD]
-        bl      wait
-        mov     timeout, #0b0000000000010000
-        str     r3, [gpbas, #GPPUDCLK0]
-        bl      wait
-        str     r0, [gpbas, #GPPUDCLK0]
         ldr     r3, [gpbas, #GPLEV0]
         tst     r3, #0b00000010000
         bne     linux-0x1000
-        mov     r3, #0b00000000000000000001000000000000
-        str     r3, [gpbas, #GPFSEL0]
         ldr     cnt, =0b10101010101010101010101010101010
+        mov     timeout, #0b0000000000010000
 beep:   strcc   timeout, [gpbas, #GPSET0]
         strcs   timeout, [gpbas, #GPCLR0]
-        bl      wait
+        mov     r3, #0b00000000000000000001000000000000
+        str     r3, [gpbas, #GPFSEL0]
+beep1:  subs    r3, #1
+        bne     beep1
         lsrs    cnt, #1
         bne     beep
         add     auxbas, #AUXBASE-GPBASE
@@ -107,10 +102,6 @@ stara:  cmp     state, #2
         uadd8   block, block, r3
         mov     send, #0x06
         b       star9
-wait:   mov     r3, #0x2000
-wait1:  subs    r3, #1
-        bne     wait1
-        bx      lr
 linux:  ldr     r3, [addr, #final+8-start]
         str     r3, [addr], #4
         cmp     addr, #0x330000

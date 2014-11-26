@@ -20,7 +20,7 @@
 \section{Finalidad y tipos de salto}
 
 Queremos implementar una macro que nos permita codificar las
-instrucciones de salto dentro del vector de excepciones. Como en
+instrucciones de salto dentro del vector de interrupciones. Como en
 la arquitectura el bus de direcciones es de 32 bits no podemos
 codificar una instrucción de salto a cualquier dirección con
 una instrucción de 32 bits, puesto que no nos queda espacio
@@ -119,20 +119,27 @@ Los pasos para calcular la instrucción de salto serían.
 
 Como todo son constantes en teoría podríamos implementar la
 macro con dos instrucciones. Desgraciadamente el preprocesador
-que usamos no es muy potente, con lo que usaremos una tercera
-para hacer la división.
+que usamos no es muy potente y si un operando es una etiqueta
+sólo nos permite operar con sumas y restas. No podemos hacer las
+divisiones o desplazamientos que necesitamos, con lo que emplearemos
+una tercera instrucción para hacer el desplazamiento.
 
 La dirección actual es {\tt \textbackslash vector}, la de la RTI
 es {\tt \textbackslash dirRTI} y hay que restarle 8 por el
 segmentado de la CPU.
 \\
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector-8)/4 + 0xEA000000$ \\
-{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector)/4 + 0xE9FFFFFE$
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector)/4 + 0xE9FFFFFE$ \\
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+3A7FFFFF8)/4$ \\
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+A7FFFFFB) ror 2$
+
+Vemos cómo en el último paso hemos transformado una división en una rotación, donde los
+2 bits menos significativos (ambos a 1) pasan a ser los más significativos tras la
+rotación.
 
 \section{Resultado}
 
-Si hacemos {\tt ror} en lugar de {\tt lsr} para dividir entre 4 nos
-ahorramos una suma, quedando el código final como sigue.
+El código final queda como sigue.
 
 \begin{lstlisting}
       .macro    ADDEXC  vector, dirRTI
@@ -144,6 +151,9 @@ ahorramos una suma, quedando el código final como sigue.
 
 Como la arquitectura no nos permite escribir en una dirección absoluta, antes
 de invocar la macro debemos asegurarnos de que {\tt r0} apunte al vector de
-excepciones, es decir que valga {\tt 0}.
+interrupciones, es decir que valga {\tt 0}. En caso de usar esta macro como
+primera instrucción del programa Bare Metal podemos omitir la inicialización
+de {\tt r0}, ya que en las especificaciones de carga del {\tt kernel.img} se
+establece este valor.
 
 \chapterend

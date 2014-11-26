@@ -13,88 +13,255 @@
 \fancyhead[LO]{\nouppercase{\rightmark}}
 %\fancyhead[RE]{Parte \thepart \rightmark} %
 
-\chapterbegin{Resistencias de pull-up y pull-down}
-\label{chp:SerieBoot}
+\chapterbegin{Resistencias programables de pull-up y pull-down}
+\label{chp:resistencias}
 \minitoc
 
 \section{Introducción}
 
-Eléctricamente un pulsador no es más que un interruptor que deja pasar
+En general las resistencias de pull-up y pull-down son resistencias que se ponen en
+las entradas para fijar la tensión que de otra forma quedaría indeterminada, al estar
+en situación de circuito abierto o alta impedancia. El ejemplo típico donde se usa es
+en un pulsador. Eléctricamente un pulsador no es más que un interruptor que deja pasar
 la corriente cuando está pulsado y se queda en circuito abierto en su posición de reposo
 (sin pulsar). De los dos contactos que tiene, uno se conecta a masa y el otro al pin de
 entrada de la Raspberry. Así que cuando lo pulsamos hacemos un corto que llevaría los cero
 voltios de la masa al pin de entrada (enviamos un cero lógico), pero cuando está sin pulsar
 no enviamos nada al pin, éste se queda en lo que se denomina alta impedancia.
 
-Para solventar ésto hay dos opciones, o conectar externamente una resistencia entre el pin y
-los 3.3V de la alimentación, o bien configurar el puerto GPIO para que lo haga internamente
-(dentro del chip) con algo equivalente a una resistencia. Como nuestro circuito pulsador no
-tiene resistencia externa, en nuestro ejemplo no tenemos más remedio que configurar la interna.
+Todos los pines del GPIO en la Raspberry se pueden configurar por software para que
+se comporten como queramos: o bien sin resistencia, o con una resistencia a Vcc (pull-up) o
+con una resistencia a masa (pull-down). Este tipo de resistencias son débiles (weak) debido
+a que están dentro de la pastilla (SoC) y se implementan con transistores. Se puede
+anular el efecto de estas resistencias poniendo resistencias externas.
 
-Las entradas no hay que configurarlas, o mejor dicho, el valor {\tt 000} que se corresponde
-con una entrada en los registros {\tt GPFSELx} lo usamos indistintamente para entradas como
-para pines no usados. Desde un punto de vista eléctrico es más seguro dejar los pines no usados
-como entradas, de esta forma evitamos que un corto con alimentación u otra salida pueda estropear
-el aparato.
+\section{Pulsadores en la placa auxiliar}
 
-Nuestro programa principal tendrá lo de siempre, más la configuración de las resistencias
-{\tt pull-up} (se llaman así cuando se conectan a alimentación, cuando lo hacen a masa se
-llamarían {\tt pull-down}) y por último cambiamos la fuente de interrupción que antes se
-encargaba de cambiar el estado de las luces. Si antes teníamos un temporizador que
-incrementaba la secuencia de luces, ahora tenemos dos pulsadores, uno para incrementar y
-otro para decrementar la secuencia.
+En la placa auxiliar tenemos dos pulsadores conectados a GPIO 2 y GPIO 3. No es casualidad
+que estén conectados concretamente a esos dos pines. Son los únicos pines que tienen
+resistencias externas de pull-up, concretamente de 1K8, que anulan cualquier configuración
+interna que pongamos. La razón es porque las resistencias internas son débiles, tienen un
+valor aproximado de unos 50K. Cuando hay dos resistencias en paralelo como es el caso,
+la de menor valor anula el efecto de la de mayor valor.
 
-Vamos al datasheet de periféricos del BCM2835 y observamos en la tabla (se corresponde con
-IRQ 2) las siguientes entradas.
+Por tanto si configuramos GPIO 2 ó GPIO 3 como entradas, independientemente del valor
+que configuremos por software, se comportarán siempre como si sólo tuviesen una
+resistencia de pull-up.
 
-\begin{lstlisting}
-gpio_int[0]
-gpio_int[1]
-gpio_int[2]
-gpio_int[3]
+El propósito de este apéndice es aprender a cambiar la configuración de los pull-ups/pull-downs
+en caso de usar otras placas auxiliares distintas. En la nuestra las únicas entradas (pulsadores)
+que hay están resueltas con las resistencias antes comentadas que tiene la Raspberry sólo en
+esos dos pines.
+
+\section{Ejemplo de aplicación}
+
+El montaje que proponemos es con uno de los pines de la fila superior, en concreto el
+pin GPIO 18 que hay a la derecha de los pines del puerto serie. En estos ejemplos
+no vamos a requerir la placa auxiliar, de esta forma
+dejamos libres los pines Vcc (3.3V), ya que necesitaremos uno para el último ejemplo. 
+
+\subsection{Pulsador a masa sin cambiar configuración}
+
+En este primer ejemplo vamos a tratar de encender el LED interno de la Raspberry llamado
+ACT (OK) mediante un pulsador externo. El primer montaje sería el de
+la figura.
+
+El esquema sería el de la figura \ref{fig:circuito1}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/circuito1.png}
+  \caption{Pulsador a masa}
+  \label{fig:circuito1}
+\end{figure}
+
+Ahora escribimos el código. Como el pin GPIO que controla dicho LED es distinto en los
+modelos normales que en los A+/B+, enviamos la señal a ambos pines. En el modelo normal
+sería GPIO 16 y en el plus, el GPIO 47.
+
+\begin{lstlisting}[caption={apend1.s},label={lst:codigoApendice_1}]
+        .include  "inter.inc"
+.text
+        ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000001000000000000000000000
+        str     r1, [r0, #GPFSEL4]
+/* guia bits           10987654321098765432109876543210*/
+        mov     r2, #0b00000000000000010000000000000000
+/* guia bits           32109876543210987654321098765432*/
+        mov     r3, #0b00000000000000001000000000000000
+bucle:  str     r2, [r0, #GPCLR0]   @ apago GPIO 16
+        str     r3, [r0, #GPCLR1]   @ apago GPIO 47
+        ldr     r1, [r0, #GPLEV0]
+/* guia bits           10987654321098765432109876543210*/
+        tst     r1, #0b00000000000001000000000000000100
+        streq   r2, [r0, #GPSET0]   @ enciendo GPIO 16
+        streq   r3, [r0, #GPSET1]   @ enciendo GPIO 47
+        b       bucle
 \end{lstlisting}
 
-Como es habitual no se explica nada más. Podríamos investigar nosotros mismos a qué se corresponde
-cada bit, pero con una simple búsqueda en internet nos damos cuenta de que gpio\_int0, gpio\_int1 y
-gpio\_int2 se disparan con subconjuntos de GPIOs, mientras que gpio\_int3 lo hace al activarse
-cualquier pin. Como lo que queremos es una fuente
-que salte con cualquier línea GPIO (ya la configuraremos individualmente en los registros GPIO)
-nos quedamos con el bit {\tt gpio\_int3}.
+Probamos el código y comprobamos que al pulsar el botón izquierdo no pasa nada,
+el LED está siempre encendido.
 
-Por suerte la parte de documentación que afecta a la configuración de los pull-ups está más
-completa.
+Esto se debe a que por defecto el pin GPIO 18 está configurando con una resistencia de
+pull-down y nosotros necesitamos una de pull-up, de lo contrario siempre leeremos un cero
+por dicho pin. Los valores por defecto (tras el reset) se pueden consultar en la página
+103 del datasheet, aunque la mayor parte de los pines disponibles por el puerto estan
+a pull-down.
 
-{\it
-The GPIO Pull-up/down Clock Registers control the actuation of internal pull-downs on 
-the respective GPIO pins. These registers must be used in conjunction with the GPPUD 
-register  to  effect  GPIO  Pull-up/down  changes.  The  following  sequence  of  events  is 
-required:\\
-1.  Write to GPPUD to set the required control signal(i.e. Pull-up or Pull-Down or neither 
-to remove the current Pull-up/down)\\
-2.  Wait 150 cycles – this provides the required set-up time for the control signal\\
-3.  Write to GPPUDCLK0/1 to clock the control signal into the GPIO pads you wish to 
-modify – NOTE only the pads which receive a clock will bemodified, all others will 
-retain their previous state\\
-4.  Wait 150 cycles – this provides the required hold time for the control signal\\
-5.  Write to GPPUD to remove the control signal\\
-6.  Write to GPPUDCLK0/1 to remove the clock}
+Para solventar ésto hay tres opciones: o conectar el otro terminal del interruptor a Vcc en
+lugar de a GND, o configurar el pin para cambiarlo de pull-down a pull-up, o conectar una
+resistencia externa a Vcc que anule el pull-down interno. Nosotros vamos a explorar las dos
+primeras opciones.
+
+\subsection{Pulsador a masa cambiando configuración}
+
+En este ejemplo vamos a configurar GPIO 18 a pull-up de acuerdo a la siguiente
+figura \ref{fig:pullup}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/pullup.png}
+  \caption{Resistencia interna de pull-up}
+  \label{fig:pullup}
+\end{figure}
+
+Para configurar un pin determinado en pull-up/pull-down/desconectado seguimos los
+siguientes pasos.
+
+\begin{enumerate}
+  \item Escribir en {\tt GPPUD} el tipo de resistencia que queremos. Un 0 sería
+si no queremos resistencia, un 1 si es de pull-down ó un 2 si lo que queremos es un
+pull-ups.
+  \item Esperar 150 ciclos. Esto provee el tiempo requerido de {\tt set-up} para controlar la señal.
+  \item Escribir en {\tt GPPUDCLK0/1} un 1 en la posición de los pines que queramos modificar,
+mientras que los que estén a 0 mantendrán su antiguo estado.
+  \item Esperar otros 150 ciclos. Con esto le damos tiempo de {\tt hold} suficiente a la señal.
+  \item Poner GPPUD en su estado de reposo, que sería a valor 0 (desactivado).
+  \item Escribir un 0 en {\tt GPPUDCLK0/1}.
+\end{enumerate}
 
 Una de las cosas que tenemos que hacer es esperar 150 ciclos (como mínimo). Como
 sabemos que un salto condicional tarda al menos dos ciclos en ejecutarse, nuestra rutina
 de retardo sería la siguiente.
 
 \begin{lstlisting}
-wait:   mov     r2, #50
-wait1:  subs    r2, #1
+wait:   mov     r1, #50
+wait1:  subs    r1, #1
         bne     wait1
         bx      lr
 \end{lstlisting}
 
-Y por último, el programa principal quedaría así.
+Y el código que hace todo lo anterior, para poner a pull-up el GPIO 18 (donde hemos puesto
+el pulsador) es el siguiente.
 
+\begin{lstlisting}
+        str     r1, [r0, #GPPUD]
+        bl      wait
+/* guia bits           10987654321098765432109876543210*/
+        mov     r1, #0b00000000000001000000000000000100
+        str     r1, [r0, #GPPUDCLK0]
+        bl      wait
+        mov     r1, #0
+        str     r1, [r0, #GPPUD]
+        str     r1, [r0, #GPPUDCLK0]
+\end{lstlisting}
 
-El valor escrito en {\tt GPPUD} es un 2, que se corresponde con {\tt pull-ups} (para pull-downs
-sería un 1 y para desactivarlo un 0). En {\tt GPPUDCLK0} indicamos que queremos conectar esas
-resistencias a los puertos GPIO 9 y 27/21 (pulsadores), y 
+El ejemplo completo quedaría así.
+
+\begin{lstlisting}[caption={apend2.s},label={lst:codigoApendice_2}]
+        .include  "inter.inc"
+.text
+        ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000001000000000000000000000
+        str     r1, [r0, #GPFSEL4]
+        mov     r1, #2
+        str     r1, [r0, #GPPUD]
+        bl      wait
+/* guia bits           10987654321098765432109876543210*/
+        mov     r1, #0b00000000000001000000000000000100
+        str     r1, [r0, #GPPUDCLK0]
+        bl      wait
+        mov     r1, #0
+        str     r1, [r0, #GPPUD]
+        str     r1, [r0, #GPPUDCLK0]
+/* guia bits           10987654321098765432109876543210*/
+        mov     r2, #0b00000000000000010000000000000000
+/* guia bits           32109876543210987654321098765432*/
+        mov     r3, #0b00000000000000001000000000000000
+bucle:  str     r2, [r0, #GPCLR0]   @ apago GPIO 16
+        str     r3, [r0, #GPCLR1]   @ apago GPIO 47
+        ldr     r1, [r0, #GPLEV0]
+/* guia bits           10987654321098765432109876543210*/
+        tst     r1, #0b00000000000001000000000000000100
+        streq   r2, [r0, #GPSET0]   @ enciendo GPIO 16
+        streq   r3, [r0, #GPSET1]   @ enciendo GPIO 47
+        b       bucle
+
+wait:   mov     r1, #50
+wait1:  subs    r1, #1
+        bne     wait1
+        bx      lr
+\end{lstlisting}
+
+Comprobamos cómo ahora sí funciona, y mientras tenemos el botón presionado,
+el LED se enciende, apagándose en cuanto lo soltamos.
+
+\subsection{Pulsador a Vcc sin cambiar configuración}
+
+Cambiamos es montaje, y en lugar de a GND conectamos el pulsador a Vcc según
+la figura \ref{fig:circuito2}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/circuito2.png}
+  \caption{Pulsador a Vcc}
+  \label{fig:circuito2}
+\end{figure}
+
+De esta forma aprovechamos que ese pin en concreto está conectado a pull-down tras
+el reset, por lo que no habría que cambiar la configuración del pin para obtener
+lo que vemos en la figura \ref{fig:pulldown}.
+
+Prácticamente tendríamos el mismo código que en {\tt apend1.s} no nos funcionaba,
+la única diferencia es que cambiamos los {\tt streq} por {\tt strne}.
+
+\begin{lstlisting}[caption={apend3.s},label={lst:codigoApendice_3}]
+        .include  "inter.inc"
+.text
+        ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000000001000000000000000000
+        str     r1, [r0, #GPFSEL1]
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00000000001000000000000000000000
+        str     r1, [r0, #GPFSEL4]
+/* guia bits           10987654321098765432109876543210*/
+        mov     r2, #0b00000000000000010000000000000000
+/* guia bits           32109876543210987654321098765432*/
+        mov     r3, #0b00000000000000001000000000000000
+bucle:  str     r2, [r0, #GPCLR0]   @ apago GPIO 16
+        str     r3, [r0, #GPCLR1]   @ apago GPIO 47
+        ldr     r1, [r0, #GPLEV0]
+/* guia bits           10987654321098765432109876543210*/
+        tst     r1, #0b00000000000001000000000000000100
+        strne   r2, [r0, #GPSET0]   @ enciendo GPIO 16
+        strne   r3, [r0, #GPSET1]   @ enciendo GPIO 47
+        b       bucle
+\end{lstlisting}
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/pulldown.png}
+  \caption{Resistencia interna de pull-down}
+  \label{fig:pulldown}
+\end{figure}
 
 \chapterend
