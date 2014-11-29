@@ -1,0 +1,12 @@
+*.aux
+*.bbl
+*.blg
+*.mtc*
+*.toc
+*.lot
+*.log
+*.lof
+*.maf
+*.idx
+*.out
+A0.PFC.pdf

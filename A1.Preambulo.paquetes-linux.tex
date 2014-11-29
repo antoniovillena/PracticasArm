@@ -1,0 +1,74 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Documento LaTeX                                             %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Título: Paquetes
+% Autor:  Ignacio Moreno Doblas
+% Fecha:  2014-02-01
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Tabla de materias:
+% 1 Codificación e idioma %
+% 2 Matemáticas y Física %
+% 3 Gráficos%
+% 4 Estilo y formato%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%1 Codificación e idioma%
+\usepackage[utf8]{inputenc} %Codificación en utf8%
+\usepackage[spanish]{babel} %Hyphenation (Guionado) en español%
+\usepackage[T1]{fontenc} %Codificación de fuente%
+%\usepackage{eurofont} %Tipografía euro (€)%
+\usepackage{eurosym} %Tipografía euro (€)%
+\usepackage{textcomp}
+
+%2 Matemáticas y Física %
+% Importante para ecuaciones, magnitudes y unidades%
+\usepackage{amssymb,amsmath,latexsym,amsfonts} % paquetes estándar%
+\usepackage[squaren]{SIunits} %Paquete para magnitudes y unidades físicas%
+\usepackage{ifthen} %sentencias if y while%
+
+%3 Gráficos%
+\usepackage{graphics,graphicx} %paquetes gráficos estándar%
+\usepackage{wrapfig} %paquete para gráfica lateral%
+\usepackage[rflt]{floatflt} %figuras flotantes%
+  % \begin{floatingfigure}[r]/[l]{4.5cm}
+  % \end{floatingfigure}
+\usepackage{graphpap} %comando \graphpaper en el entorno picture%
+
+%4 Estilo y formato%
+\usepackage{fancyhdr} %cabeceras y pies mejor que con \pagestyle{}%
+\usepackage{titlesec,titletoc} %Formateo de secciones y títulos%
+\raggedbottom %Para fragmentar versos en varias páginas%
+\usepackage{makeidx} %MakeIndex%
+%\usepackage{showidx} % Hace que cada comando \index se imprima en la página donde se ha puesto (útil para corregir los índices)
+\usepackage{alltt} % Define el environment alltt, como verbatim, excepto que \, { y } tienen su significado normal. Se describe en el fichero alltt.dtx.
+\usepackage[pdftex,bookmarksnumbered,hidelinks]{hyperref} %hyper-references%
+\usepackage{minitoc} % Para poner tablas de contenido en cada capítulo.
+\usepackage{listings} % Para escribir piezas de código C, Python, etc. %
+%listings configuration
+\usepackage{color}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codecyan}{rgb}{0,0.5,0.5}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstset{
+  language=[ARM]Assembler, %Puede ser C, C++, Java, etc.
+  showstringspaces=false,
+  formfeed=\newpage,
+  tabsize=4,
+  commentstyle=\small\color{codegreen},
+  basicstyle=\small\ttfamily,
+  morekeywords={models, lambda, forms}
+  breaklines=true,                 % sets automatic line breaking
+  frame=single,                    % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  keywordstyle=[2]\color{codecyan},
+}
+
+\usepackage{tipa} % tipografía IPA (International Phonetic Alphabet)
+\usepackage{longtable} %Entorno Longtable, fracciona tablas a lo largo de páginas%
+\usepackage{colortbl}
+\usepackage{acronym}  %Para expandir automáticamente los acrónimos
