@@ -102,21 +102,15 @@ cuidadosa de selección de información y redacción de la documentación adecua
 el objetivo docente de las prácticas.
 
 El aprendizaje del lenguaje ensamblador del procesador ARM usado en la Raspberry Pi
-se puede llevar a cabo leyendo la documentación disponible en internet
-\footnote{Resumen del lenguaje ensamblador para procesadores ARM\\
-\url{http://www.davespace.co.uk/arm/introduction-to-arm/}}
-y haciendo los tutoriales de
-\footnote{Tutorial con prácticas de ensamblador ARM sobre Raspberry Pi\\
-\url{http://thinkingeek.com/2013/01/09/arm-assembler-raspberry-pi-chapter-1/}}
+se puede llevar a cabo leyendo la documentación disponible en \cite{DATH}
+y haciendo los tutoriales de \cite{TASM}.
 Para la parte más centrada en el hardware como por ejemplo entender el uso del GPIO
 (subsistema encargado de la entrada/salida general) para poder controlar los leds
 disponibles en la placa, para el control de teclado y de pantalla se consultará la
 amplia documentación disponible en internet como por ejemplo los tutoriales disponibles en
-\footnote{Baking Pi: Operating Systems Development! Course by Alex Chadwick. Version 1.0c\\
-\url{http://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/introduction.html}}
+\cite{BKPI}
 y la descripción los modos de operación de los periféricos conectados al procesador ARM
-\footnote{BCM2835 ARM Peripherals (Manual de los periféricos conectados en una Raspberry Pi)\\
-\url{http://www.raspberrypi.org/wp-content/uploads/2012/02/BCM2835-ARM-Peripherals.pdf}}
+\cite{ARMP}
 
 \sectionx{Fases de trabajo y planificación temporal}
 Estimamos que el desarrollo completo de este Proyecto Fin de Carrera podría realizarse
@@ -124,7 +118,7 @@ a lo largo de unos 6 meses, llevando a cabo las siguientes tareas:
 
 \begin{enumerate}
   \item Estudio básico del lenguaje ensamblador ARM y el tool-chain para compilar de la
-        Raspberry Pi [1, 2] necesarios para el posterior desarrollo de todas las prácticas. 
+        Raspberry Pi necesarios para el posterior desarrollo de todas las prácticas. 
         Estimación temporal: 2 semanas.
 
   \item Estudio de las prácticas de programación en ensamblador existentes en la actualidad,
@@ -160,8 +154,10 @@ Los medios materiales para el desarrollo de este proyecto fin de carrera son los
         del código ensamblador ARM.
   \item Convertidor USB-Serie para comunicarse con la Raspberry.
   \item Placa auxiliar, construida ex profeso para el proyecto empleando un servicio online de
-        fabricación de PCBs \footnote{http://seeedstudio.com/service/index.php?r=pcb} y
-        comprando los componentes en ebay y aliexpress.
+        fabricación de PCBs
+\textcolor{blue}{
+  \href{http://seeedstudio.com/service/index.php?r=pcb}
+  {http://seeedstudio.com/service/index.php?r=pcb}} y comprando los componentes en ebay y aliexpress.
 \end{enumerate}
 
 \chapterend

@@ -170,7 +170,10 @@ El proceso de arranque de la Raspberry Pi es el siguiente:
 
 De todos estos archivos los obligatorios son {\tt bootcode.bin}, {\tt start.elf} y
 {\tt kernel.img}. Los dos primeros los bajamos del repositorio oficial
-\footnote{\url{https://github.com/raspberrypi}} y el tercero {\tt kernel.img} es el que nosotros
+\textcolor{blue}{
+  \href{https://github.com/raspberrypi}
+  {https://github.com/raspberrypi}}
+y el tercero {\tt kernel.img} es el que nosotros
 vamos a generar. Estos tres archivos deben estar en el directorio raíz de la primera partición
 de la tarjeta SD, la cual debe estar formateada en FAT32.
 
@@ -193,7 +196,10 @@ trabajo, donde no es necesario extraer la SD y por tanto podemos actualizar el {
 en cuestión de segundos.
 
 \begin{itemize}
-  \item Cable JTAG con software Openocd \footnote{\url{http://openocd.sourceforge.net}}
+  \item Cable JTAG con software Openocd
+\textcolor{blue}{
+  \href{http://openocd.sourceforge.net}
+  {http://openocd.sourceforge.net}}
   \item Cable USB-serie desde el ordenador de desarrollo hacia la Raspberry, requiere
         tener instaladas las herramientas de compilación cruzada en el ordenador de desarrollo.
   \item Cable serie-serie que comunica dos Raspberries, una orientada a desarrollo y la otra

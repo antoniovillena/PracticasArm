@@ -62,8 +62,11 @@ Cortex-A53/A57, X-Gene, Apple A7 & ARMv8-A & 64/32 & Apple iPhone 5S\\ \hline
 \label{list_fam}
 \end{longtable}
 
-Las extensiones de la arquitectura ARMv6k frente a la básica ARMv6 son mínimas
-\footnote{\url{http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/apbs02s02.html}}
+Las 
+\textcolor{blue}{
+  \href{http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0301h/apbs02s02.html}
+  {extensiones de la arquitectura ARMv6k}}
+frente a la básica ARMv6 son mínimas
 por lo que a efectos prácticos trabajaremos con la arquitectura ARMv6.
 
 \subsubsection{Registros}
@@ -239,20 +242,28 @@ aunque no se os indique explícitamente.
 \subsection{Configuración del entorno para realizar las prácticas en casa}
 
 Las instrucciones vienen detalladas en esta dirección:\newline
-\hspace{2.5cm}{\bf http://elinux.org/RPi\_Easy\_SD\_Card\_Setup}
+\textcolor{blue}{
+  \href{http://elinux.org/RPi\_Easy\_SD\_Card\_Setup}
+  {http://elinux.org/RPi\_Easy\_SD\_Card\_Setup}}
 
 Vamos a hacer un resumen de cómo se haría en Windows. Para otros
 sistemas operativos (Linux, Mac Os) seguir las instrucciones antes mencionadas.
 
 \begin{enumerate}
   \item Descargamos la última versión de RASPBIAN en la siguiente url: \newline
-\hspace{2.5cm}{\bf http://www.raspberrypi.org/downloads/}
+\hspace{2.5cm}
+\textcolor{blue}{
+  \href{http://www.raspberrypi.org/downloads/}
+  {http://www.raspberrypi.org/downloads/}}
   \item Extraemos del .zip el archivo de imagen, en nuestro caso se llama
         2014-01-07-wheezy-raspbian.img, aunque seguramente tu versión será más moderna.
   \item Insertamos una tarjeta SD en tu PC (slot SD o adaptador USB) y nos aseguramos de que
         funcione correctamente. Si no, la formateamos en FAT32.
   \item Nos bajamos e instalamos la utilidad Win32DiskImager. \newline
-\hspace{2.5cm}{\bf http://sourceforge.net/projects/win32diskimager}
+\hspace{2.5cm}
+\textcolor{blue}{
+  \href{http://sourceforge.net/projects/win32diskimager}
+  {http://sourceforge.net/projects/win32diskimager}}
   \item Ejecutamos como Administrador la utilidad anterior.
   \item Dentro de la utilidad, seleccionamos el archivo de imagen anterior,
         2014-01-07-wheezy-raspbian.img
@@ -267,13 +278,19 @@ sistemas operativos (Linux, Mac Os) seguir las instrucciones antes mencionadas.
 De forma alternativa podemos ejecutar la imagen anterior en un emulador de
 Raspberry Pi, y seguir gran parte de las mismas con la comodidad de tu PC. Para
 ello partimos del archivo de imagen obtenido en el apartado 2 de la lista anterior,
-y seguimos los siguientes pasos\footnote{\url{http://xecdesign.com/qemu-emulating-raspberry-pi-the-easy-way/}}.
+y seguimos los pasos según \cite{QEMU}.
 
 \begin{enumerate}
   \item Descargamos el emulador QEMU desde aquí: \newline
-\hspace{2.5cm}{\bf http://lassauge.free.fr/qemu/}
+\hspace{2.5cm}
+\textcolor{blue}{
+  \href{http://lassauge.free.fr/qemu/}
+  {http://lassauge.free.fr/qemu/}}
   \item Descargamos el siguiente núcleo o kernel desde aquí: \newline
-\hspace{2.5cm}{\bf http://xecdesign.com/downloads/linux-qemu/kernel-qemu}
+\hspace{2.5cm}
+\textcolor{blue}{
+  \href{http://xecdesign.com/downloads/linux-qemu/kernel-qemu}
+  {http://xecdesign.com/downloads/linux-qemu/kernel-qemu}}
   \item Ejecutamos desde línea de comandos:
 \begin{lstlisting}
 qemu-system-armw -kernel kernel-qemu -cpu arm1176
@@ -642,7 +659,10 @@ el directorio de trabajo al terminar.
 También es buena idea conectarte por ssh a la Raspberry que tengas en casa
 como acabamos de explicar, así te ahorras el tener que disponer de teclado
 y monitor extra. Desde Windows puedes bajarte putty.exe 
-\footnote{\url{http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html}}
+en \newline
+\textcolor{blue}{
+  \href{http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html}
+  {http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html}}
 (no requiere instalación) y crear un acceso directo en el escritorio con
 el siguiente destino, cambiando {\bf ruta} y {\bf 192.168.1.42} por lo que
 corresponda.
@@ -728,9 +748,8 @@ Reading symbols from /home/pi/intro1...(no debugging sy...
 \end{lstlisting}
 
 Podemos escribir {\bf help} para acceder a la ayuda integrada, o bien
-irnos a la página web de documentación
-\footnote{\url{http://sourceware.org/gdb/current/onlinedocs/gdb/}}
-del {\bf gdb}. El primer comando a aprender es:
+irnos a la página web de documentación del {\bf gdb} \cite{DGDB}.
+El primer comando a aprender es:
 
 \begin{lstlisting}
 (gdb) quit
