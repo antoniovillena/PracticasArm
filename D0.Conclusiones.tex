@@ -1,10 +1,134 @@
 \chapterbeginx{Conclusiones y líneas futuras}
 
-  Después de todo el desarrollo del proyecto, es pertinente hacer una valoración final del mismo, respecto a los resultados obtenidos, las expectativas o el resultado de la experiencia acumulada.
+Tras haber estudiado detenidamente las prácticas diseñadas en
+torno a la arquitectura x86 hicimos una comparativa entre
+arquitecturas. A pesar de ser las enormes diferencias que separan
+ARM de x86 hemos tratado de seguir el mismo guión argumental
+de las prácticas.
 
-  En esta sección se exponen todos esos conceptos y enuncian unas conclusiones finales.
-  
-  Además, considerando también el estado de la técnica, se pueden deducir líneas futuras de trabajo, proponer otros puntos de vista o cualquier otra sugerencia como postámbulo del presente trabajo, para ser considerada por el lector o el tribunal evaluador.
+Al comienzo de cada lección suele haber una serie de conceptos
+teóricos, esta parte apenas se ha tocado con ligeras modificaciones
+para mantener la coherencia con la nueva arquitectura. El problema
+viene una vez avanzamos en la lección, ya que la forma de actuar
+es completamente distinta. En x86 básicamente tenemos todo el
+hardware a nuestra disposición, podemos comunicarnos a muy bajo
+nivel mediante puertos E/S, a bajo nivel mediante interrupciones
+software a la BIOS, o a medio/bajo haciendo lo mismo bajo MS-DOS.
+
+En ARM está todo más jerarquizado. Desde Linux no podemos
+comunicarnos directamente con el hardware, el más bajo nivel al
+que aspiramos es con interrupciones software bajo kernel. También
+tenemos acceso a librerías, sin embargo estas se hacen con un
+mecanismo distinto, mediante llamadas a funciones empleando la
+convención AAPCS.
+
+Aunque no sea exactamente igual, hemos creado una equivalencia entre
+la BIOS del PC y el kernel de Linux, entre las ISR (Interrupt Service
+Routines) del MS-DOS y las llamadas a funciones de librerías externas,
+y finalmente hemos recurrido al Bare Metal para mostrar cómo se
+accede directamente al hardware.
+
+Hemos estudiado a fondo la plataforma Raspberry Pi, sobre todo lo
+referente al subsistema E/S y el acceso en Bare Metal. Hemos
+buscado dispositivos que sean simples pero que a la vez abarquen
+todos los aspectos requeridos desde un punto de vista didáctico,
+sobre todo que puedan ser accedidos tanto mediante polling como
+vía interrupciones.
+
+Llegamos a la conclusión de que con el puerto GPIO y el System Timer
+se cubrían todos los aspectos, centrando las prácticas Bare Metal
+en torno a estos. Vimos la necesidad de diseñar una placa de extensión
+para aumentar la funcionalidad de la Raspberry Pi, y de esta forma
+ilustrar mejor los ejemplos en Bare Metal. Gracias a los pulsadores,
+el buzzer y los LEDs el alumno puede ir experimentando con el código
+y aprendiendo los distintos mecanismos que hay para manejarlos.
+
+En la adaptación de las prácticas es donde más cambios hemos
+realizado, debido a la diferencia entre arquitecturas y a que una
+conversión más literal de las mismas habría resultado un tanto
+forzada. Hemos tratado de seguir un orden más natural, por ejemplo
+al introducir los LEDs. Primero tratamos de simplemente encender
+un LED, luego nos centramos en hacerlo parpadear, y a medida que
+las prácticas avanzan hacemos cosas más complicadas como una
+secuencia animada que involucre a varios LEDs.
+
+En cuanto al subsistema gráfico hemos experimentado con él, pero al
+final hemos decidido excluirlo para las prácticas debido a la
+dificultad logística y económica que supone dotar a los laboratorios
+de monitores con entrada HDMI ó Video Compuesto. Los que hay sólo
+tienen VGA, y aunque hay aparatos conversores, haría falta también
+un sistema de conmutación práctico ya que se requiere trabajar a la vez
+con el PC y la Raspberry.
+
+Hemos simplificado al máximo el conexionado y el proceso de carga de
+programas Bare Metal. En lugar de conectarnos a la Raspberry por el
+típico puerto Ethernet para trabajar con Linux, hemos aprovechado el
+puerto serie (necesario para Bare Metal) para hacer la misma función,
+con lo que nos ahorramos un cable Ethernet y un slot libre en el switch o
+router. El único elemento necesario para trabajar con la Raspberry
+(aparte de la placa de expansión) es un conversor USB-Serie que cuesta
+en torno a un euro. Este dispositivo tendría 3 funciones: sirve para
+alimentar la Raspberry, para trabajar con ella en Linux a modo de terminal
+y para cargar (también depurar) programas en Bare Metal.
+
+Especial atención hemos puesto en la carga Bare Metal. Aunque en teoría
+se puedan ejecutar programas Bare Metal simplemente reemplazando el
+archivo kernel.img de la tarjeta SD, a la hora de desarrollar este
+mecanismo resulta tedioso. Extraer la tarjeta, meterla en un PC,
+reemplazar el archivo, extraerla del PC, introducirla en la Raspberry
+y resetear la misma es una tarea que requiere su tiempo. Aunque un minuto
+no suponga mucho tiempo si lo haces una sola vez, a medida que vas
+probando modificación tras otra, el proceso se vuelve repetitivo y
+aburrido. Hemos optimizado el ciclo de desarrollo mediante un bootloader
+en la tarjeta SD que lee del puerto serie y ejecuta el programa Bare
+Metal que se le envíe. También hemos pedido conversores USB-Serie
+especiales que disponen de un pin de más, que empleamos
+para forzar el reset de la Raspberry, que de otra forma habría que
+desenchufar y enchufar (o a lo sumo pulsar un botón).
+
+De esta forma la carga de programas Bare Metal se vuelve muy ágil, y
+en cuestión de 1 ó 2 segundos podemos tener cargado un nuevo programa
+desde la última modificación que hagamos.
+
+Hemos tratado de aproximar al alumno a esta plataforma de
+la forma más natural posible, empleando la cadena de herramientas GNU
+para ensamblado, compilado, enlazado y depuración, que además de ser
+gratuita está bastante extendida en la comunidad (e incluida en la
+propia distribución). También hemos escogido Raspbian como distribución
+de Linux porque es con diferencia la más popular. Está basada en Debian,
+por lo que resulta apropiada para usuarios con poca experiencia en Linux.
+
+Nuestra intención es que el alumno además de aprender disfrute de la
+asignatura. Con esta plataforma es posible porque si el alumno lo desea
+puede adquirir una Raspberry por su propia cuenta y complementar las
+prácticas desde casa. Por esta razón hemos dotado al
+laboratorio con el doble de placas de expansión que Raspberries. Así
+podrán ser prestadas al alumno que las solicite, ya sea para continuar
+el trabajo que se ha quedado pendiente en el laboratorio o para
+experimentar con sus propios desarrollos.
+
+Como líneas futuras está el ya mencionado subsistema gráfico. También puede
+resultar interesante explotar las posibilidades que brinda el coprocesador
+matemático (ó VFP) u otros dispositivos más complejos como el teclado,
+el audio o el acceso a la tarjeta SD.
+
+Otra línea no explorada puede ser la depuración en Bare Metal, si bien hemos
+probado un sistema que permite depurar por el puerto serie, hemos decidido
+no incluirlo para no sobrecargar al alumno. Tampoco es realmente necesaria,
+los ejemplos Bare Metal son más bien sencillos y el alumno puede repasar
+el código para tratar de encontrar dónde falla.
+
+En este proyecto hemos tratado de buscar un acercamiento sencillo y didáctico
+para aprender ensamblador y familiarizarse con la plataforma. Pero nada impide
+hacer cosas más complejas dando por aprendidos estos conocimientos en
+asignaturas posteriores. Un ejemplo puede ser para Sistemas Operativos. Saber
+combinar un lenguaje de alto nivel como C con ensamblador y el manejo del
+hardware a bajo nivel son una base esencial para esta asignatura.
+
+Por último, los conocimientos adquiridos aquí también pueden resultar
+interesantes para proyectos Bare Metal que no sean Sistemas Operativos, hay un
+abanico muy amplio: aplicaciones gráficas, sistemas en tiempo real,
+sistemas embebidos, etc...
 
 \begin{flushright}
 {\large \pfcauthorname}\nli
