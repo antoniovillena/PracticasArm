@@ -103,10 +103,10 @@ más uno de estado) de 32 bits cada uno.
   \item[Registro CPSR.]
         Almacena las banderas condicionales y los bits de control. Los bits de control
         definen la habilitación de interrupciones normales (I),
-        interrupciones rápidas (F), modo Thumb \footnote{es un modo simplificado donde las
+        interrupciones rápidas (F), modo Thumb \footnote{Es un modo simplificado donde las
         instrucciones son de 16 bits en lugar de 32 y se acceden a menos registros (hasta r7),
         con la ventaja de que el código ocupa menos espacio.} (T) y el modo de operación
-        de la CPU. Existen hasta 8 modos de operación, pero desde nuestra aplicación
+        de la CPU. Existen hasta 8 modos de operación, pero por ahora desde nuestra aplicación
         sólo vamos a trabajar en uno de ellos, el {\it Modo Usuario}. Los demás son modos
         privilegiados usados exclusivamente por el sistema operativo.
 
@@ -160,7 +160,8 @@ Un conjunto de instrucciones y/o datos forman un módulo fuente.
 Este módulo es la entrada del compilador, que chequea la sintaxis y lo
 traduce a código máquina formando un módulo objeto.
 Finalmente, un enlazador (montador ó {\it linker}) traduce todas las
-referencias relativas a direcciones absolutas.
+referencias relativas a direcciones absolutas y termina generando el
+ejecutable.
 
 El ensamblador presenta una serie de ventajas e inconvenientes con
 respecto a otros lenguajes de más alto nivel. Al ser un lenguaje de
@@ -235,9 +236,7 @@ y GNU Debbuger ({\bf gdb}). Todas estas herramientas forman parte de la
 GNU toolchain que viene instalada por defecto en la mayoría de las distribuciones
 basadas en Linux, en concreto Raspbian. Para obtener más información sobre estos
 comandos se puede recurrir a la ayuda del sistema con {\tt man as}, {\tt man gcc} y
-{\tt man gdb}. Se aconseja que a lo largo de de esta
-primera sesión práctica os vayais familiarizando con ambos entornos,
-aunque no se os indique explícitamente.
+{\tt man gdb}.
 
 \subsection{Configuración del entorno para realizar las prácticas en casa}
 
@@ -247,7 +246,7 @@ Las instrucciones vienen detalladas en esta dirección:\newline
   {http://elinux.org/RPi\_Easy\_SD\_Card\_Setup}}
 
 Vamos a hacer un resumen de cómo se haría en Windows. Para otros
-sistemas operativos (Linux, Mac Os) seguir las instrucciones antes mencionadas.
+sistemas operativos (Linux, Mac OS) seguir las instrucciones antes mencionadas.
 
 \begin{enumerate}
   \item Descargamos la última versión de RASPBIAN en la siguiente url: \newline
@@ -276,9 +275,10 @@ sistemas operativos (Linux, Mac Os) seguir las instrucciones antes mencionadas.
 \end{enumerate}
 
 De forma alternativa podemos ejecutar la imagen anterior en un emulador de
-Raspberry Pi, y seguir gran parte de las mismas con la comodidad de tu PC. Para
+Raspberry Pi, y seguir gran parte de las prácticas con la comodidad de tu PC. Para
 ello partimos del archivo de imagen obtenido en el apartado 2 de la lista anterior,
-y seguimos los pasos según \cite{QEMU}.
+y seguimos los pasos según \cite{QEMU}. Los pasos son válidos para Windows y Linux,
+aunque nosotros mostraremos sólo los de Windows.
 
 \begin{enumerate}
   \item Descargamos el emulador QEMU desde aquí: \newline
@@ -291,34 +291,48 @@ y seguimos los pasos según \cite{QEMU}.
 \textcolor{blue}{
   \href{http://xecdesign.com/downloads/linux-qemu/kernel-qemu}
   {http://xecdesign.com/downloads/linux-qemu/kernel-qemu}}
-  \item Ejecutamos desde línea de comandos:
+  \item Lanzamos la línea de comandos o ventana de MS-DOS. Esto se hace desde
+{\tt Programas->Accesorios->Símbolo del sistema} o bien pulsando {\tt Windows+R} y escribiendo
+``cmd''. Una vez lanzada escribimos lo siguiente:
 \begin{lstlisting}
 qemu-system-armw -kernel kernel-qemu -cpu arm1176
 -m 256 -M versatilepb -no-reboot -serial stdio -append
 "root=/dev/sda2 panic=1 rootfstype=ext4 rw init=/bin/bash"
 -hda 2014-01-07-wheezy-raspbian.img
 \end{lstlisting}
-  \item {\tt nano /etc/ld.so.preload}
-  \item Pon un {\bf \#} al comienzo de la siguiente línea:
+  \item Aparece el emulador en una nueva ventana tipo terminal. Ya estaríamos
+dentro de la Raspberry emulada. Una vez se muestren los mensajes de arranque
+aparece el siguiente texto:
+\begin{lstlisting}
+raspberrypi login:
+\end{lstlisting}
+  Nos está pidiendo el nombre de usuario. Nosotros escribimos {\tt pi}.
+  \item Luego nos piden el password, que es {\tt raspberry}. En este caso y
+por motivos de seguridad no se recibe respuesta visual mientras escribimos
+la contraseña, ni siquiera aparecen asteriscos.
+  \item Una vez identificados, lo primero que hacemos es editar el archivo
+{\tt /etc/ld.so.preload} con el siguiente comando:
+\begin{lstlisting}
+nano /etc/ld.so.preload
+\end{lstlisting}
+  \item Dentro del editor ponemos un {\bf \#} al comienzo de la siguiente línea:
 \begin{lstlisting}
 #/usr/lib/arm-linux-gnueabihf/libcofi_rpi.so
 \end{lstlisting}
-  \item Presiona {\tt Ctrl-X} y luego {\tt y}, Enter para guardar y salir.
-  \item {\tt halt}
-  \item Cierra la ventana de QEMU, y edita el siguiente archivo .bat.
+  \item Presionamos {\tt Ctrl-X} y luego {\tt y}, Enter para guardar y salir.
+  \item Escribimos {\tt halt} para salir limpiamente del sistema emulado.
+  \item Cerramos la ventana de QEMU y creamos el siguiente archivo {\tt lanzador.bat}.
 \begin{lstlisting}
 qemu-system-armw -kernel kernel-qemu -cpu arm1176
 -m 256 -M versatilepb -no-reboot -serial stdio -append
 "root=/dev/sda2 panic=1 rootfstype=ext4 rw"
 -hda 2014-01-07-wheezy-raspbian.img
 \end{lstlisting}
-  \item Ejecuta el archivo .bat que acabas de crear. Ya está, cada vez que
-termines sal limpiamente con {\tt halt}. Todos los archivos que vayas creando
-se almacenan en la imagen como si se tratase de SD real corriendo sobre una
+  \item Ejecutamos el archivo {\tt lanzador.bat} que acabamos de crear.
+Ya hemos terminado. Todos los archivos que vayamos creando
+se almacenan en la imagen como si se tratase de una SD real corriendo sobre una
 Raspberry Pi real.
 \end{enumerate}
-
-Por defecto el nombre de usuario es {\tt pi} y la contraseña {\tt raspberry}.
 
 \subsection{Aspecto de un programa en ensamblador}
 
@@ -369,7 +383,7 @@ de 32 bits no hay que tener especial cuidado en que estén alineadas. Si tratamo
 de escribir en esta zona el ensamblador nos mostrará un mensaje de error.
 \end{description}
 
-De estas tres secciones la única que obligatoriamente debe existir es
+De estas dos secciones la única que obligatoriamente debe existir es
 la sección .text (o sección de código). En el ejemplo \ref{lst:codigoPract1}
 comprobamos que están las dos.
 
@@ -401,20 +415,20 @@ emplearemos las comillas simples y las comillas dobles respectivamente.
 
 \subsubsection{Símbolos}
 
-Como las etiquetas se pueden ubicar en tanto en la sección de datos como en la de código,
-la versatilidad que nos dan las mismas es enorme. En la zona de datos pueden representar
-variables, constantes y cadenas. En la zona de código etiquetas de salto, funciones y
+Como las etiquetas se pueden ubicar tanto en la sección de datos como en la de código,
+la versatilidad que nos dan las mismas es enorme. En la zona de datos, las etiquetas pueden representar
+variables, constantes y cadenas. En la zona de código podemos usar etiquetas de salto, funciones y
 punteros a zona de datos.
 
 Las macros y las constantes simbólicas son símbolos cuyo ámbito pertenece al preprocesador,
 a diferencia de las etiquetas que pertenecen al del ensamblador. Se especifican con las
-directivas .equ y .macro respectivamente y permiten que el código sea más legible y menos
+directivas .macro y .equ respectivamente y permiten que el código sea más legible y menos
 repetitivo.
 
 \subsubsection{Instrucciones}
 
-Las instrucciones del {\bf as} responden al formato general:
-
+Las instrucciones del {\bf as} (a partir de ahora usamos {\bf as} para referirnos al
+ensamblador) responden al formato general:
 
 \begin{lstlisting}
 Etiqueta:  Nemotécnico  Operando/s  /* Comentario */
@@ -450,8 +464,8 @@ pre/post-incrementos. En cualquiera de los casos el tamaño debe ser una
 palabra (32 bits), salvo contadas excepciones como {\tt ldr} y {\tt str}
 donde puede ser media palabra (16 bits) o un byte (8 bits).
 En el ejemplo {\tt r1} es el operando destino, de tipo registro,
-y {\tt puntero\_var1} es el operando fuente, una etiqueta, ambos
-de tamaño palabra (32 bits).
+y {\tt puntero\_var1} es el operando fuente, una etiqueta. Tanto {\tt r1}
+como {\tt puntero\_var1} hacen referencia a un valor de tamaño palabra (32 bits).
 
 El campo \textit{Comentario} es opcional ({\tt r1 <- \&var1}, en el ejemplo)
 y debe comenzar con la secuencia {\tt /*} y acabar con {\tt */} al igual
@@ -495,7 +509,7 @@ condicionales.
 
 En esta sesión práctica se explorarán algunas de estas instrucciones.
 Para buscar información sobre cualquiera de ellas durante las prácticas,
-recuerda que puedes utilizar el datasheet del ARM1176JZF-S.
+recuerda que puedes utilizar el manual técnico del ARM1176JZF-S \cite{ATRM}.
 
 \subsubsection{Directivas}
 
@@ -513,7 +527,7 @@ valores a las constantes o reservar posiciones de memoria para las
 variables (con un posible valor inicial).  \textbf{.byte, .hword, .word,
 .ascii, .asciz, .zero y .space}
 son directivas que indican al compilador que reserve memoria para
-las variables del tipo indicado. Por ejemplo,
+las variables del tipo indicado. Por ejemplo:
 
 \begin{lstlisting}
 a1:   .byte  1       /* tipo byte, inicializada a 1 */
