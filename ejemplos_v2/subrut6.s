@@ -4,6 +4,8 @@ var1:   .asciz  "%d\n"
 .text
 .global main
 main:   push    {r4, lr}
+
+/* Primera llamada poly3(1, 2, 3, 4, 5) */
         mov     r0, #1
         mov     r1, #2
         mov     r2, #3
@@ -16,6 +18,7 @@ main:   push    {r4, lr}
         ldr     r0, =var1
         bl      printf
 
+/* Segunda llamada poly3(1, -1, 1, -1, 8) */
         mov     r0, #1
         mov     r1, #-1
         mov     r2, #1
@@ -28,6 +31,7 @@ main:   push    {r4, lr}
         ldr     r0, =var1
         bl      printf
 
+/* Tercera llamada poly3(2, 0, 0, 0, 8) */
         mov     r0, #2
         mov     r1, #0
         mov     r2, #0

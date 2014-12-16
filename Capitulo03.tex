@@ -581,8 +581,8 @@ fib1:   add     sp, #length       @ libero espacio de v.locales
 
 Lo único que nos faltaba era la función {\tt main}. La lista de {\tt .equ} puede
 ir al comienzo, pero por claridad la ponemos justo antes de la función a la que
-se va a aplicar. La función {\tt main} no tiene nada nuevo, lo único es que incrementamos
-el contador {\tt r4} en lugar de decrementar porque lo necesitamos dicho valor como
+se va a aplicar. La función {\tt main} no tiene nada nuevo, salvo que incrementamos
+el contador {\tt r4} en lugar de decrementarlo porque necesitamos dicho valor como
 parámetro para llamar a la función {\tt fibo}.
 
 Para terminar con este ejemplo vamos a hacer una sencilla optimización. Observa un momento
@@ -591,30 +591,32 @@ un registro, {\tt r0}, tanto para comparar la entrada como para escribir el valo
 No se toca ningún registro más, no hemos modificado {\tt lr} porque no hemos llamado a ninguna
 subrutina, tampoco hemos hecho uso de las variables locales.
 
-La optimización consiste en procesar la primera rama antes de las operaciones con la pila,
+La optimización consiste (ver listado \ref{lst:codigoPract3_6}) en procesar la primera rama antes de las operaciones con la pila,
 de esta forma nos ahorramos algunos ciclos de reloj. Es un buen ejemplo para comprobar
 lo flexibles que pueden ser las funciones: hay funciones en las que podemos evitar tratar
 con la pila como en el listado \ref{lst:codigoPract3_3}, otras en las que no tenemos más
-remedio, y un último caso en que podemos tener una mezcla de ambas.
+remedio, y un último caso en que podemos tener una mezcla de ambas alternativas.
 
 \begin{lstlisting}[caption={Parte del código del programa subrut4.s},label={lst:codigoPract3_6}]
-fibo:   cmp     r0, #2
-        movlo   r0, #1
-        bxlo    lr
-        push    {lr}
-        sub     sp, #length
-        sub     r0, #1
-        str     r0, [sp, #local1]
-        bl      fibo
-        str     r0, [sp, #local2]
-        ldr     r0, [sp, #local1]
-        sub     r0, #1
-        bl      fibo
-        ldr     r1, [sp, #local2]
-        add     r0, r1
-        add     sp, #length
-        pop     {lr}
-        bx      lr
+fibo:   cmp     r0, #2            @ if n<2
+        movlo   r0, #1            @ return 1
+        bxlo    lr                @ salgo de la función
+
+        push    {lr}              @ salvaguarda lr
+        sub     sp, #length       @ hago espacio para v.locales
+        sub     r0, #1            @ r0= n-1
+        str     r0, [sp, #local1] @ salvo n-1 en [sp]
+        bl      fibo              @ fibonacci(n-1)
+        str     r0, [sp, #local2] @ salvo salida de fib.(n-1)
+        ldr     r0, [sp, #local1] @ recupero de la pila n-1
+        sub     r0, #1            @ calculo n-2
+        bl      fibo              @ fibonacci(n-2)
+        ldr     r1, [sp, #local2] @ recupero salida de fib(n-1)
+        add     r0, r1            @ lo sumo a fib.(n-1)
+
+        add     sp, #length       @ libero espacio de v.locales
+        pop     {lr}              @ recupero registros, sólo lr
+        bx      lr                @ salgo de la función
 \end{lstlisting}
 
 \subsection{Funciones con muchos parámetros de entrada}
@@ -631,9 +633,7 @@ f(x) = ax^3 + bx^2 + cx + d
 
 
 Nuestra función tendría 5 entradas, una para cada coeficiente, más el valor de la $x$ que
-sería el quinto parámetro que pasamos por pila.
-
-Como siempre, comenzamos escribiendo el código en C.
+sería el quinto parámetro que pasamos por pila. Como siempre, comenzamos escribiendo el código en C:
 
 \begin{lstlisting}[caption={Evaluador de polinomios subrut5.c},label={lst:codigoPract3_6},language=C]
 int poly3(int a, int b, int c, int d, int x){
@@ -656,7 +656,7 @@ Cuya salida es la siguiente.
 1024
 \end{lstlisting}
 
-El código completo es el siguiente.
+El código completo en ensamblador se muestra en el listado \ref{lst:codigoPract3_7}.
 
 \begin{lstlisting}[caption={Evaluador de polinomios subrut5.s},label={lst:codigoPract3_7}]
 .data
@@ -664,19 +664,33 @@ var1:   .asciz  "%d\n"
 
 .text
 .global main
+
+/* Salvo registros */
 main:   push    {r4, lr}
+
+/* Introduzco los 4 primeros parámetros vía registros */
         mov     r0, #1
         mov     r1, #2
         mov     r2, #3
         mov     r3, #4
+
+/* Introduzco el 5o parámetro por pila */
         mov     r4, #5
         push    {r4}
+
+/* Llamada a función poly3(1, 2, 3, 4, 5) */
         bl      poly3
+
+/* Equilibro la pila (debido al 5o parámetro) */
         add     sp, #4
+
+/* Paso resultado de la función a r1, cadena a
+   imprimir a r0 y llamo a la función */
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
 
+/* Segunda llamada, esta vez poly3(1, -1, 1, -1, 8) */
         mov     r0, #1
         mov     r1, #-1
         mov     r2, #1
@@ -685,10 +699,13 @@ main:   push    {r4, lr}
         push    {r4}
         bl      poly3
         add     sp, #4
+
+/* Imprimo resultado de segunda llamada */
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
 
+/* Llamo e imprimo poly3(2, 0, 0, 0, 8) */
         mov     r0, #2
         mov     r1, #0
         mov     r2, #0
@@ -700,20 +717,22 @@ main:   push    {r4, lr}
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
+
+/* Recupero registros y salgo de main */
         pop     {r4, lr}
         bx      lr
 
         .equ    param5,   4*1  /* r4 */
 
-poly3:  push    {r4}
-        ldr     r4, [sp, #param5]
-        smlabb  r3, r2, r4, r3
-        smulbb  r2, r4, r4
-        smlabb  r3, r1, r2, r3
-        smulbb  r2, r2, r4
-        smlabb  r0, r0, r2, r3
-        pop     {r4}
-        bx      lr
+poly3:  push    {r4}              @ salvaguarda r4
+        ldr     r4, [sp, #param5] @ leo r4 de pila
+        smlabb  r3, r2, r4, r3    @ r3= c*x + d
+        smulbb  r2, r4, r4        @ r2= x*x
+        smlabb  r3, r1, r2, r3    @ r3= b*(x*x) + (c*x + d)
+        smulbb  r2, r2, r4        @ r2= x*(x*x)
+        smlabb  r0, r0, r2, r3    @ r0= a*x*x*x + b*x*x + c*x+d
+        pop     {r4}              @ recupero r4
+        bx      lr                @ salgo de la función
 \end{lstlisting}
 
 Vemos como hemos usado un {\tt .equ} para facilitar la legibilidad del código, así
@@ -738,7 +757,7 @@ siguiente forma.
       .equ    local3,   4+local2
       .equ    length,   4+local3
       .equ    param5,   4*3+length /* r4,r5,lr */
-      .equ    param6,   4+param5*3
+      .equ    param6,   4+param5
 
 func: push    {r4, r5, lr}
       ...
@@ -753,12 +772,12 @@ Y éste sería el mapa de pila de nuestra hipotética función.
   \label{fig:pila4}
 \end{figure}
 
-Los números que hemos puesto números a la izquierda de cada elemento se
+Los números que hemos puesto a la izquierda de cada elemento se
 corresponden con las constantes que calcula el preprocesador para el
 desplazamiento respecto al puntero de pila. De no haber empleado la lista
 de {\tt .equ} tendríamos que calcular nosotros mismos estos desplazamientos,
 y lo que es peor, el código perdería legibilidad. No es lo mismo poner
-{\tt ldr r4, [sp, \#param5]}, que por ejemplo {\tt ldr r4, [sp, \#24]}, habría
+{\tt ldr r4, [sp, \#param5]}, que por ejemplo {\tt ldr r4, [sp, \#24]}, ya que habría
 que revisar a qué corresponde el desplazamiento {\tt \#24} o indicarlo como
 comentario.
 
@@ -780,44 +799,44 @@ en total 8 bytes.
 Todas los cálculos se condensan en 5 líneas donde se alternan las instrucciones
 {\tt smlaxy} y {\tt smulxy}. Son instrucciones que multiplican/acumulan y
 multiplican respectivamente números enteros. El comportamiento exacto de cada
-instrucción viene detallado en el datasheet del procesador, aunque funciona
-bastante bien buscándolas en google, suele aparecer la ayuda oficial en el primer
-resultado de la búsqueda.
+instrucción viene detallado en el datasheet\cite{ATRM} del procesador.
+\footnote{
+También es fácil encontrar la especificación de una instrucción buscando su
+nemónico en Google, ya que suele aparecer la ayuda oficial de ARM en el primer
+resultado de la búsqueda}
 
 \begin{lstlisting}
-  smlabb  r3, r2, r4, r3 /* r3= d+c*x             */
-  smulbb  r2, r4, r4     /* r2= x^2               */
-  smlabb  r3, r1, r2, r3 /* r3= d+c*x+b*x^2       */
-  smulbb  r2, r2, r4     /* r2= x^3               */
-  smlabb  r0, r0, r2, r3 /* r0= d+c*x+b*x^2+a*x^3 */
+  smlabb  r3, r2, r4, r3    @ r3= d+c*x
+  smulbb  r2, r4, r4        @ r2= x^2
+  smlabb  r3, r1, r2, r3    @ r3= d+c*x+b*x^2
+  smulbb  r2, r2, r4        @ r2= x^3
+  smlabb  r0, r0, r2, r3    @ r0= d+c*x+b*x^2+a*x^3
 \end{lstlisting}
 
 Como podéis observar, las instrucciones ARM son muy potentes, permiten
 implementar en 5 instrucciones lo que en C nos habría costado 6
-multiplicaciones y 4 sumas. Nótese como utilizamos como registros
+multiplicaciones y 4 sumas. Nótese cómo utilizamos como registros
 intermedios {\tt r2, r3} los parámetros de entrada a medida que no los
 necesitamos más.
 
 Después de esto acaba la función con las habituales {\tt pop {r4}} y
-{\tt bx lr}. Ya hemos terminado la función {\tt poly3}, ha quedado
-bastante pequeña en tamaño. Todo lo contrario que la función {\tt main}.
-
-La función {\tt main} es larga por varias razones: hacemos 3 llamadas
+{\tt bx lr}. Ya hemos terminado la función {\tt poly3}, que ha quedado
+bastante pequeña en tamaño. Todo lo contrario que la función {\tt main}. Sin
+embargo, la función {\tt main} es larga por varias razones: hacemos 3 llamadas
 a {\tt poly3}, debemos introducir muchas constantes, algunas de ellas
-en pila, y debemos imprimir los resultados y hacer el equilibrado de pila.
-
-El equilibrado de pila consiste en incrementar {\tt sp} después de la
+en pila, y debemos imprimir los resultados y hacer el equilibrado de pila. Este
+equilibrado de pila consiste en incrementar {\tt sp} después de la
 llamada a la función para desalojar los parámetros que previamente habíamos
 introducido en la misma. Como en nuestro ejemplo pasamos por pila un
 único parámetro de 4 bytes, lo que hacemos es incrementar {\tt sp} en 4 tras
 cada llamada a {\tt poly3}.
 
-Un detalle muy importante que no podemos observar en nuestro ejemplo, los
-parámetros que pasamos por pila lo hacemos en orden inverso desde el último
+Un detalle muy importante que no podemos observar en nuestro ejemplo es que los
+parámetros que pasamos por pila se pasan en orden inverso desde el último
 al quinto. Esto es así porque la pila crece hacia abajo. Es más, es
 aconsejable reusar los registros {\tt r0-r3} para introducir los
-parámetros por pila. Si tuviésemos que pasar 6 parámetros, constantes del
-1 al 6 lo haríamos así.
+parámetros por pila. Si tuviésemos que pasar 6 parámetros (constantes del
+1 al 6) lo haríamos así:
 
 \begin{lstlisting}
         mov     r0, #6
@@ -831,10 +850,10 @@ parámetros por pila. Si tuviésemos que pasar 6 parámetros, constantes del
 \end{lstlisting}
 
 Como véis no hay una forma clara y legible de introducir los parámetros
-de una función. Tened cuidado con los push múltiples, no importa el orden
-en que introduzcas los registros, el procesador siempre introduce en pila
+de una función. Hay que Tener cuidado con los push múltiples, ya que no importa el orden
+en que especifiques los registros, el procesador siempre introduce en pila
 el registro más alto y va hacia atrás hasta llegar al primero. Aprovechando
-esto podemos mejorar el ejemplo anterior.
+esto podemos mejorar el ejemplo anterior:
 
 \begin{lstlisting}
         mov     r0, #5
@@ -847,7 +866,7 @@ esto podemos mejorar el ejemplo anterior.
 \end{lstlisting}
 
 Por último vamos a mejorar un poco la velocidad de la función {\tt poly3} de
-esta forma.
+esta forma:
 
 \begin{lstlisting}[caption={Parte de subrut6.s},label={lst:codigoPract3_8}]
 poly3:  sub     sp, #4
@@ -874,20 +893,20 @@ Como ya hemos visto todos los casos posibles, hacemos un resumen de todo en una
 serie de puntos desde que pasamos los parámetros en el llamador hasta que restauramos
 la pila desde el llamador, pasando por la llamada a la función y la ejecución de la misma.
 
-\begin{itemize}
+\begin{enumerate}
   \item Usando los registros {\tt r0-r3} como almacén temporal, el llamador pasa por pila
         los parámetros quinto, sexto, etc... hasta el último. Cuidado con el orden,
-        especialmente si se emplea un {\tt push} múltiple. Opcional, sólo si nuestra
-        función tiene más de 4 parámetros.
-  \item El llamador escribe los primeros 4 parámetros en {\tt r0-r3}. Opcional, nos
-        podemos saltar este paso si nuestra función no tiene parámetros.
+        especialmente si se emplea un {\tt push} múltiple. Este paso es opcional y sólo
+        necesario si nuestra función tiene más de 4 parámetros.
+  \item El llamador escribe los primeros 4 parámetros en {\tt r0-r3}. Este paso es opcional,
+        ya que nos lo podemos saltar si nuestra función no tiene parámetros.
   \item El llamador invoca a la función con {\tt bl}. Este paso es obligatorio.
   \item Ya dentro de la función, lo primero que hace esta es salvaguardar los registros
-        desde {\tt r4} que se empleen más adelante como registros temporales. También opcional.
+        desde {\tt r4} que se empleen más adelante como registros temporales. También es opcional.
   \item Decrementar la pila para hacer hueco a las variables locales. La suma de bytes
         entre paso de parámetros por pila, salvaguarda y variables locales debe ser
         múltiplo de 8, rellenar aquí hasta completar. Como este paso es opcional, en caso
-        de no hacerlo aquí rellenar en el paso anterior.
+        de no hacerlo aquí el alineamiento se debe hacer en el paso 4.
   \item La función realiza las operaciones que necesite para completar su objetivo, accediendo
         a parámetros y variables locales mediante constantes {\tt .equ} para aportar mayor claridad
         al código. Se devuelve el valor resultado en {\tt r0} (ó en {\tt r1:r0} si es doble
@@ -897,7 +916,7 @@ la pila desde el llamador, pasando por la llamada a la función y la ejecución 
   \item Retornar la función con {\tt bx lr} volviendo al código llamador, exactamente a la
         instrucción que hay tras el {\tt bl}. 
   \item El llamador equilibra la pila en caso de haber pasado parámetros por ella.
-\end{itemize}
+\end{enumerate}
 
 \section{Ejercicios}
 
@@ -920,7 +939,7 @@ void main(void){
 
 Hay muchas formas de calcular el mínimo de una lista de elementos, la más sencilla es
 comparar todos los elemento con una variable, la cual actualizamos sólo si el elemento es
-menor que la variable.
+menor que la variable. Usa el siguiente cuadro para escribir la versión en ensamblador.
 
 \begin{center}
 \begin{myfbox}
@@ -974,8 +993,8 @@ llamada a subrutina cuenta todas las instrucciones que se ejecutan metiéndote e
 subrutina. La única excepción es {\tt bl printf}, que debes contar como un único ciclo.
 
 Haz lo mismo pero usando la herramienta {\tt gdb} para comprobar el resultado anterior.
-Recuerda no meterte dentro de los printf con {\tt ni}, en las llamadas a la función
-{\tt abs} usa {\tt si}.
+Recuerda no meterte dentro de los printf con {\tt ni}. En las llamadas a la función
+{\tt media} usa {\tt si}.
 
 \subsubsection{Macros}
 
@@ -986,7 +1005,8 @@ llamar a la misma, y para evitar repetir siempre el mismo código utilizamos la 
 {\tt bl funcion} y {\tt bx lr}. El inconveniente es que el tamaño del ejecutable será
 mayor.
 
-Como ejemplo vamos a dar una implementación del método {\tt abs}.
+En el listado \ref{lst:codigoPract3_9} vemos un ejemplo que usa la función {\tt abs},
+pero que con un simple cambio empleamos la macro del mismo nombre.
 
 \begin{lstlisting}[caption={Parte de subrut8.s},label={lst:codigoPract3_9}]
       .macro  abs
@@ -999,25 +1019,34 @@ var1:   .asciz  "%d\n"
 
 .text
 .global main
+
+/* Salvo registros */
 main:   push    {r4, lr}
+
+/* Primera llamada abs(1) */
         mov     r0, #1
         bl      abs
+
+/* Imprimo primera llamada */
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
 
+/* Segunda llamada abs(-2) e imprimo */
         mov     r0, #-2
         bl      abs
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
 
+/* Tercera llamada abs(3) e imprimo */
         mov     r0, #3
         bl      abs
         mov     r1, r0
         ldr     r0, =var1
         bl      printf
 
+/* Cuarta llamada abs(-4) e imprimo */
         mov     r0, #-4
         bl      abs
         mov     r1, r0
@@ -1026,8 +1055,8 @@ main:   push    {r4, lr}
         pop     {r4, lr}
         bx      lr
 
-abs:    tst     r0, r0
-        negmi   r0, r0
+abs:    tst     r0, r0      @ comprueba el flag de signo
+        negmi   r0, r0      @ si es negativo, negamos de nuevo
         bx      lr
 \end{lstlisting}
 
@@ -1036,11 +1065,13 @@ Borra el {\tt bl} antes del {\tt abs} para probar la versión con macros. Dentro
 {\tt bl printf} junto con la cuenta es la siguiente.
 
 \begin{lstlisting}
-start / si 6 / ni / si 5 / ni /
-/ si 5 / ni / si 5 / ni / si 2
-6+1+(5+1)*3+2 = 27
+start -> si 6 -> ni -> si 5 -> ni -> 
+-> si 5 -> ni -> si 5 -> ni -> si 2
 \end{lstlisting}
 
+$6+1+(5+1)*3+2 = 27$
+
+\vspace{0.25cm}
 Reescribe el ejercicio anterior de la media aritmética empleando macros en vez de
 funciones.
 
@@ -1074,7 +1105,7 @@ abs &
 Este conteo de ciclos es ilustrativo. En un procesador real sólo
 las instrucciones simples tardan un ciclo de reloj, siempre y cuando
 el resultado de la operación no se utilice en la instrucción posterior,
-en cuyo la duración es de dos ciclos. Después hay instrucciones
+en cuyo caso la duración es de dos ciclos. Después hay instrucciones
 complejas como las multiplicaciones, que necesitan 3 ciclos (más si hay
 que añadir la penalización anterior). Por último están los casos 
 más complejos. Por un lado tenemos los saltos condicionales, donde el
@@ -1086,7 +1117,8 @@ un fallo de caché hay que añadir la penalización correspondiente.
 
 \subsection{Algoritmo de ordenación}
 
-Escoge un algoritmo de ordenación de entre los 4 siguientes.
+Escoge un algoritmo de ordenación de entre los 4 siguientes e
+impleméntalo en ensamblador:
 
 \begin{itemize}
   \item Burbuja.
@@ -1095,8 +1127,7 @@ Escoge un algoritmo de ordenación de entre los 4 siguientes.
   \item Quicksort.
 \end{itemize}
 
-E impleméntalo en ensamblador. Como ejemplo mostramos el código en C
-del algoritmo de la burbuja.
+Como ejemplo mostramos el código en C del algoritmo de la burbuja.
 
 \begin{lstlisting}[caption={Parte de subrut9.c},label={lst:codigoPract3_10},language=C]
 #include <stdio.h>
