@@ -27,8 +27,7 @@ a bajo nivel de lo que en alto nivel se conoce como procedimientos
 y funciones. La diferencia entre procedimiento y función, radica
 en que las funciones proporcionan un valor de retorno. 
 }%
-, aspecto que se desarrollarán en esta
-práctica.
+, aspecto que se desarrollará en esta práctica.
 
 El puntero de pila es {\tt r13} aunque por convención nunca se emplea esa
 nomeclatura, sino que lo llamamos {\tt sp} ({\bf s}tack {\bf p}ointer o puntero
@@ -38,25 +37,26 @@ a la cima de la pila (última palabra introducida en ella).
 La pila tiene asociadas dos operaciones: {\tt push} (meter un elemento en la pila) y
 {\tt pop} (sacar un elemento de la pila). En la operación {\tt push} primero
 decrementamos en 4 (una palabra son 4 bytes) el registro {\tt sp} y luego escribimos
-dicho elemento en memoria. Decimos que la pila crece hacia abajo.
+dicho elemento en la posición de memoria apuntada por {\tt sp}. Decimos que la pila
+crece hacia abajo, ya que cada vez que insertamos un dato el {\tt sp} se decrementa
+en 4.
 
-\begin{lstlisting}[caption={Operación push},escapeinside={@}{@}]
+De esta forma, la instrucción {\tt push} realmente implementa las dos siguientes
+instrucciones:
+
+\begin{lstlisting}[caption={Operación push}]
         sub     sp, sp, #4
         str     r0, [sp]
 \end{lstlisting}
 
 Para sacar elementos de la pila tenemos la operación {\tt pop}, que primero extrae
-el elemento de la pila y luego incrementa el puntero (decrece hacia arriba).
+el elemento de la pila y luego incrementa el puntero (la pila decrece hacia arriba).
+Por tanto, la instrucción {\tt pop} es equivalente a:
 
-\begin{lstlisting}[caption={Operación pop},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Operación pop}]
         ldr     r0, [sp]
         add     sp, sp, #4
 \end{lstlisting}
-
-Para el procesador ARM estas instrucciones no existen. Sin embargo tenemos las
-instrucciones {\tt stm} y {\tt ldm} que son mucho más potentes y el ensamblador
-permite las pseudoinstrucciones {\tt push} y {\tt pop} que de forma transparente
-traducirá a {\tt stm} y {\tt ldm}.
 
 Un uso muy común de la pila es salvaguardar una serie de registros, que queremos
 usar para hacer las operaciones que necesitemos pero que al final tenemos que
@@ -88,6 +88,12 @@ En este caso el orden no es relevante, el procesador siempre usa el orden ascend
 el {\tt push} y el descendente para el {\tt pop}, aunque nosotros por legibilidad siempre
 escribiremos los registros en orden ascendente.
 
+Realmente, para el procesador ARM las instrucciones {\tt push} y {\tt pop} no existen.
+Sin embargo tenemos las
+instrucciones {\tt stm} y {\tt ldm} que son mucho más potentes y el ensamblador
+permite las pseudoinstrucciones {\tt push} y {\tt pop} que de forma transparente
+traducirá a {\tt stm} y {\tt ldm}.
+
 Las instrucciones {\tt ldm} y {\tt stm} tienen la siguiente sintaxis.
 
 \begin{lstlisting}
@@ -95,37 +101,44 @@ Las instrucciones {\tt ldm} y {\tt stm} tienen la siguiente sintaxis.
     stm{modo_direc}{cond} rn{!}, lista_reg
 \end{lstlisting}
 
-{\bf modo\_direc}
+A continuación explicamos cada uno de los argumentos de {\tt ldm/stm}
+
+\begin{enumerate}
+
+\item{\bf modo\_direc}
 \begin{itemize}
-  \item{\tt ia} Incrementa dirección después ({bf a}fter) de cada transferencia. Es el modo por defecto
+  \item{\tt ia}: Incrementa dirección después ({\bf i}ncrement {\bf a}fter) de cada transferencia. Es el modo por defecto
                 en caso de omitirlo.
-  \item{\tt ib} Incrementa dirección antes ({bf b}efore) de cada transferencia.
-  \item{\tt da} Decrementa después de cada transferencia.
-  \item{\tt db} Decrementa antes de cada transferencia.
+  \item{\tt ib}: Incrementa dirección antes ({\bf i}ncrement {\bf b}efore) de cada transferencia.
+  \item{\tt da}: Decrementa después ({\bf d}ecrement {\bf a}fter) de cada transferencia.
+  \item{\tt db}: Decrementa antes ({\bf d}ecrement {\bf b}efore) de cada transferencia.
 \end{itemize}
 
-{\bf cond} Es opcional, son las mismas condiciones de los flags que vimos en el capítulo
-          anterior, que permiten ejecutar o no dicha instrucción. En la práctica sólo las
-          usamos para los saltos condicionales.
+\item{\bf cond}. Es opcional, son las mismas condiciones de los flags que vimos en la sección
+          \ref{sec:InsSal} del capítulo anterior (página \pageref{sec:InsSal}), que permiten
+          ejecutar o no dicha instrucción.
 
-{\bf rn} Es el registro base, el cual apunta a la dirección inicial de memoria donde
-          se hará la transferencia. El más común es {\tt sp} ({\tt r13}), pero puede
+\item{\bf rn}. Es el registro base, el cual apunta a la dirección inicial de memoria donde
+          se hará la transferencia. El registro más común es {\tt sp} ({\tt r13}), pero puede
           emplearse cualquier otro.
 
-{\bf !} Es un sufijo opcional. Si está presente, actualizamos {\tt rn} al final de la operación.
+\item{\bf !}. Es un sufijo opcional. Si está presente, actualizamos {\tt rn} con la dirección
+          calculada al final de la operación.
 
-{\bf lista\_reg} Una lista de uno o más registros, que serán leídos o escritos en memoria. La
+\item{\bf lista\_reg}. Es una lista de uno o más registros, que serán leídos o escritos en memoria. La
           lista va encerrada entre llaves y separada por comas. También podemos
           usar un rango de registros. En este ejemplo se almacenan los registros {\tt r3, r4,
-          r5, r6, r10 y r12}.
-
+          r5, r6, r10 y r12}. Si inicialmente {\tt r1} contiene el valor 24, después de
+          ejecutar la instrucción siguiente {\tt r3} se almacenará en la dirección 20,
+          {\tt r4} en 16, {\tt r5} en 12, {\tt r6} en 8, {\tt r10} en 4 y {\tt r12} en 0.
 \begin{lstlisting}
         stmdb   r1!, {r3-r6, r10, r12}
 \end{lstlisting}
+\end{enumerate}
 
 Si tenemos en cuenta que {\tt push} predecrementa, que {\tt pop} postincrementa y que ambas
 actualizan el registro base (que sería {\tt sp}), la traducción de las pseudoinstrucciones
-{\tt push \{r4, r6\}} y {\tt pop \{r4, r6\}} serían respectivamente.
+{\tt push \{r4, r6\}} y {\tt pop \{r4, r6\}} serían respectivamente:
 
 \begin{lstlisting}
     stmdb sp!, {r4, r6}    /* push */
@@ -161,8 +174,8 @@ de pautas, lo que se denominamos AAPCS (Procedure Call Standard for the ARM Arch
   \item El resto de parámetros se pasan por pila. En la pila se aplican las mismas reglas de
         alineamiento que en los registros. La unidad mínima son 32 bits, por ejemplo si queremos
         pasar un char por valor, extendemos de byte a word rellenando con ceros los 3 bytes
-        más significativos. Lo mismo ocurre con los enteros de 64 bits, en el momento en que haya
-        un sólo parámetro de este tipo, todos los demás se alinean a 64 bits.
+        más significativos. Lo mismo ocurre con los enteros de 64 bits, pero en el momento en que
+        haya un sólo parámetro de este tipo, todos los demás se alinean a 64 bits.
   \item Es muy importante preservar el resto de registros (de {\tt r4} en
         adelante incluyendo {\tt lr}). La única excepción es el registro {\tt r12} que podemos
         cambiar a nuestro antojo. Normalmente se emplea la pila para almacenarlos al comienzo de
@@ -178,6 +191,10 @@ de pautas, lo que se denominamos AAPCS (Procedure Call Standard for the ARM Arch
         8 bytes y equilibremos la pila antes de salir de la función.
 \end{enumerate}
 
+Cuando programamos en Bare Metal no es necesario seguir estas reglas. Es más, podemos escribir
+una función sin seguir la norma incluso si trabajamos bajo Linux, pero no es
+recomendable ya que no podríamos reusarlas para otros proyectos.
+
 Lo mejor para entender estas reglas es con una serie de ejemplos de menor a mayor complejidad
 que veremos a lo largo de este capítulo.
 
@@ -189,7 +206,7 @@ En este primer ejemplo crearemos nuestras propias funciones generadoras de núme
 aleatorios, a las que llamaremos {\tt myrand} y {\tt mysrand}
 (en sustitución a las {\tt rand} y {\tt srand} que ya existen en la librería).
 
-\begin{lstlisting}[caption={Código del programa subrut1.c},label={lst:codigoPract3_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa subrut1.c},label={lst:codigoPract3_1},language=C]
 #include <stdio.h>
 
 void main(void){
@@ -203,16 +220,18 @@ void main(void){
 \end{lstlisting}
 
 El programa principal lo hacemos en C, mientras que las funciones {\tt myrand} y {\tt mysrand}
-las haremos en ensamblador. La implementación es sencilla, almacenamos la semilla en la variable
-estática {\tt seed}, podemos cambiar el valor de la semilla en cualquier momento con la función
+las haremos en ensamblador. La implementación es sencilla. Almacenamos la semilla en la variable
+estática {\tt seed}. Podemos cambiar el valor de la semilla en cualquier momento con la función
 {\tt mysrand}, y recibir un número pseudoaleatorio de 15 bits con la función {\tt myrand}.
 En realidad {\tt myrand} lo único que hace es aplicar una operación sencilla en la semilla
 (multiplicación y suma) y extraer 15 bits de esta. El secreto del algoritmo reside en que se
 han elegido unas constantes para la multiplicación y la suma de tal forma que la variable 
 {\tt seed} pasará por todos los valores de 32 bits en una secuencia que a simple vista parece
-aleatoria, pero que no lo es (por eso se llama pseudoaleatoria).
+aleatoria, pero que no lo es (por eso se llama pseudoaleatoria):
 
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
+static int seed;
+
 short myrand(void){
   seed= seed*1103515245 + 12345;
   return seed>>16 & 0x7fff;
@@ -223,9 +242,9 @@ void mysrand(int x){
 }
 \end{lstlisting}
 
-Veamos en qué se traducen estas funciones en ensamblador.
+Veamos en qué se traducen estas funciones en ensamblador:
 
-\begin{lstlisting}[caption={Código del programa subrut1.s},label={lst:codigoPract3_2},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa subrut1.s},label={lst:codigoPract3_2}]
 .data
 seed:   .word   1
 const1: .word   1103515245
@@ -233,15 +252,18 @@ const2: .word   12345
 
 .text
 .global myrand, mysrand
-myrand: ldr     r1, =seed
-        ldr     r0, [r1]
-        ldr     r2, [r1, #4]
-        mul     r3, r0, r2
-        ldr     r0, [r1, #8]
-        add     r0, r0, r3
-        str     r0, [r1]
-        mov     r0, r0, LSL #1
-        mov     r0, r0, LSR #17
+myrand: ldr     r1, =seed       @ leo puntero a semilla
+        ldr     r0, [r1]        @ leo valor de semilla
+        ldr     r2, [r1, #4]    @ leo const1 en r2
+        mul     r3, r0, r2      @ r3= seed*1103515245
+        ldr     r0, [r1, #8]    @ leo const2 en r0
+        add     r0, r0, r3      @ r0= r3+12345
+        str     r0, [r1]        @ guardo en variable seed
+
+/* Estas dos líneas devuelven "seed>>16 & 0x7fff".
+   Con un pequeño truco evitamos el uso del AND */
+        LSL     r0, #1
+        LSR     r0, #17
         bx      lr
 
 mysrand:ldr     r1, =seed
@@ -250,7 +272,7 @@ mysrand:ldr     r1, =seed
 \end{lstlisting}
 
 Antes de nada ensamblamos, compilamos/enlazamos y ejecutamos estos archivos para
-comprobar su correcto funcionamiento.
+comprobar su correcto funcionamiento:
 
 \begin{lstlisting}
 pi@raspberrypi ~ $ as -o subrut1.o subrut1.s
@@ -268,20 +290,21 @@ A diferencia de ejemplos anteriores, en nuestro código ensamblador no tenemos
 ninguna función {\tt main} porque ésta la hemos implementado en C. Sin embargo
 aparecen dos etiquetas después de la directiva {\tt .global}, que son
 {\tt myrand} y {\tt mysrand}. Esto es fundamental si queremos que nuestras
-funciones sean vistas desde el exterior, en este caso el programa en C.
+funciones sean vistas desde el exterior, en este caso desde el programa en C.
 
 Empecemos con la función más sencilla, {\tt mysrand}. Consta de 3 instrucciones.
 En la primera de ellas apuntamos con {\tt r1} a la dirección donde se encuentra
 la variable {\tt seed}. En la segunda pasamos el primer y único parámetro de la
-función, {\tt r0}, a lo que apunta {\tt r1}, es decir, a la variable {\tt seed}.
-Por último salimos de la función con la conocida instrucción {\tt bx lr}.
+función, {\tt r0}, a la posición de memoria apuntada por {\tt r1}, es decir, a
+la variable {\tt seed}. Por último salimos de la función con la conocida
+instrucción {\tt bx lr}. No hay más, no tenemos que devolver nada en {\tt r0}
+(la función devuelve el tipo {\tt void}), ni tenemos que preservar registros,
+ni crear variables locales.
 
-No hay más, no tenemos que devolver nada en {\tt r0} (la función devuelve el
-tipo {\tt void}), ni tenemos que preservar registros, ni crear variables locales.
-
-La otra función es un poco más compleja, aparte de requerir más cálculos debemos
-devolver un valor. Aprovechamos que las 3 variables están juntas (en realidad las
-dos últimas son constantes) para no tener que cargar 3 veces la dirección de cada
+La otra función es un poco más compleja. Aparte de requerir más cálculos debemos
+devolver un valor. Aprovechamos que las 3 variables están almacenadas
+consecutivamente (en realidad las dos últimas son constantes) para no tener que
+cargar 3 veces la dirección de cada
 variable en un registro. Lo hacemos la primera vez con {\tt ldr r1, =seed}, y
 accedemos a las variables con direccionamiento a registro con desplazamiento (
 {\tt [r1], [r1, \#4] y [r1, \#8]}). Como no hay parámetros de entrada empleamos
@@ -291,28 +314,40 @@ resultado en el registro {\tt r0}.
 
 \subsection{Funciones en ensamblador llamadas desde ensamblador}
 
-Del ejemplo anterior pasamos a ensamblador la única parte que estaba escrita en
-C, que era la función {\tt main}.
+Del ejemplo anterior vamos a pasar a ensamblador la única parte que estaba escrita en
+C, que era la función {\tt main}:
 
-\begin{lstlisting}[caption={Código del programa subrut2.s},label={lst:codigoPract3_3},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa subrut2.s},label={lst:codigoPract3_3}]
 .data
+
 var1:   .asciz  "%d\n"
 seed:   .word   1
 const1: .word   1103515245
 const2: .word   12345
 
 .text
+
 .global main
+
+/* Salvamos registros */
 main:   push    {r4, r5}
+
+/* Llamamos a mysrand con parámetro 42 */
         mov     r0, #42
         bl      mysrand
+
+/* Inicializamos contador de bucle en r4 */
         mov     r4, #5
-bucle:  bl      myrand
-        mov     r1, r0
-        ldr     r0, =var1
-        bl      printf
-        subs    r4, r4, #1
-        bne     bucle
+
+/* Bucle que imprime 5 números aleatorios */
+bucle:  bl      myrand      @ leo número aleatorio
+        mov     r1, r0      @ paso valor a r1
+        ldr     r0, =var1   @ pongo cadena en r0
+        bl      printf      @ llamo a función printf
+        subs    r4, r4, #1  @ decremento contador
+        bne     bucle       @ salgo si llego a cero
+
+/* Recuperamos registros y salimos */
         pop     {r4, r5}
         bx      lr
 
@@ -338,19 +373,18 @@ la implementamos en ensamblador. Al fin y al cabo {\tt main} es otra función m�
 tanto debe de seguir la normativa AAPCS.
 
 Primero preservamos {\tt r4} y {\tt r5}. En realidad {\tt r5} no se modifica y no haría falta
-preservarla, lo hacemos para alinear a 8 la pila. Luego llamamos a {\tt mysrand} con el valor 42
+preservarla, pero lo hacemos para alinear a 8 la pila. Luego llamamos a {\tt mysrand} con el valor 42
 como primer y único parámetro. Inicializamos a 5 el contador del bucle, que almacenamos en
 {\tt r4} y comenzamos el bucle. El bucle consiste en llamar a {\tt myrand} y pasar el resultado
 devuelto de esta función al segundo parámetro de la función {\tt printf}, llamar a {\tt printf},
-decrementar contador y repetir bucle hasta que el contador llegue a cero.
-
-Una vez salimos del bucle recuperamos los registros {\tt r4} y {\tt r5} y devolvemos el control
-al sistema {\tt bx lr}.
+decrementar el contador y repetir el bucle hasta que el contador llegue a cero. Una vez salimos
+del bucle recuperamos los registros {\tt r4} y {\tt r5} y devolvemos el control
+al sistema: {\tt bx lr}.
 
 \subsection{Funciones recursivas}
 
 El siguiente paso es implementar una función recursiva en ensamblador. Vamos a escoger la 
-secuencia de Fibonacci por su sencillez, trataremos de imprimir los diez primeros números
+secuencia de Fibonacci por su sencillez. Trataremos de imprimir los diez primeros números
 de la secuencia. Se trata de una sucesión de números naturales en las que los dos primeros
 elementos valen uno y los siguientes se calculan sumando los dos elementos anteriores.
 Los diez primeros números serían los siguientes.
@@ -359,9 +393,9 @@ Los diez primeros números serían los siguientes.
 1, 1, 2, 3, 5, 8, 13, 21, 34, 55...
 \end{lstlisting}
 
-Este es código en un lenguaje de alto nivel como C que imprime la anterior secuencia.
+Este es el código en un lenguaje de alto nivel como C que imprime la anterior secuencia.
 
-\begin{lstlisting}[caption={Código del programa subrut3.c},label={lst:codigoPract3_4},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa subrut3.c},label={lst:codigoPract3_4},language=C]
 #include <stdio.h>
 
 int fibonacci(int n){
@@ -384,16 +418,15 @@ C no necesitemos variables locales para la función fibonacci, sí nos hará fal
 en concreto dos variables: una para acumular la suma y otra para mantener el parámetro de entrada.
 
 Para ello vamos a emplear la pila, que hasta ahora sólo la dedicábamos para salvaguardar los
-registros mayores de {\tt r4} en la función. En realidad encima de esto teníamos los parámetros
-pasados por pila por el llamador, pero nunca los hemos usado porque han sido pocos los parámetros y
-nos han bastado los registros para ello. Recuerda que el número de parámetros pasados por registros
-es de 4 (dos en caso de parámetros de 64 bits), siempre en los registros desde {\tt r0} hasta
-{\tt r3}, a partir de aquí si hay más parámetros, éstos se pasan por pila.
+registros a partir de {\tt r4} en la función. La pila tendría un tercer uso que no hemos visto
+todavía. Sirve para que el llamador pase el resto de parámetros en caso de que haya más de 4.
+Los primeros 4 parámetros (dos en caso de parámetros de 64 bits) se pasan por los registros
+desde {\tt r0} hasta {\tt r3}. A partir de aquí si hay más parámetros éstos se pasan por pila.
 
 Las variables locales se alojan debajo del área de salvaguarda de registros, para ello hay que
-hacer espacio decrementando el puntero de pila una cierta cantidad de bytes, e incrementando esa
-misma cantidad justo antes de salir de la función. En la figura \ref{fig:pila} vemos el uso de la pila
-de una función genérica.
+hacer espacio decrementando el puntero de pila una cierta cantidad de bytes, e incrementando
+{\tt sp} en esa misma cantidad justo antes de salir de la función. En la figura \ref{fig:pila}
+vemos el uso de la pila de una función genérica.
 
 \begin{figure}[h]
   \centering
@@ -406,9 +439,7 @@ Pues bien, en nuestro caso de la función fibonacci necesitamos 0 bytes para pas
 4 bytes para salvaguarda de registros (sólo guardaremos {\tt lr}) y 8 bytes para nuestras
 dos variables locales. Como la suma es de 12 bytes, que no es múltiplo de 8, redondeamos a 16
 añadiendo una tercera variable local que no usaremos (también podríamos haber salvaguardado un
-segundo registro).
-
-Nuestro mapa particular lo podemos observar en la figura \ref{fig:pila2}.
+segundo registro). Nuestro mapa particular lo podemos observar en la figura \ref{fig:pila2}.
 
 \begin{figure}[h]
   \centering
@@ -421,31 +452,34 @@ En teoría podemos encargarnos nosotros mismos de hacer toda la aritmética que 
 uso de variables locales, pero en la práctica estamos más expuestos a cometer errores y
 nuestro código es más ilegible. Las 3 variables locales ocupan 12 bytes, a la primera
 accedemos con el direccionamiento {\tt [sp]} y a la segunda con {\tt [sp, \#4]} (la tercera
-no la usamos). El código quedaría así.
+no la usamos). El código quedaría como en el listado \ref{lst:codigoPract3_45}.
 
-\begin{lstlisting}
-fibo:   push    {lr}
-        sub     sp, #12
-        cmp     r0, #2
-        movlo   r0, #1
+\begin{lstlisting}[caption={Función recursiva fibo (en subrut3.s)},label={lst:codigoPract3_45}]
+fibo:   push    {lr}          @ salvaguarda lr
+        sub     sp, #12       @ hago espacio para v. locales
+        cmp     r0, #2        @ if n<2
+        movlo   r0, #1        @ return 1
         blo     fib1
-        sub     r0, #1
-        str     r0, [sp]
-        bl      fibo
-        str     r0, [sp, #4]
-        ldr     r0, [sp]
-        sub     r0, #1
-        bl      fibo
-        ldr     r1, [sp, #4]
-        add     r0, r1
-fib1:   add     sp, #12
-        pop     {lr}
-        bx      lr
+
+        sub     r0, #1        @ else
+        str     r0, [sp]      @ salvo n-1 en [sp]
+        bl      fibo          @ fibonacci(n-1)
+        str     r0, [sp, #4]  @ salvo valor devuelto por fib.(n-1)
+        ldr     r0, [sp]      @ recupero de la pila n-1
+        sub     r0, #1        @ calculo n-2
+        bl      fibo          @ fibonacci(n-2)
+        ldr     r1, [sp, #4]  @ recupero salida de fib.(n-1)
+        add     r0, r1        @ lo sumo a fib.(n-1)
+
+fib1:   add     sp, #12       @ libero espacio de v. locales
+        pop     {lr}          @ recupero registros (sólo lr)
+        bx      lr            @ salgo de la función
 \end{lstlisting}
 
 Siguiendo el orden de la pila, primero salvaguardamos {\tt lr} y luego hacemos espacio para
-3 palabras con {\tt sub sp, \#12} en el comienzo de la función; al acabar restauramos en orden
-inverso, primero restauramos los 12 bytes de las variables locales y luego recuperamos {\tt lr}.
+3 palabras con {\tt sub sp, \#12} en el comienzo de la función. Al salir de la rutina
+restauramos en orden inverso, primero restauramos los 12 bytes de las variables locales
+y luego recuperamos {\tt lr}.
 
 Nuestra función tiene dos ramas, en una se comprueba que el parámetro sea menor de 2, y si lo
 es devolvemos el valor 1 y salimos de la función. En la otra rama invocamos nuestra propia
@@ -454,10 +488,10 @@ función.
 
 El truco para hacer el código más legible es nombrando las 3 variables locales y la longitud
 mediante la directiva {\tt .equ} (también nos valdría su alias {\tt .set}). Partimos del valor
-0 de desplazamiento en la primera variable local y vamos encadenando, a cada elemento le
+0 de desplazamiento en la primera variable local y vamos encadenando. A cada elemento le
 corresponde la longitud más la posición del anterior. Así, si necesitamos modificar alguna
 variable tan sólo tendremos en cuenta la anterior y la siguiente, no tenemos que modificar
-toda la estructura.
+toda la estructura:
 
 \begin{lstlisting}
         .equ    local1,   0
@@ -466,46 +500,56 @@ toda la estructura.
         .equ    length,   4+local3
 \end{lstlisting}
 
-Con esta nueva filosofía el código queda menos críptico.
+Con esta nueva filosofía el código queda menos críptico, como vemos en el listado \ref{lst:codigoPract3_46}.
 
-\begin{lstlisting}
-fibo:   push    {lr}
-        sub     sp, #length
-        cmp     r0, #2
-        movlo   r0, #1
+\begin{lstlisting}[caption={Función recursiva fibo (en subrut3.s)},label={lst:codigoPract3_46}]
+fibo:   push    {lr}              @ salvaguarda lr
+        sub     sp, #length       @ hago espacio para v.locales
+        cmp     r0, #2            @ if n<2
+        movlo   r0, #1            @ return 1
         blo     fib1
-        sub     r0, #1
-        str     r0, [sp, #local1]
-        bl      fibo
-        str     r0, [sp, #local2]
-        ldr     r0, [sp, #local1]
-        sub     r0, #1
-        bl      fibo
-        ldr     r1, [sp, #local2]
-        add     r0, r1
-fib1:   add     sp, #length
-        pop     {lr}
-        bx      lr
+
+        sub     r0, #1            @ else
+        str     r0, [sp, #local1] @ salvo n-1 en [sp]
+        bl      fibo              @ fibonacci(n-1)
+        str     r0, [sp, #local2] @ salvo salida de fib.(n-1)
+        ldr     r0, [sp, #local1] @ recupero de la pila n-1
+        sub     r0, #1            @ calculo n-2
+        bl      fibo              @ fibonacci(n-2)
+        ldr     r1, [sp, #local2] @ recupero salida de fib(n-1)
+        add     r0, r1            @ lo sumo a fib.(n-1)
+
+fib1:   add     sp, #length       @ libero espacio de v.locales
+        pop     {lr}              @ recupero registros, sólo lr
+        bx      lr                @ salgo de la función
 \end{lstlisting}
 
-Ya estamos en condiciones de mostrar el archivo completo.
+Ya estamos en condiciones de mostrar el archivo completo en el listado \ref{lst:codigoPract3_5}.
 
-\begin{lstlisting}[caption={Código del programa subrut3.s},label={lst:codigoPract3_5},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa subrut3.s},label={lst:codigoPract3_5}]
 .data
 var1:   .asciz  "%d\n"
 
 .text
 .global main
+
+/* Salvo registros */
 main:   push    {r4, lr}
+
+/* Inicializo contador del bucle a 0 en r4 */
         mov     r4, #0
-bucle:  mov     r0, r4
-        bl      fibo
-        mov     r1, r0
-        ldr     r0, =var1
-        bl      printf
-        add     r4, r4, #1
-        cmp     r4, #10
-        bne     bucle
+
+/* Bucle que imprime los 10 primeros valores */
+bucle:  mov     r0, r4      @ tomo contador como parámetro
+        bl      fibo        @ llamo a la función
+        mov     r1, r0      @ paso resultado a r1
+        ldr     r0, =var1   @ pongo cadena en r0
+        bl      printf      @ llamo a función printf
+        add     r4, r4, #1  @ incremento contador de bucle
+        cmp     r4, #10     @ comparo si es menor de 10
+        bne     bucle       @ si llegamos a 10 salgo de bucle
+
+/* Recupero registros y salgo de main */
         pop     {r4, lr}
         bx      lr
 
@@ -514,23 +558,25 @@ bucle:  mov     r0, r4
         .equ    local3,   4+local2
         .equ    length,   4+local3
 
-fibo:   push    {lr}
-        sub     sp, #length
-        cmp     r0, #2
-        movlo   r0, #1
+fibo:   push    {lr}              @ salvaguarda lr
+        sub     sp, #length       @ hago espacio para v.locales
+        cmp     r0, #2            @ if n<2
+        movlo   r0, #1            @ return 1
         blo     fib1
-        sub     r0, #1
-        str     r0, [sp, #local1]
-        bl      fibo
-        str     r0, [sp, #local2]
-        ldr     r0, [sp, #local1]
-        sub     r0, #1
-        bl      fibo
-        ldr     r1, [sp, #local2]
-        add     r0, r1
-fib1:   add     sp, #length
-        pop     {lr}
-        bx      lr
+
+        sub     r0, #1            @ else
+        str     r0, [sp, #local1] @ salvo n-1 en [sp]
+        bl      fibo              @ fibonacci(n-1)
+        str     r0, [sp, #local2] @ salvo salida de fib.(n-1)
+        ldr     r0, [sp, #local1] @ recupero de la pila n-1
+        sub     r0, #1            @ calculo n-2
+        bl      fibo              @ fibonacci(n-2)
+        ldr     r1, [sp, #local2] @ recupero salida de fib(n-1)
+        add     r0, r1            @ lo sumo a fib.(n-1)
+
+fib1:   add     sp, #length       @ libero espacio de v.locales
+        pop     {lr}              @ recupero registros, sólo lr
+        bx      lr                @ salgo de la función
 \end{lstlisting}
 
 Lo único que nos faltaba era la función {\tt main}. La lista de {\tt .equ} puede
@@ -551,7 +597,7 @@ lo flexibles que pueden ser las funciones: hay funciones en las que podemos evit
 con la pila como en el listado \ref{lst:codigoPract3_3}, otras en las que no tenemos más
 remedio, y un último caso en que podemos tener una mezcla de ambas.
 
-\begin{lstlisting}[caption={Parte del código del programa subrut4.s},label={lst:codigoPract3_6},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte del código del programa subrut4.s},label={lst:codigoPract3_6}]
 fibo:   cmp     r0, #2
         movlo   r0, #1
         bxlo    lr
@@ -589,7 +635,7 @@ sería el quinto parámetro que pasamos por pila.
 
 Como siempre, comenzamos escribiendo el código en C.
 
-\begin{lstlisting}[caption={Evaluador de polinomios subrut5.c},label={lst:codigoPract3_6},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Evaluador de polinomios subrut5.c},label={lst:codigoPract3_6},language=C]
 int poly3(int a, int b, int c, int d, int x){
   return a*x*x*x + b*x*x + c*x + d;
 }
@@ -612,7 +658,7 @@ Cuya salida es la siguiente.
 
 El código completo es el siguiente.
 
-\begin{lstlisting}[caption={Evaluador de polinomios subrut5.s},label={lst:codigoPract3_7},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Evaluador de polinomios subrut5.s},label={lst:codigoPract3_7}]
 .data
 var1:   .asciz  "%d\n"
 
@@ -803,7 +849,7 @@ esto podemos mejorar el ejemplo anterior.
 Por último vamos a mejorar un poco la velocidad de la función {\tt poly3} de
 esta forma.
 
-\begin{lstlisting}[caption={Parte de subrut6.s},label={lst:codigoPract3_8},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte de subrut6.s},label={lst:codigoPract3_8}]
 poly3:  sub     sp, #4
         ldr     r12, [sp, #param5]
         smlabb  r3, r2, r12, r3
@@ -942,7 +988,7 @@ mayor.
 
 Como ejemplo vamos a dar una implementación del método {\tt abs}.
 
-\begin{lstlisting}[caption={Parte de subrut8.s},label={lst:codigoPract3_9},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte de subrut8.s},label={lst:codigoPract3_9}]
       .macro  abs
         tst     r0, r0
         negmi   r0, r0
@@ -1052,7 +1098,7 @@ Escoge un algoritmo de ordenación de entre los 4 siguientes.
 E impleméntalo en ensamblador. Como ejemplo mostramos el código en C
 del algoritmo de la burbuja.
 
-\begin{lstlisting}[caption={Parte de subrut9.c},label={lst:codigoPract3_10},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Parte de subrut9.c},label={lst:codigoPract3_10},language=C]
 #include <stdio.h>
 
 int vect[]= {8, 10, -3, 4, -5, 50, 2, 3};

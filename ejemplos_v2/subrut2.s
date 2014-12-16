@@ -8,16 +8,26 @@ const2: .word   12345
 .text
 
 .global main
+
+/* Salvamos registros */
 main:   push    {r4, r5}
+
+/* Llamamos a mysrand con parámetro 42 */
         mov     r0, #42
         bl      mysrand
+
+/* Inicializamos contador de bucle en r4 */
         mov     r4, #5
-bucle:  bl      myrand
-        mov     r1, r0
-        ldr     r0, =var1
-        bl      printf
-        subs    r4, r4, #1
-        bne     bucle
+
+/* Bucle que imprime 5 números aleatorios */
+bucle:  bl      myrand      @ leo número aleatorio
+        mov     r1, r0      @ paso valor a r1
+        ldr     r0, =var1   @ pongo cadena en r0
+        bl      printf      @ llamo a función printf
+        subs    r4, r4, #1  @ decremento contador
+        bne     bucle       @ salgo si llego a cero
+
+/* Recuperamos registros y salimos */
         pop     {r4, r5}
         bx      lr
 

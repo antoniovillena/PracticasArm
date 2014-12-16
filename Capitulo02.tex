@@ -382,6 +382,7 @@ mat[i][j] = M_d[@mat + ((i*M)+j)*B]
 
 
 \subsection{Instrucciones de salto}
+\label{sec:InsSal}
 
 Las instrucciones de salto pueden producir saltos incondicionales ({\tt b} y {\tt bx})
 o saltos condicionales. Cuando saltamos a una etiqueta empleamos {\tt b}, mientras que
@@ -434,7 +435,7 @@ dirección de la siguiente instrucción.
 main:   mov     r1, #1
         mov     r2, #2
         bl      subrut
-        mov     r4, #4  /* siguiente instrucción */
+        mov     r4, #4  /* Siguiente instrucción */
         ...
 
 subrut: mov     r3, #3
@@ -457,7 +458,7 @@ el registro {\tt lr} en pila con las instrucciones {\tt push} y {\tt pop}.
 main:   mov     r1, #1
         mov     r2, #2
         bl      nivel1
-        mov     r5, #5  /* siguiente instrucción */
+        mov     r5, #5  /* Siguiente instrucción */
         ...
 
 nivel1: push    {lr}
@@ -513,12 +514,12 @@ traducción de la estructura {\tt if} está en los listados
   int vi, vf, i;
 
   for ( i= vi; i<=vf; i++ ){ 
-    /*cuerpo del bucle*/
+    /* Cuerpo del bucle */
   }
 
   i= vi; 
   while ( i<=vf ){ 
-    /*cuerpo del bucle*/
+    /* Cuerpo del bucle */
     i++; 
   }
 \end{lstlisting}
@@ -533,7 +534,7 @@ registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPra
         ldr     r2, [r2]
 bucle:  cmp     r1, r2
         bhi     salir
-        /* cuerpo
+        /* Cuerpo
            del
            bucle  */
         add     r1, r1, #1
@@ -545,10 +546,10 @@ salir:
   int a, b;
 
   if( a==b ){ 
-    /* código entonces */
+    /* Código entonces */
   }
   else{
-    /* código sino */
+    /* Código sino */
   }
 \end{lstlisting}
 
@@ -560,10 +561,10 @@ salir:
         cmp     r1, r2
         bne     sino
 entonces:
-        /* código entonces */
+        /* Código entonces */
         b       final
 sino:
-        /* código sino */
+        /* Código sino */
 final:  ...
 \end{lstlisting}
 
@@ -807,7 +808,6 @@ aplicándola al siguiente ejemplo en C.
 
 \section{Enunciados de la práctica}
 
-
 \subsection{Suma de elementos de un vector}
 
 En este primer apartado, estudiaremos un bucle que calcula la suma de
@@ -839,25 +839,25 @@ var2:   .word   128, 32, 100, -30, 124
 .text
 .global main
 
-/* salvamos registros */
+/* Salvamos registros */
 main:   push    {r4, lr}
 
-/* inicializamos variables y apuntamos r2 a var2 */
+/* Inicializamos variables y apuntamos r2 a var2 */
         mov     r0, #5
         mov     r1, #0
         ldr     r2, =var2
 
-/* bucle que hace la suma */
+/* Bucle que hace la suma */
 bucle:  ldr     r3, [r2], #4
         add     r1, r1, r3
         subs    r0, r0, #1
         bne     bucle
 
-/* imprimimos resultado */
+/* Imprimimos resultado */
         ldr     r0, =var1
         bl      printf
 
-/* recuperamos registros y salimos */
+/* Recuperamos registros y salimos */
         pop     {r4, lr}
         bx      lr
 \end{lstlisting}
@@ -1022,16 +1022,16 @@ var2:   .word   1600000000, -100, 800000000, -50, 200
 .text
 .global main
 
-/* salvamos registros */
+/* Salvamos registros */
 main:   push    {r4, r5, r6, lr}
 
-/* inicializamos variables y apuntamos r4 a var2 */
+/* Inicializamos variables y apuntamos r4 a var2 */
         mov     r5, #5
         mov     r2, #0
         mov     r3, #0
         ldr     r4, =var2
 
-/* bucle que hace la suma */
+/* Bucle que hace la suma */
 bucle:  ldr     r0, [r4], #4
         mov     r1, r0, ASR #31
         adds    r2, r2, r0
@@ -1039,11 +1039,11 @@ bucle:  ldr     r0, [r4], #4
         subs    r5, r5, #1
         bne     bucle
 
-/* imprimimos resultado */
+/* Imprimimos resultado */
         ldr     r0, =var1
         bl      printf
 
-/* recuperamos registros y salimos */
+/* Recuperamos registros y salimos */
         pop     {r4, r5, r6, lr}
         bx      lr
 \end{lstlisting}
