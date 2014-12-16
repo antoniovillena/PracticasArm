@@ -122,7 +122,7 @@ segmentado de la CPU.
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector-8)/4 + 0xEA000000$ \\
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector)/4 + 0xE9FFFFFE$ \\
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+3A7FFFFF8)/4$ \\
-{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+A7FFFFFB) ror 2$
+{\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+A7FFFFFB) ROR 2$
 
 Vemos cómo en el último paso hemos transformado una división en una rotación, donde los
 2 bits menos significativos (ambos a 1) pasan a ser los más significativos tras la
@@ -135,7 +135,7 @@ El código final queda como sigue.
 \begin{lstlisting}
       .macro    ADDEXC  vector, dirRTI
         ldr     r1, =(\dirRTI-\vector+0xa7fffffb)
-        ror     r1, #2
+        ROR     r1, #2
         str     r1, [r0, #\vector]
       .endm
 \end{lstlisting}

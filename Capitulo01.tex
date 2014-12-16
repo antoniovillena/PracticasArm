@@ -320,7 +320,7 @@ nano /etc/ld.so.preload
 #/usr/lib/arm-linux-gnueabihf/libcofi_rpi.so
 \end{lstlisting}
   \item Presionamos {\tt Ctrl-X} y luego {\tt y}, Enter para guardar y salir.
-  \item Escribimos {\tt halt} para salir limpiamente del sistema emulado.
+  \item Escribimos {\tt sudo halt} para salir limpiamente del sistema emulado.
   \item Cerramos la ventana de QEMU y creamos el siguiente archivo {\tt lanzador.bat}.
 \begin{lstlisting}
 qemu-system-armw -kernel kernel-qemu -cpu arm1176
@@ -498,7 +498,7 @@ grupo \textbf{add, cmp, adc, sbc, mul}.
      \item \textit{Instrucciones de manejo de bits.}  Realizan
 operaciones de desplazamiento, rotación y lógicas sobre registros o
 posiciones de memoria. Están en este grupo las instrucciones:\textbf{
-and, tst, eor, orr, lsl, lsr, asr, ror, rrx}.
+and, tst, eor, orr, LSL, LSR, ASR, ROR, RRX}.
 
      \item \textit{Instrucciones de transferencia de control.}  Se
 utilizan para controlar el flujo de ejecución de las instrucciones
@@ -541,7 +541,7 @@ dat2: .space 200, 4  /* 200 bytes de valor 4        */
 \end{lstlisting}
 
 La directiva \textbf{.equ} (ó \textbf{.set}) es utilizada para asignar un
-valor a una constante simbólica.
+valor a una constante simbólica:
 
 \begin{lstlisting}
 .equ N, -3     /* en adelante N se sustituye por -3 */
@@ -554,7 +554,7 @@ valor a una constante simbólica.
         rellenando con ceros, de tal forma que comience en una dirección
         múltiplos del número que especifiquemos en {\it alineamiento},
         normalmente potencia de 2. Si no especificamos {\it alineamiento}
-        por defecto toma el valor de 4 (alineamiento a palabra).
+        por defecto toma el valor de 4 (alineamiento a palabra):
 
 \begin{lstlisting}
 a1: .byte 25   /* definimos un byte con el valor 25 */
@@ -570,7 +570,7 @@ a2: .word 4    /* variable alineada a tamaño palabra*/
         tiempo de compilación. En general, incluyen las operaciones lógicas
         {\tt \&}, {\tt |}, {\tt $\sim$}, aritméticas {\tt +}, {\tt -},
         {\tt *}, {\tt /}, {\tt \%} y de desplazamiento
-        {\tt $<$}, {\tt $>$}, {\tt $<<$}, {\tt $>>$}.
+        {\tt $<$}, {\tt $>$}, {\tt $<<$}, {\tt $>>$}:
 
 \begin{lstlisting}
 .equ pies, 9     /* definimos a 9 la constante pies */
@@ -594,14 +594,14 @@ podríamos usar una macro como la siguiente:
 \end{lstlisting}
 
 Esta macro se llama {\it CuadM1} y tiene tres parámetros (input, aux y output).
-Cada vez que la usemos en el programa haremos:
+Si posteriormente usamos la macro de la siguiente forma:
 
 \begin{lstlisting}
         CuadM1  r1, r8, r0
 \end{lstlisting}
 
-\noindent y el ensamblador {\it expande} la macro, es decir, en lugar de
-la llamada coloca:
+\noindent el ensamblador se encargará de expandir la macro, es decir, en lugar de
+la macro coloca:
 
 \begin{lstlisting}
         mul     r8, r1, r1
@@ -612,7 +612,7 @@ No hay que confundir las macros con los procedimientos. Por un lado,
 el código de un procedimiento es único, todas las llamadas usan el
 mismo, mientras que el de una macro aparece (se expande) cada vez que
 se referencia, por lo que ocuparán más memoria. Las macros serán
-más rápidas en su ejecución, pues es secuencial, frente a la de
+más rápidas en su ejecución, pues es secuencial, frente a
 los procedimientos, ya que implican un salto cuando aparece la llamada
 y un retorno cuando se termina. La decisión de usar una macro o un
 procedimiento dependerá de cada situación en concreto, aunque las
@@ -658,17 +658,22 @@ podemos ejecutar o depurar con el {\bf gdb}.
 
 Recuerda que en laboratorio las raspberries no tienen
 monitor ni teclado, la única conexión con el mundo real
-es el puerto Ethernet. Así que antes de nada averigua cuál es la
-dirección IP, el usuario y la contraseña asignados a tu puesto
-y escribe lo siguiente.
+es el puerto Ethernet. En el apéndice \ref{chp:SerieBoot} se
+explica otro mecanismo para conectar.
+
+Así que antes de nada averigua cuál es la dirección IP de la Raspberry
+Pi dentro de la red local. Por defecto el usuario es {\tt pi} y la
+contraseña {\tt raspberry}. Suponiendo que la dirección IP asignada es
+{\tt 192.168.1.42}, utilizaremos ssh:
 
 \begin{lstlisting}
-        ssh usuario@192.168.1.42
+        ssh pi@192.168.1.42
 \end{lstlisting}
 
-Y luego introduce la contraseña. A diferencia de cuando trabajas en casa
-el usuario/contraseña {\bf pi/raspberry} no está activado. Procura limpiar
-el directorio de trabajo al terminar.
+Y luego introduce la contraseña. Ya conectado a la Raspberry Pi desde un PC
+a través de ssh. Todos los alumnos se conectarán con el mismo nombre de usuario,
+por lo que hay que dejar limpio el directorio de trabajo antes de terminar
+la sesión.
 
 También es buena idea conectarte por ssh a la Raspberry que tengas en casa
 como acabamos de explicar, así te ahorras el tener que disponer de teclado
@@ -1261,8 +1266,8 @@ En este apartado veremos el funcionamiento de las instrucciones de
 desplamiento y rotación. Las instrucciones de desplazamiento pueden
 ser lógicas o aritméticas.
 
-Los desplazamientos lógicos desplazan los bit del valor fuente
-introduciendo ceros (uno o más de uno). El último bit que sale del valor
+Los desplazamientos lógicos desplazan los bit del registro fuente
+introduciendo ceros (uno o más de uno). El último bit que sale del registro
 fuente se almacena en el flag C (figura~\ref{fig:instrSHIFT}).
 El desplazamiento aritmético hace lo mismo, pero manteniendo el signo
 (figura \ref{fig:instrSHIFTarit}).
@@ -1301,6 +1306,10 @@ parar al flag C (figura~\ref{fig:instrRotCarry}). Estas instrucciones
 sólo rotan un bit, al contrario que las anteriores que podían rotar/desplazar
 varios. La rotación con carry a la derecha es {\tt RRX}, no existe la contrapartida
 {\tt RLX} porque se puede sintetizar con otra instrucción ya existente {\tt adcs}.
+Con {\tt adcs} podemos sumar un registro consigo mismo, que es lo mismo que multiplicar por 2
+o desplazar 1 bit hacia la izquierda. Si a esto le añadimos el bit de carry como entrada
+y actualizamos los flags a la salida, tendremos exactamente el mismo comportamiento
+que tendría la instrucción {\tt RLX}.
 
 \begin{figure}[h]
   \centering
@@ -1333,7 +1342,7 @@ minúscula. En realidad las dos siguientes instrucciones son totalmente
 equivalentes.
 
 \begin{lstlisting}
-        lsrs    r0, r0, #1
+        LSRs    r0, r0, #1
         movs    r0, r0, LSR #1
 \end{lstlisting}
 
@@ -1363,9 +1372,9 @@ Instrucción & r1 (binario) & C \\
 \hline\hline
 ldr r1, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-lsrs r1, r1, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+LSRs r1, r1, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-lsrs r1, r1, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+LSRs r1, r1, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
 \end{tabular}
 }
@@ -1377,9 +1386,9 @@ Instrucción & r2 (binario) & C \\
 \hline\hline
 ldr r2, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-asrs r2, r2, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+ASRs r2, r2, \#1&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-asrs r2, r2, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+ASRs r2, r2, \#3&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
 \end{tabular}
 }
@@ -1391,11 +1400,11 @@ Instrucción & r3 (binario) & C \\
 \hline\hline
 ldr r3, [r0]&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-rors r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+RORs r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-rors r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+RORs r3, r3, \#31&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
-rors r3, r3, \#24&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
+RORs r3, r3, \#24&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 \hline
 \end{tabular}
 }
@@ -1436,15 +1445,15 @@ var1:   .word   0x80000000
 
 main:   ldr     r0, =var1     /* r0 <- &var1        */
         ldr     r1, [r0]      /* r1 <- *r0          */
-        lsrs    r1, r1, #1    /* r1 <- r1 lsr #1    */
-        lsrs    r1, r1, #3    /* r1 <- r1 lsr #3    */
+        LSRs    r1, r1, #1    /* r1 <- r1 LSR #1    */
+        LSRs    r1, r1, #3    /* r1 <- r1 LSR #3    */
         ldr     r2, [r0]      /* r2 <- *r0          */
-        asrs    r2, r2, #1    /* r2 <- r2 asr #1    */
-        asrs    r2, r2, #3    /* r2 <- r2 asr #3    */
+        ASRs    r2, r2, #1    /* r2 <- r2 ASR #1    */
+        ASRs    r2, r2, #3    /* r2 <- r2 ASR #3    */
         ldr     r3, [r0]      /* r3 <- *r0          */
-        rors    r3, r3, #31   /* r3 <- r3 rol #1    */
-        rors    r3, r3, #31   /* r3 <- r3 rol #1    */
-        rors    r3, r3, #24   /* r3 <- r3 rol #8    */
+        RORs    r3, r3, #31   /* r3 <- r3 ROL #1    */
+        RORs    r3, r3, #31   /* r3 <- r3 ROL #1    */
+        RORs    r3, r3, #24   /* r3 <- r3 ROL #8    */
         ldr     r4, [r0]      /* r4 <- *r0          */
         msr     cpsr_f, #0    /* C=0                */
         adcs    r4, r4, r4    /* rotar izda carry   */
@@ -1478,7 +1487,7 @@ La instrucción {\tt mul} realiza una multiplicación truncada, es decir,
 nos quedamos con los 32 bits inferiores del resultado. Como el signo
 del resultado es el bit más significativo el cual no obtenemos, esta
 multiplicación es válida tanto para operandos naturales (sin signo) como
-para enteros (con signo). En el ejemplo de abajo {\tt r0 = parte\_baja(r1*r2)}.
+para enteros (con signo). En el ejemplo de abajo {\tt r0 = parte\_baja(r1*r2)}:
 
 \begin{lstlisting}
         mul     r0, r1, r2
@@ -1489,7 +1498,7 @@ por eso la {\tt l} del final, donde el resultado es de 64 bits. Si los
 operandos son naturales escogemos la multiplicación sin signo (unsigned) {\tt umull}.
 Por el contrario, si tenemos dos enteros como factores hablamos de
 multiplicación con signo (signed) {\tt smull}. En ambos ejemplos la parte baja del
-resultado se almacena en r0, y la parte alta en r1. {\tt r1:r0 = r2*r3}
+resultado se almacena en r0, y la parte alta en r1. Para hacer que {\tt r1:r0 = r2*r3}:
 
 \begin{lstlisting}
         umull   r0, r1, r2, r3

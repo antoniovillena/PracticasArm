@@ -272,7 +272,7 @@ El orden recomendado es el siguiente, aunque se puede cambiar el mismo salvo el 
 \begin{lstlisting}
       .macro    ADDEXC  vector, dirRTI
         ldr     r1, =(\dirRTI-\vector+0xa7fffffb)
-        ror     r1, #2
+        ROR     r1, #2
         str     r1, [r0, #\vector]
       .endm
 \end{lstlisting}
@@ -564,7 +564,7 @@ siempre las mismas constantes, haciendo el código más sencillo de mantener.
 \begin{lstlisting}[caption={inter.inc},label={lst:codigoPract5_0}]
       .macro    ADDEXC  vector, dirRTI
         ldr     r1, =(\dirRTI-\vector+0xa7fffffb)
-        ror     r1, #2
+        ROR     r1, #2
         str     r1, [r0, #\vector]
       .endm
         .set    GPBASE,   0x20200000

@@ -44,15 +44,31 @@ lado también es más rápido.
     mov     r1, r2, LSL #2      /* r1 <- (r2*4) */
     mov     r1, r3, ASR #3      /* r1 <- (r3/8) */
 \end{lstlisting}
-    Implicitamente también interviene en la creación de constantes, rotando o
+    Estas instrucciones también se usan implicitamente para la creación de constantes, rotando o
     desplazando constantes más pequeñas de forma transparente al usuario. Como todas
     las instrucciones ocupan 32 bits, es técnicamente imposible que podamos cargar
     en un registro cualquier constante de 32 bits con la instrucción {\tt mov}. Por
     esta razón cuando se necesita cargar una constante más compleja en un registro
     (como una dirección a una variable de memoria) no podemos hacerlo con la instrucción
-    {\tt mov}, tenemos que recurrir a {\tt ldr} con direccionamiento a memoria. En algunos
-    casos es difícil determinar si el ensamblador conseguirá codificar una constante
-    por medio de esta técnica, con lo que la única solución es probar.
+    {\tt mov}, tenemos que recurrir a {\tt ldr} con direccionamiento a memoria.
+
+    Un método para determinar si una constante entra o no en una instrucción {\tt mov} es
+    pasar la constante a binario y quitar los ceros de la izquierda y de la derecha y contar
+    el número de bits resultante. Si el número de bits es menor o igual que 8, la constante
+    entra en una instrucción {\tt mov}. Por ejemplo la constante {\tt 0x00354000} al pasarla
+    a binario sería {\tt 00000000001101010100000000000000}. Eliminando los ceros de delante
+    y detrás tenemos {\tt 11010101}, que son 8 bits y por tanto cabe en un {\tt mov}.
+
+    Este método tiene excepciones. Una de ellas está en los números negativos, que en lugar
+    de quitar ceros a izquierda y derecha quitamos unos. Por ejemplo la constante {\tt 0xFFFBFBFF}
+    en binario es {\tt 11111111111110111111101111111111} y quitando los unos a ambos lados
+    queda {\tt 011111110}, que son 9 bits y por tanto este caso requiere un {\tt ldr}.
+
+    La otra excepción está en el hecho de que las constantes de 32 bits no sólo se crean
+    desplazando constantes de 8, el ensamblador también puede recurrir a rotaciones circulares
+    para crearlas. En casos complejos como éste a veces es más práctico probar con {\tt mov}
+    y si no salta ningún error en el ensamblado es porque cabe con {\tt mov}. Por ejemplo:
+
 \begin{lstlisting}
     mov     r1, #0x80000020
 \end{lstlisting}
@@ -62,8 +78,8 @@ lado también es más rápido.
 \end{lstlisting}
     El ensamblador nos muestra el siguiente error.
 \begin{lstlisting}
-intro1.s: Assembler messages:
-intro1.s:10: Error: invalid constant (80000040) after fixup
+ejem.s: Assembler messages:
+ejem.s:10: Error: invalid constant (80000040) after fixup
 \end{lstlisting}
 
   \item[Direccionamiento a memoria, sin actualizar registro puntero.]
@@ -78,7 +94,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     fijos de un array, ya que el desplazamiento es constante. Por
     ejemplo si tenemos {\tt r1} apuntando a un array de enteros de
     32 bits {\tt int a[]} y queremos poner a 1 el
-    elemento {\tt a[3]}, lo hacemos así.
+    elemento {\tt a[3]}, lo hacemos así:
 
 \begin{lstlisting}
     mov     r2, #1          /* r2 <- 1          */
@@ -96,7 +112,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     Parecido al anterior pero en lugar de un inmediato emplea otro registro. Útil
     en el caso de queramos mantener fijo el registro {\tt Rx} y movernos con {\tt Ry},
     o bien para acceder a desplazamientos mayores a 4095. El mismo ejemplo de
-    arriba utilizando esta variante sería.
+    arriba utilizando esta variante sería:
 
 \begin{lstlisting}
     mov     r2, #1          /* r2 <- 1          */
@@ -111,7 +127,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     o rotación sobre el segundo registro {\tt Ry}. Muy útil
     en caso de arrays o estructuras con elementos de longitud
     potencia de 2, ya que podemos indexar directamente. El
-    mismo ejemplo de antes.
+    mismo ejemplo de antes:
     
 \begin{lstlisting}
     mov     r2, #1
@@ -120,7 +136,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
 \end{lstlisting}
 
     Nótese cómo accedemos a {\tt a[3]}
-    directamente con el valor del índice, {\tt 3}).
+    directamente con el valor del índice, {\tt 3}.
 \end{itemize}
 
 
@@ -139,7 +155,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     Una notación muy parecida a la versión que no actualiza registro, la única
     diferencia es que la constante de desplazamiento queda fuera de los corchetes.
     Presenta el mismo límite de hasta 4095. Este ejemplo pone a cero los 3 primeros
-    elementos {\tt a[0], a[1], a[2]} del array.
+    elementos {\tt a[0], a[1], a[2]} del array:
 
 \begin{lstlisting}
     mov     r2, #0          /* r2 <- 0      */
@@ -159,14 +175,14 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     encerramos entre llaves el primer registro, que es el que se va
     a utilizar en la instrucción de lectura o escritura en memoria. Es decir
     primero cargamos de {\tt [Rx]} y luego actualizamos {\tt Rx} con el valor
-    que corresponda. Esta instrucción.
+    que corresponda. Esta instrucción:
 
 \begin{lstlisting}
     ldr     r2, [r1], +r3, LSL #2
 \end{lstlisting}
 
     Se puede desglosar en estas otras dos, cuyo comportamiento es exactamente
-    el mismo.
+    el mismo:
 
 \begin{lstlisting}
     ldr     r2, [r1]
@@ -186,7 +202,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
 
     Este modo es muy útil en casos que queramos reusar en una futura instrucción
     la dirección que hemos calculado. En este ejemplo duplicamos el valor
-    que se encuentra en {\tt a[3]}.
+    que se encuentra en {\tt a[3]}:
 
 \begin{lstlisting}
     ldr     r2, [r1, #+12]!
@@ -203,7 +219,7 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
             [Rx, -Ry, operación\_desp \#inmediato]! \newline}
 
     Tercer y último caso de direccionamiento preindexado. Al igual que
-    antes, desgloso en dos instrucciones para ver el funcionamiento exacto.
+    antes, desgloso en dos instrucciones para ver el funcionamiento exacto:
 
 \begin{lstlisting}
     ldr     r2, [r1, +r3, LSL #2]!
@@ -212,15 +228,15 @@ intro1.s:10: Error: invalid constant (80000040) after fixup
     Equivale a esto.
 
 \begin{lstlisting}
-    ldr     r2, [r1, +r3, LSL #2]
     add     r1, r1, r3, LSL #2
+    ldr     r2, [r1]
 \end{lstlisting}
 
     O bien a esto otro.
 
 \begin{lstlisting}
+    ldr     r2, [r1, +r3, LSL #2]
     add     r1, r1, r3, LSL #2
-    ldr     r2, [r1]
 \end{lstlisting}
 \end{itemize}
 
@@ -308,9 +324,8 @@ vectores están definidos siempre a partir de la posición 0. El propio
 índice indica cuántos elementos hemos de desplazarnos respecto del
 comienzo del primer elemento (para acceder al elemento cero hemos de
 saltarnos 0 elementos, para acceder al elemento 1 hemos de saltarnos
-un elemento, etc... En general, para acceder al elemento con índice
-{\tt i}
-hemos de saltarnos los {\tt i} elementos anteriores).
+un elemento, etc...; En general, para acceder al elemento con índice
+{\tt i} hemos de saltarnos los {\tt i} elementos anteriores).
 
 Dado un vector {\tt int v[N];}, todos los elementos se encuentran en posiciones
 consecutivas a partir de la dirección de {\tt v[0]}
@@ -345,8 +360,7 @@ bloque de  $M \times N \times B$ bytes (ver figura \ref{fig:dos_5}(a)).
 
 Dentro de este bloque, los elementos se almacenan por filas. Primero
 se guardan todos los elementos de la fila $0$, después todos los de la
-fila $1$, etc... Dentro de cada fila, los elementos están ordenados por
-columnas (figura \ref{fig:dos_5}(b)).
+fila $1$, etc. como se ve en la figura \ref{fig:dos_5}(b).
 
 
 \begin{figure}[h]
@@ -370,7 +384,11 @@ mat[i][j] = M_d[@mat + ((i*M)+j)*B]
 \subsection{Instrucciones de salto}
 
 Las instrucciones de salto pueden producir saltos incondicionales ({\tt b} y {\tt bx})
-o saltos condicionales. En los saltos condicionales añadimos dos o tres letras
+o saltos condicionales. Cuando saltamos a una etiqueta empleamos {\tt b}, mientras que
+si queremos saltar a un registro lo hacemos con {\tt bx}. La variante de registro {\tt bx}
+la solemos usar como instrucción de retorno de subrutina, raramente tiene otros usos.
+
+En los saltos condicionales añadimos dos o tres letras
 a la ({\tt b/bx}), mediante las cuales condicionamos si se salta o no dependiendo
 del estado de los flags. Estas condiciones se pueden añadir a cualquier
 otra instrucción, aunque la mayoría de las veces lo que nos interesa es controlar
@@ -388,9 +406,9 @@ La lista completa de condiciones es ésta.
   \item{\tt CC/LO} ({\tt c}arry {\tt c}lear/{\tt l}ower, carry inactivo/menor). Cuando {\tt C} está inactivo ({\tt C} vale 0).
   \item{\tt VS} (o{\tt v}erlow {\tt s}et, desbordamiento activo). Cuando {\tt V} está activo ({\tt V} vale 1).
   \item{\tt VC} (o{\tt v}erlow {\tt c}lear, desbordamiento inactivo). Cuando {\tt V} está inactivo ({\tt V} vale 0).
-  \item{\tt GT} ({\tt g}reater {\tt t}han, mayor en complemento a dos). Cuando {\tt Z} está inactivo y {\tt N=V}({\tt Z} vale 0, {\tt N} vale {\tt V}).
+  \item{\tt GT} ({\tt g}reater {\tt t}han, mayor en complemento a dos). Cuando {\tt Z} está inactivo y {\tt N=V} ({\tt Z} vale 0, {\tt N} vale {\tt V}).
   \item{\tt LT} ({\tt l}ower {\tt t}han, menor en complemento a dos). Cuando {\tt N!=V} ({\tt N} vale {\tt not V}).
-  \item{\tt GE} ({\tt g}reater or {\tt e}qual, mayor o igual en complemento a dos). Cuando {\tt N=V}({\tt N} vale {\tt V}).
+  \item{\tt GE} ({\tt g}reater or {\tt e}qual, mayor o igual en complemento a dos). Cuando {\tt N=V} ({\tt N} vale {\tt V}).
   \item{\tt LE} ({\tt l}ower or {\tt e}qual, menor o igual en complemento a dos). Cuando {\tt Z} está activo y {\tt N!=V} ({\tt Z} vale 1, {\tt N} vale {\tt not V}).
   \item{\tt HI} ({\tt h}igher, mayor). Cuando {\tt C} está activo y {\tt Z} inactivo ({\tt C} vale 1, {\tt Z} vale 0).
   \item{\tt LS} ({\tt l}ower or {\tt s}ame, menor o igual). Cuando {\tt C} está inactivo ó {\tt Z} activo ({\tt C} vale 0 ó {\tt Z} vale 1).
@@ -402,12 +420,9 @@ si el bit de estado cero está activo (Z=1), y en caso contrario
 (Z=0) no interrumpirá el flujo secuencial de instrucciones.
 Previo a un salto condicional, el registro de flags debe ser actualizado
 mediante alguna instrucción aritmética ({\tt adds}, {\tt subs}, {\tt cmp},
-\dots) o lógica ({\tt and}, {\tt orr}, {\tt tst}, \dots). En la mayoría
+\dots) o lógica ({\tt ands}, {\tt orrs}, {\tt tst}, \dots). En la mayoría
 de los casos tenemos que añadir el sufijo {\tt s} a una instrucción normal
 {\tt add}, para forzar que la nueva instrucción {\tt adds} actualice los flags.
-
-El operando de la instrucción de salto ({\tt b}) puede ser una etiqueta que indica la
-posición de memoria a saltar, o bien un registro en caso de {\tt bx}.
 
 Un aspecto muy peculiar de la arquitectura ARM es que las llamadas a
 subrutinas se hacen mediante un sencillo añadido a la instrucción de salto. La
@@ -428,10 +443,10 @@ subrut: mov     r3, #3
 
 Si seguimos el flujo del programa primero cargamos {\tt r1} a 1, luego {\tt r2}
 a 2 y lo siguiente que hay es una llamada a subrutina. En dicha llamada el
-procesador carga en {\tt lr} la dirección de la siguiente instrucción {\tt mov r4, \#4}
-y salta a la etiqueta {\tt subrut:}. Se ejecuta el {\tt mov r3, \#3} de la subrutina
-y después {\tt bx lx} que vendría a ser la instrucción de retorno. Es decir, salimos
-de la subrutina retomando el flujo del programa principal, ejecutando {\tt mov r4, \#4}.
+procesador carga en {\tt lr} la dirección de la siguiente instrucción ``{\tt mov r4, \#4}''
+y salta a la etiqueta {\tt subrut}. Se ejecuta el ``{\tt mov r3, \#3}'' de la subrutina
+y después ``{\tt bx lr}'' que vendría a ser la instrucción de retorno. Es decir, salimos
+de la subrutina retomando el flujo del programa principal, ejecutando ``{\tt mov r4, \#4}''.
 
 Este sencillo esquema vale para un sólo nivel de subrutinas, es decir, dentro de
 {\tt subrut} no podemos llamar a otra subrutina porque sobreescribimos el valor del
@@ -455,13 +470,20 @@ nivel2: mov     r4, #4
         bx      lr
 \end{lstlisting}
 
-Como véis en el último nivel ({\tt nivel2}) podemos ahorrarnos el tener que
+Como veis, en el último nivel ({\tt nivel2}) podemos ahorrarnos el tener que
 almacenar y recuperar {\tt lr} en la pila.
 
 \vspace{0.25cm}
 Las instrucciones de salto en la arquitectura ARM abarcan una zona muy extensa,
-hasta 16Mb. Sin embargo no cubren todo el ancho del bus de direcciones, sólo
-24 de los 32 bits. En caso de necesitar un salto mayor de 24 bits recurrimos
+hasta 64 Mb (32 Mb hacia adelante y otros 32 Mb hacia atrás). Estos límites podemos
+justificarlos atendiendo al formato de instrucción que podemos ver en el apéndice
+\ref{chp:MacroADDEXC}. El código de operación ocupa 8 de los 32 bits, dejándonos
+24 bits para codificar el destino del salto. En principio con 24 bits podemos
+direccionar 16 Mb $[-2^{23}-1, 2^{23}-1]$, sin embargo la arquitectura ARM se aprovecha
+del hecho de que las instrucciones están alineadas a direcciones múltiplo de 4 (en binario
+acaban en {\tt 00}), por lo que el rango real es de 64 Mb $[-2^{25}-1,2^{25}-1]$
+
+En caso de necesitar un salto mayor recurrimos
 a la misma solución de la carga de inmediatos del {\tt mov}, solo que el
 registro a cargar es el {\tt pc}.
 
@@ -487,7 +509,7 @@ aritméticas o lógicas, con el fin de actualizar los flags de estado. La
 traducción de la estructura {\tt if} está en los listados
 \ref{lst:codigoPract2_3} y \ref{lst:codigoPract2_4}.
 
-\begin{lstlisting}[caption={Código del programa tipos1.c},label={lst:codigoPract2_1},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Estructura del for y while en C (tipos1.c)},label={lst:codigoPract2_1},language=C]
   int vi, vf, i;
 
   for ( i= vi; i<=vf; i++ ){ 
@@ -504,7 +526,7 @@ traducción de la estructura {\tt if} está en los listados
 \begin{lstlisting}[caption={Traducción de las estructuras {\tt for} y {\tt while}.
 Hemos supuesto que el valor inicial está en la variable {\tt vi}
 y el valor final en  la variable {\tt vf} y se ha utilizado el
-registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPract2_2},escapeinside={@}{@}]
+registro {\tt r1} como índice de las iteraciones {\tt i}.},label={lst:codigoPract2_2}]
         ldr     r1, =vi
         ldr     r1, [r1]
         ldr     r2, =vf
@@ -519,7 +541,7 @@ bucle:  cmp     r1, r2
 salir:
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Código del programa tipos2.c},label={lst:codigoPract2_3},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Estructura if en C (tipos2.c)},label={lst:codigoPract2_3},language=C]
   int a, b;
 
   if( a==b ){ 
@@ -530,7 +552,7 @@ salir:
   }
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Traducción de la estructura {\tt if}},label={lst:codigoPract2_4},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Traducción de la estructura {\tt if}},label={lst:codigoPract2_4}]
         ldr     r1, =a
         ldr     r1, [r1]
         ldr     r2, =b
@@ -557,7 +579,7 @@ ensamblador generado a partir del código fuente en C.
 
 Veámoslo con un ejemplo.
 
-\begin{lstlisting}[caption={Código del programa tipos3.c},label={lst:codigoPract2_5},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3.c},label={lst:codigoPract2_5},language=C]
 #include <stdio.h>
 
 void main(void){
@@ -577,8 +599,8 @@ Después de crear el fichero {\tt tipos3.s}, lo compilamos con este comando.
         gcc -Os -S -o tipos3a.s tipos3.c
 \end{lstlisting}
 
-Con el parámetro {\tt -S} forzamos la interrupción (generamos {\tt .s} en lugar de
-{\tt .o}) y con {\tt -Os} le indicamos al compilador que queremos optimizar en
+Con el parámetro {\tt -S} forzamos la generación del {\tt .s} en lugar del
+{\tt .o} y con {\tt -Os} le indicamos al compilador que queremos optimizar en
 tamaño, es decir que queremos código ensamblador lo más pequeño posible, sin
 importar el rendimiento del mismo.
 
@@ -586,7 +608,7 @@ El código ensamblador resultante está un poco sucio, lleno de directivas super
 con punteros a variables e instrucciones no simplificadas por el preprocesador. Tras
 limpiarlo quedaría así.
 
-\begin{lstlisting}[caption={Código del programa tipos3a.s},label={lst:codigoPract2_6},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3a.s},label={lst:codigoPract2_6}]
 .data
 var1:   .asciz  "%d\012"
 
@@ -606,18 +628,18 @@ main:   push    {r4, lr}
 El carácter {\tt \textbackslash n} se ha transformado en octal {\tt \textbackslash 012} puesto que el ensamblador
 no entiende de secuencias de escape. La instrucciones {\tt push} y {\tt pop} son la versión
 simple de {\tt stmfd} y {\tt ldmfd} que veremos más adelante. Nótese que la función no acaba
-con el típico {\tt bx lr}, se trata de una optimización que consigue reducir de dos
-instrucciones a una.
-
-\begin{lstlisting}
-        pop     {r4, pc}
-\end{lstlisting}
-
-La instrucción anterior es equivalente a estas otras dos.
+con el típico {\tt bx lr}. Se trata de una optimización que consigue reducir de dos
+instrucciones a una. Es decir, estas dos instrucciones:
 
 \begin{lstlisting}
         pop     {r4, lr}
         bx      lr
+\end{lstlisting}
+
+Se simplifican a:
+
+\begin{lstlisting}
+        pop     {r4, pc}
 \end{lstlisting}
 
 En general no vamos a emplear este tipo de optimizaciones en las prácticas, puesto que
@@ -633,15 +655,15 @@ haber almacenado {\tt r4} en pila) responde a la convención {\bf AAPCS} que
 veremos con más detenimiento en el siguiente capítulo.
 
 Veamos qué ocurre cuando le indicamos al compilador que queremos optimizar al
-máximo en velocidad (la escala va del 0 al 3) el mismo código en C.
+máximo en velocidad (la escala va del 0 al 3) el mismo código en C:
 
 \begin{lstlisting}
         gcc -O3 -S -o tipos3b.s tipos3.c
 \end{lstlisting}
 
-Tras simplificar, el fichero en ensamblador generado sería este.
+Tras simplificar, el fichero en ensamblador generado sería éste:
 
-\begin{lstlisting}[caption={Código del programa tipos3b.s},label={lst:codigoPract2_7},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa tipos3b.s},label={lst:codigoPract2_7}]
 .data
 var1:   .asciz  "%d\012"
 
@@ -668,15 +690,15 @@ main:   push    {r4, lr}
 \end{lstlisting}
 
 Observamos que el bucle como tal ha desaparecido. En realidad lo que ha ocurrido
-es que el compilador a empleado una técnica agresiva de optimización llamada
+es que el compilador ha empleado una técnica agresiva de optimización llamada
 {\it loop unrolling} o desenrollamiento de bucle, que consiste en sustituir
 mediante repeticiones del cuerpo del bucle, de tal forma que no perdemos tiempo
 comparando ni haciendo el salto condicional. En este caso empleamos tantas repeticiones
 como iteraciones tiene el bucle, aunque normalmente se llega hasta un límite de
 repeticiones. De no ser así el ejecutable se volvería excesivamente grande.
 
-Por último señalar que se optimizado el final de la función, aunque de otra forma
-distinta al caso anterior. La última iteración debería ser así.
+Por último señalar que de nuevo se ha optimizado el final de la función, aunque de otra forma
+distinta al caso anterior. La última iteración debería ser así:
 
 \begin{lstlisting}
         mov     r0, r4
@@ -686,10 +708,13 @@ distinta al caso anterior. La última iteración debería ser así.
         bx      lr
 \end{lstlisting}
 
+Se deja como ejercicio explicar porqué ``pop {r4, lr}'' y ``b printf'' primero llama
+a {\tt printf} y luego retorna al SO.
+
 \subsection{Ejercicios propuestos.}
 
 \subsubsection{Ejercicio 2.1}
-Basándonos en los ejemplos anteriores, escribe un bucle for {\tt for} que imprima
+Basándonos en los ejemplos anteriores, escribe un bucle {\tt for} que imprima
 los 50 primeros números pares naturales en orden inverso (desde 100 hasta 2 en pasos
 de 2). Una vez hecho esto, aplica desenrollamiento de bucle de tal forma
 que el salto condicional se ejecute 10 veces, con 5 repeticiones cada vez.
@@ -791,7 +816,7 @@ vector} y tiene 5 elementos de tipo {\tt int} (entero de 32 bits). Los algoritmo
 que realizan la suma de sus elementos, tanto en C como en ensamblador, se
 pueden encontrar en los listados \ref{lst:dos_9} y \ref{lst:dos_10}.
 
-\begin{lstlisting}[caption={Código del programa tipos4.c},label={lst:dos_9},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Suma de elementos de un vector (tipos4.c)},label={lst:dos_9},language=C]
 #include <stdio.h>
 
 void main(void){
@@ -805,28 +830,39 @@ void main(void){
 }
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Código del programa tipos4.s},label={lst:dos_10},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Suma de elementos de un vector (tipos4.s)},label={lst:dos_10}]
 .data
+
 var1:   .asciz  "La suma es %d\n"
 var2:   .word   128, 32, 100, -30, 124
 
 .text
 .global main
+
+/* salvamos registros */
 main:   push    {r4, lr}
+
+/* inicializamos variables y apuntamos r2 a var2 */
         mov     r0, #5
         mov     r1, #0
         ldr     r2, =var2
+
+/* bucle que hace la suma */
 bucle:  ldr     r3, [r2], #4
         add     r1, r1, r3
         subs    r0, r0, #1
         bne     bucle
+
+/* imprimimos resultado */
         ldr     r0, =var1
         bl      printf
+
+/* recuperamos registros y salimos */
         pop     {r4, lr}
         bx      lr
 \end{lstlisting}
 
-Si analizamos el código en ensamblador (listado \ref{lst:dos_10}(b)), veremos que se
+Si analizamos el código en ensamblador (listado \ref{lst:dos_10}), veremos que se
 recorre todo el vector con el registro {\tt r0}, realizándose la suma sobre el
 registro {\tt r1}. A diferencia de ejemplos anteriores decrementamos de 5 a 0, así
 nos ahorramos una comparación, ya que la instrucción {\tt subs} detecta cuando hemos
@@ -848,7 +884,7 @@ poco útil. Para acelerar el proceso, podemos utilizar puntos de parada o {\it b
 Otro problema que tenemos es que al ejecutar un paso de una instrucción exacta {\tt si}
 nos metemos dentro de la rutina {\tt printf}, cosa que no nos interesa a no ser que queramos
 descubrir las interioridades de la librería. Para evitar esto ejecutamos con {\tt ni}, que
-ejecutará {\tt bl printf} de un paso sin meterse dentro.
+ejecutará {\tt bl printf} de un paso sin meterse dentro de la rutina.
 
 Para introducir un breakpoint hay varias maneras, siempre es buena idea investigar a fondo
 la ayuda que se nos brinda el propio depurador con {\tt help break}. Nosotros pondremos dos
@@ -925,7 +961,7 @@ La suma es 354
 \end{lstlisting}
 
 Ahora vamos a modificar un poco el programa. Copiamos {\tt tipos4.s} en
-otro fichero {\tt tipos4.s} (con {\tt cp tipos4.s tipos5.s}). Ahora modifica
+otro fichero {\tt tipos5.s} (con {\tt cp tipos4.s tipos5.s}). Ahora modifica
 la lista de números del array, reemplazándola por esta otra.
 
 \begin{lstlisting}
@@ -964,7 +1000,7 @@ int}. Por tanto, el programador debería ir acumulando el resultado de
 la suma sobre un {\tt long long} (64 bits), tal y como se muestra
 en el siguiente listado.
 
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 void main(void){
   int i;
   long long suma;
@@ -975,26 +1011,39 @@ void main(void){
   }
   printf("La suma es %d\n", suma);
 }
-----------------
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Suma de un vector de enteros largos (tipos6.s)},label={lst:dos_11}]
 .data
+
 var1:   .asciz  "La suma es %lld\n"
 var2:   .word   1600000000, -100, 800000000, -50, 200
 
 .text
 .global main
+
+/* salvamos registros */
 main:   push    {r4, r5, r6, lr}
+
+/* inicializamos variables y apuntamos r4 a var2 */
         mov     r5, #5
         mov     r2, #0
         mov     r3, #0
         ldr     r4, =var2
+
+/* bucle que hace la suma */
 bucle:  ldr     r0, [r4], #4
         mov     r1, r0, ASR #31
         adds    r2, r2, r0
         adc     r3, r3, r1
         subs    r5, r5, #1
         bne     bucle
+
+/* imprimimos resultado */
         ldr     r0, =var1
         bl      printf
+
+/* recuperamos registros y salimos */
         pop     {r4, r5, r6, lr}
         bx      lr
 \end{lstlisting}
@@ -1007,13 +1056,12 @@ en cada iteración en {\tt r0} y extender el signo mediante la instrucción
 sumamos los 32 bits inferiores almacenando también el posible acarreo (flag {\tt C}),
 y en la segunda {\tt adc} sumamos los 32 bits superiores más el acarreo anterior.
 
-Sin entrar en detalles que veremos en el próximo capítulo, el número de 64 bits que
-le enviamos a la función {\tt printf} debe estar {\tt r3:r2}, debemos guardar en pila
+El número de 64 bits que
+le enviamos a la función {\tt printf} debe estar en {\tt r3:r2}, debemos guardar en pila
 todos los registros por encima de {\tt r4} (incluyéndolo) y en el {\tt push} debe
-haber un número par de elementos. Si tuviésemos un número impar, como es el caso,
-salvaremos el siguiente registro {\tt r6} aunque no lo necesitemos en nuestra función.
-
-
+haber un número par de elementos. Se explica más adelante por qué. Si tuviésemos un número
+impar, como es el caso, salvaremos el siguiente registro {\tt r6} aunque no lo
+necesitemos en nuestra función.
 
 \subsubsection{Ejercicio 2.6}
 Dada la definición de matriz {\tt short mat[4][6]}; ¿cuál es la
@@ -1035,13 +1083,15 @@ fórmula para acceder al elemento {\tt mat[i][2]}?
 \end{center}
 
 
-\begin{lstlisting}[caption={Matrices},label={lst:dos_11},escapeinside={@}{@}]
+\begin{lstlisting}[caption={Matrices},label={lst:dos_12}]
 matriz: .hword    0,    1,    2,    3,    4,    5
         .hword 0x10, 0x11, 0x12, 0x13, 0x14, 0x15
         .hword 0x20, 0x21, 0x22, 0x23, 0x24, 0x25
         .hword 0x30, 0x31, 0x32, 0x33, 0x34, 0x35
 suma:   .hword 0
-------------------------------
+\end{lstlisting}
+
+\begin{lstlisting}[language=C]
 suma= 0; 
 for ( i= 0; i<4; i++ ){
   suma+= mat[i][2];
@@ -1049,14 +1099,14 @@ for ( i= 0; i<4; i++ ){
 \end{lstlisting}
 
 Queremos hacer un programa que sume todos los elementos de la columna
-2 de la matriz (listado \ref{lst:dos_11}). Completa {\tt tipos7.s} para
+2 de la matriz (listado \ref{lst:dos_12}). Completa {\tt tipos7.s} para
 que implemente este código, utilizando dentro del bucle que realiza la
 suma la fórmula del ejercicio 2.6. Para comprobarlo, el resultado
 es 104 = 0x68.
 
 Fíjate en que en esta versión del código que recorre los elementos de
 una columna,  para calcular la dirección de cada elemento aplicamos la
-expresión \ref{eq:accesoelemmatriz}. A ésto es a lo que llamamos
+ecuación de la página \pageref{eq:accesoelemmatriz}. A ésto es a lo que llamamos
 acceso aleatorio a los elementos de la matriz. 
 
 Sin embargo, sabemos que hay una relación entre los elementos de una
@@ -1089,6 +1139,7 @@ ahora sabes que se pueden recorrer todos los elementos de una columna
 sin más que ir sumando ese desplazamiento. Decimos entonces que
 hacemos un acceso secuencial a los elementos de la matriz. Copia el
 fichero {\tt tipos7.s} a {\tt tipos8.s} e implementa sobre este
-último  el acceso secuencial. El resultado es el anterior (104 = 0x68).
+último  el acceso secuencial. El resultado tiene que ser el mismo
+que el anterior (104 = 0x68).
 
 \chapterend{}
