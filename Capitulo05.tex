@@ -6,7 +6,7 @@
 utilizan dispositivos de E/S haciendo uso del sistema de
 interrupciones hardware. Para poder programar los distintos parámetros
 que configuran el entorno de las interrupciones es necesario conocer de
-forma detallada cómo funcionan los registros asociados, ya que
+forma detallada cómo funcionan los puertos asociados, ya que
 éste es el mecanismo típico mediante el cual el procesador se
 comunica con los periféricos.
 
@@ -195,7 +195,7 @@ Es el segmento de código que se ejecuta para atender a una interrupción. Una v
 ejecutado dicha rutina, retomamos la ejecución normal de nuestro programa, justo después de la instrucción
 donde lo habíamos interrumpido. Cada rutina de tratamiento debe atender a todas las posibles
 fuentes de interrupción de su mismo tipo, con lo que al comienzo de la interrupción se suelen
-acceder a los registros asociados para detectar qué periférico ha causado la interrupción y
+acceder a los puertos asociados para detectar qué periférico ha causado la interrupción y
 actuar en consecuencia.
 
 Si nos interesan {\tt IRQ} y {\tt FIQ}, a lo sumo tendremos que escribir dos
@@ -300,7 +300,7 @@ El orden recomendado es el siguiente, aunque se puede cambiar el mismo salvo el 
   \item Escribimos código de inicialización ajeno al proceso de interrupción, como por ejemplo
         configurar los GPIOs a salidas donde queramos que actúe un LED.
   \item Ahora viene la inicialización de las interrupciones. Aquí le decimos al sistema qué fuentes
-        pueden provocar interrupciones, escribiendo en los registros asociados. 
+        pueden provocar interrupciones, escribiendo en los puertos asociados. 
   \item El último paso es habilitar las interrupciones globalmente escribiendo en el registro
         {\tt cpsr}. Lo hacemos indirectamente vía otro registro, y la instrucción tiene otro
         nombre pero hace lo mismo que un {\tt mov}. En concreto se llama {\tt msr}, y también hay
@@ -312,7 +312,7 @@ El orden recomendado es el siguiente, aunque se puede cambiar el mismo salvo el 
 
 \subsection{El controlador de interrupciones}
 
-Los registros que componen el controlador de interrupciones son los siguientes.
+Los puertos que componen el controlador de interrupciones son los siguientes.
 
 \begin{figure}[h]
   \centering
@@ -321,32 +321,32 @@ Los registros que componen el controlador de interrupciones son los siguientes.
   \label{fig:interrupciones}
 \end{figure}
 
-Las {\tt FIQs} sólo tienen un registro de control asociado, quedando todo el detalle
+Las {\tt FIQs} sólo tienen un puerto de control asociado, quedando todo el detalle
 en las {\tt IRQs}. Hay tres grupos de tres
-registros cada uno. El primer grupo (Pending) sirve para indicar que hay una interrupción
+puertos cada uno. El primer grupo (Pending) sirve para indicar que hay una interrupción
 pendiente, el segundo (Enable) es para habilitar las interrupciones y el tercero (Disable)
-para deshabilitarlas. Dentro de cada grupo tenemos un registro básico que tiene un resumen
-sobre el mapa de interrupciones y otros dos registros que
-indican con más detalle la fuente de la interrupción. En el registro básico
+para deshabilitarlas. Dentro de cada grupo tenemos un puerto básico que tiene un resumen
+sobre el mapa de interrupciones y otros dos puertos que
+indican con más detalle la fuente de la interrupción. En el puerto básico
 hay fuentes individuales {\tt GPU IRQ x} y bits que engloban a varias fuentes {\tt Bits in PR1},
-que por ejemplo indica que el origen hay que buscarlo en el registro 1. En el registro 1 están
-las primeras 32 posiciones del mapa de interrupciones, mientras que en el registro 2 están
+que por ejemplo indica que el origen hay que buscarlo en el puerto 1. En el puerto 1 están
+las primeras 32 posiciones del mapa de interrupciones, mientras que en el puerto 2 están
 las 32 últimas.
 
 La documentación oficial sobre el mapa de interrupciones está incompleta, pero buscando un poco
 por internet se puede encontrar que las interrupciones asociadas al {\tt System Timer} se
 controlan con los 4 primeros bits de la tabla (uno para cada comparador).
 
-En la figura \ref{fig:interrupcionesgrupos} vemos los registros ordenados en grupos.
+En la figura \ref{fig:interrupcionesgrupos} vemos los puertos ordenados en grupos.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=15cm]{graphs/interrupcionesgrupos.png}
-  \caption{Agrupación de registros de interrupciones}
+  \caption{Agrupación de puertos de interrupciones}
   \label{fig:interrupcionesgrupos}
 \end{figure}
 
-La forma habitual de trabajar es usar el registro apropiado del grupo {\tt Enable} para
+La forma habitual de trabajar es usar el puerto apropiado del grupo {\tt Enable} para
 habilitar la fuente de interrupción que queramos que nos interrumpa. Luego en el caso de
 ser interrumpidos podemos detectar cuál ha sido la fuente leyendo el mismo bit del
 grupo {\tt Pending} y finalmente, si pasamos a otra sección del programa donde no queremos
@@ -354,16 +354,16 @@ que nos interrumpa más dicha fuente la desactivamos con el grupo {\tt Disable}.
 
 A parte del controlador de interrupciones, cada dispositivo tiene su propio mecanismo de
 habilitar/deshabilitar y detectar/notificar la fuente de interrupción. En el caso del GPIO tenemos
-los registros {\tt GPRENn}, {\tt GPFENn}, {\tt GPHENn}, {\tt GPLENn}, {\tt GPARENn} y {\tt GPAFENn}
+los puertos {\tt GPRENn}, {\tt GPFENn}, {\tt GPHENn}, {\tt GPLENn}, {\tt GPARENn} y {\tt GPAFENn}
 para habilitar/deshabilitar. Para detectar/notificar están los {\tt GPEDSn}.
 
 Para el temporizador tenemos que {\tt STCS} hace las funciones de detección y notificación. No
-existen registros específicos para habilitar/deshabilitar ya que el controlador de
+existen puertos específicos para habilitar/deshabilitar ya que el controlador de
 interrupciones permite habilita/deshabilitar cada comparador por separado.
 
-El único registro que nos falta por ver es {\tt FIQ control ó INTFIQCON} que hemos
+El único puerto que nos falta por ver es {\tt FIQ control ó INTFIQCON} que hemos
 mostrado en la figura \ref{fig:interrupciones}. Antes mostraremos la lista de fuentes
-de interrupción aplicables a este registro.
+de interrupción aplicables a este puerto.
 
 \begin{longtable}{ p{2cm} | p{6cm}}
 \hline
@@ -379,10 +379,10 @@ de interrupción aplicables a este registro.
 71    & Acceso ilegal de tipo 2 \\ \hline
 \end{longtable}
 
-Son las mismas fuentes que en IRQ pero condensadas en un único registro. De 0 a 31 coincide
+Son las mismas fuentes que en IRQ pero condensadas en un único puerto. De 0 a 31 coincide
 con la tabla {\tt IRQ 1}, de 32 a 63 con {\tt IRQ 2} y de 64 en adelante con {\tt IRQ Basic}.
 
-El registro {\tt INTFIQCON} se programa con los 8 bits inferiores, indicando en el bit 7 si
+El puerto {\tt INTFIQCON} se programa con los 8 bits inferiores, indicando en el bit 7 si
 queremos habilitar la fuente, y en los bits del 0 al 6 ponemos el índice de la fuente que
 se corresponde con la lista. A diferencia de las IRQ, con las FIQ sólo podemos atender a
 una fuente de interrupción. 
@@ -486,7 +486,7 @@ Luego programamos el comparador para que salte la interrupción a los 4,19 segun
 
 \subsubsection{4. Inicializamos interrupciones localmente}
 
-Consiste en escribir en los registros asociados dependiendo de las fuentes que querramos
+Consiste en escribir en los puertos asociados dependiendo de las fuentes que querramos
 activar. En este primer ejemplo habilitamos el comparador
 {\tt C1} del temporizador como fuente de interrupción.
 
@@ -557,7 +557,7 @@ encargadas de encender el LED en cuestión.
 \subsection{Ejemplos de aplicación}
 
 Vamos a crear un archivo {\tt inter.inc} donde guardaremos las constantes
-asociadas a los registros y también la macro {\tt ADDEXC}, esta última
+asociadas a los puertos y también la macro {\tt ADDEXC}, esta última
 se explica en detalle en el apéndice \ref{chp:MacroADDEXC}. De esta forma evitamos escribir
 siempre las mismas constantes, haciendo el código más sencillo de mantener.
 
@@ -746,10 +746,10 @@ irq_handler:
 
 Luego escribimos un 1 en el {\tt M1} de {\tt CS}, para resetear el estado de coincidencia, ya
 que de lo contrario el gestor de interrupciones verá el bit siempre a 1 y no lanzará más
-interrupciones. Resulta confuso tener que escribir un 1 en el registro para almacenar un 0, pero
-de un modo similar a lo que ocurre con el registro {\tt GPCLR0} del GPIO es para ahorrar
-operaciones y que la RTI sea más rápida. Así no hay que leer el registro, aplicar una máscara y
-volver a escribir en el mismo registro, con una escritura es suficiente.
+interrupciones. Resulta confuso tener que escribir un 1 en el puerto para almacenar un 0, pero
+de un modo similar a lo que ocurre con el puerto {\tt GPCLR0} del GPIO es para ahorrar
+operaciones y que la RTI sea más rápida. Así no hay que leer el puerto, aplicar una máscara y
+volver a escribir en el mismo puerto, con una escritura es suficiente.
 
 \begin{lstlisting}
         ldr     r0, =STBASE
@@ -757,7 +757,7 @@ volver a escribir en el mismo registro, con una escritura es suficiente.
         str     r1, [r0, #STCS]
 \end{lstlisting}
 
-Luego tenemos que actualizar el registro comparador, de lo contrario tardará poco más
+Luego tenemos que actualizar el puerto comparador, de lo contrario tardará poco más
 de una hora en cambiar de estado el LED (es lo que tarda el contador en dar una vuelta
 completa). Para ello leemos el contador ({\tt CLO}) y le añadimos 500000 al valor leído. Como cada
 cuenta equivale a un microsegundo, este añadido al contador supone medio segundo, lo
@@ -869,10 +869,10 @@ Así sabemos que el programa está cargado a la espera de que activemos los puls
         str     r1, [r0, #GPSET0]
 \end{lstlisting}
 
-Luego habilitamos las interrupciones particulares del GPIO en el registro
+Luego habilitamos las interrupciones particulares del GPIO en el puerto
 {\tt GPREN0}, en concreto las que entran por los pulsadores (GPIO 2 y GPIO 3). 
 Para que las peticiones se propaguen desde el GPIO al controlador de interrupciones
-habilitamos el bit 20 del registro {\tt INTENIRQ2}.
+habilitamos el bit 20 del puerto {\tt INTENIRQ2}.
 
 \begin{lstlisting}
         mov     r1, #0b00000000000000000000000000001100
@@ -957,8 +957,8 @@ a 200 milisegundos.
 
 La clave de todo está en saber cuál de los dos comparadores ha producido la interrupción (se
 puede dar el caso en que salten los dos a la vez). Ésto se puede hacer de dos formas distintas:
-o bien leemos el bit asociado {\tt systim\_cx} en el registro {\tt IRQ pending 1}, o bien leemos
-el {\tt Mx} del registro {\tt CS}. Elegimos el segundo caso, así no gastamos otro registro más
+o bien leemos el bit asociado {\tt systim\_cx} en el puerto {\tt IRQ pending 1}, o bien leemos
+el {\tt Mx} del puerto {\tt CS}. Elegimos el segundo caso, así no gastamos otro puerto más
 para almacenar {\tt INTBASE}.
 
 El código completo del ejemplo es el siguiente.
@@ -1098,7 +1098,7 @@ final:  pop     {r0, r1, r2, r3}
 
 Los registros {\tt r0} y {\tt r1} los hacemos apuntar a la base del {\tt System Timer} y del
 {\tt GPIO} y no tocamos dichos valores durante toda la interrupción, vamos a estar
-constantemente leyendo y escribiendo registros y resulta incómodo tener que cargar la
+constantemente leyendo y escribiendo puertos y resulta incómodo tener que cargar la
 base cada vez.
 
 Es un error muy habitual suponer que la fuente de la interrupción sólo ha sido una, aunque
@@ -1161,13 +1161,13 @@ resta para comprobar que se ha llegado al final de la cuenta (0), y en dicho cas
 restablecemos la cuenta a 6 mediante la instrucción de ejecución condicional {\tt moveq}.
 
 En el array secuen tenemos almacenadas las posiciones que corresponden a los LEDs dentro del
-registro {\tt GPSET0}, cada posición del array es para encender un LED en concreto. Antes
+puerto {\tt GPSET0}, cada posición del array es para encender un LED en concreto. Antes
 de esto hemos apagado todos los LEDs enviando el valor que codifica todos los LEDs al
-registro {\tt GPCLR0}.
+puerto {\tt GPCLR0}.
 
 A parte de sacar la secuencia correspondiente debemos especificar cuándo será la siguiente
 interrupción. Como hicimos en el ejemplo anterior, esto se resuelve leyendo el valor del
-registro {\tt STCLO}, sumándole 200000 (200 milisegundos) y escribiéndolo en el comparador
+puerto {\tt STCLO}, sumándole 200000 (200 milisegundos) y escribiéndolo en el comparador
 {\tt STC1}.
 
 Acabado el código de manejo de LEDs, ya sólo falta por explicar el manejo del altavoz.
@@ -1403,7 +1403,7 @@ El programa principal sería el siguiente.
 bucle:  b       bucle
 \end{lstlisting}
 
-Lo nuevo que vemos aquí es una escritura en el registro {\tt GPREN0}. De esta forma
+Lo nuevo que vemos aquí es una escritura en el puerto {\tt GPREN0}. De esta forma
 le decimos al controlador de interrupciones que esos pines del GPIO serán los únicos que
 provoquen interrupciones, concretamente flancos con de subida síncronos (justo
 en el momento en que el botón toca fondo).
@@ -1443,7 +1443,7 @@ conti:  str     r2, [r1], #-4
 
 Tenemos una bifurcación (saltos condicionales) debido a que cada botón es una fuente distinta
 de interrupción y tenemos que distinguir qué botón se ha pulsado. Aquí por suerte tenemos
-un registro totalmente análogo al {\tt STCS} de los temporizadores. Se llama {\tt GPEDS0}
+un puerto totalmente análogo al {\tt STCS} de los temporizadores. Se llama {\tt GPEDS0}
 (también hay otro {\tt GPEDS1} para los GPIOs de 32 a 53 que no necesitamos) y sirve tanto
 para saber qué fuente ha producido la interrupción como para resetear su estado (y así permitir
 volver a ser interrumpidos por el mismo pin GPIO).

@@ -45,7 +45,7 @@ cadena para que éste lo muestre por pantalla. Es una especie de traductor
 intermedio que nos facilita las cosas. Nosotros desde ensamblador también
 podemos hacer llamadas al sistema directamente como veremos posteriormente.
 
-La segunda capa va desde que hacemos la llamada al sistema hasta que se
+La segunda capa va desde que hacemos la llamada al sistema (System Call o Syscall) hasta que se
 produce la transferencia de datos al periférico, retornando desde la llamada
 al sistema y volviendo a la primera capa, que a su vez retornará el control
 a la llamada a librería que hicimos en nuestro programa inicialmente.
@@ -56,8 +56,11 @@ que se ejecuta en nuestro programa ensamblador y dentro de la librería) no
 tenemos privilegios suficientes como para acceder a la zona de memoria que
 mapea los periféricos.
 
-En la figura \ref{fig:capas} podemos ver el código llamador junto con las dos
-capas.
+La función {\tt printf} es una función de la librería del lenguaje C. Como vemos en
+la figura, esta función internamente llama a la System Call (rutina del Kernel del SO)
+{\tt write} que es la que se ejecuta en modo supervisor y termina accediendo a
+los periféricos (en este caso al terminal o pantalla donde aparece el mensaje). En la
+figura \ref{fig:capas} podemos ver el código llamador junto con las dos capas.
 
 \begin{figure}[h]
   \centering
@@ -96,7 +99,9 @@ la llamada y el número de parámetros podemos buscarlo en cualquier
 manual de Linux, buscando ``Linux system call table'' en Google. En
 nuestro caso la llamada {\tt write} se corresponde con el código
 4 y acepta tres parámetros: manejador de fichero, dirección de
-los datos a escribir (nuestra cadena) y longitud de los datos.
+los datos a escribir (nuestra cadena) y longitud de los datos. En
+nuestro ejemplo, el manejador de fichero es el {\tt 1}, que está
+conectado con la salida estándar o lo que es lo mismo, con la pantalla.
 
 En general se tiende a usar una lista reducida de posibles llamadas
 a sistema, y que éstas sean lo más polivalentes posibles. En este
@@ -120,7 +125,7 @@ sistema operativo.
 
 El ciclo de ensamblado y enlazado es distinto en un programa Bare Metal. Hasta
 ahora hemos creado ejecutables, que tienen una estructura más compleja, con cabecera y
-distintas secciones en formato {\tt ELF}. Toda esta información le viene muy bien al
+distintas secciones en formato {\tt ELF} \cite{FELF}. Toda esta información le viene muy bien al
 sistema operativo, pero en un entorno Bare Metal no disponemos de él. Lo que se carga
 en {\tt kernel.img} es un binario sencillo, sin cabecera, que contiene directamente
 el código máquina de nuestro programa y que se cargará en la dirección de RAM {\tt 0x8000}.
@@ -143,7 +148,7 @@ Otra característica de Bare Metal es que sólo tenemos una sección de código 
 {\tt main}. Al no ejecutar ninguna función no tenemos la posibilidad de salir del
 programa con {\tt bx lr}, al fin y al cabo no hay ningún sistema operativo detrás al
 que regresar. Nuestro programa debe trabajar en bucle cerrado. En caso de tener una
-tarea simple que querramos terminar, es preferible dejar el sistema colgado con un
+tarea simple que queramos terminar, es preferible dejar el sistema colgado con un
 bucle infinito como última instrucción.
 
 El proceso de arranque de la Raspberry Pi es el siguiente:
@@ -191,12 +196,12 @@ en Bare Metal es el siguiente:
 \end{itemize}
 
 Es un proceso sencillo para las prácticas que vamos a hacer, pero para proyectos más largos
-se vuelve bastante pesado de realizar. Hay varias alternativas que agilizan el ciclo de
+se vuelve bastante tedioso. Hay varias alternativas que agilizan el ciclo de
 trabajo, donde no es necesario extraer la SD y por tanto podemos actualizar el {\tt kernel.img}
-en cuestión de segundos.
+en cuestión de segundos. Estas alternativas son:
 
 \begin{itemize}
-  \item Cable JTAG con software Openocd
+  \item Cable JTAG con software Openocd:
 \textcolor{blue}{
   \href{http://openocd.sourceforge.net}
   {http://openocd.sourceforge.net}}
@@ -208,20 +213,21 @@ en cuestión de segundos.
         sin necesidad de tener instaladas las herramientas de compilación en el mismo.
 \end{itemize}
 
-Las dos últimas opciones están detalladas en el apéndice \ref{chp:SerieBoot},
-básicamente se trata de meter en el kernel.img de la SD un programa especial (llamado
+Las dos últimas opciones están detalladas en el apéndice \ref{chp:SerieBoot}.
+Básicamente se trata de meter en el kernel.img de la SD un programa especial (llamado
 bootloader) que lee continuamente del puerto serie y en el momento en que recibe
-un archivo lo carga en RAM y lo ejecuta.
+un archivo del tipo {\tt kernel.img}, lo carga en RAM y lo ejecuta.
 
 \section{Acceso a periféricos}
 
-Los periféricos se controlan leyendo y escribiendo datos a los registros asociados. No
-confundir estos registros con los registros de la CPU. Un registro asociado a un periférico
+Los periféricos se controlan leyendo y escribiendo datos a los registros asociados o puertos
+de E/S. No
+confundir estos registros con los registros de la CPU. Un puerto asociado a un periférico
 es un ente, normalmente del mismo tamaño que el ancho del bus de datos, que sirve para
 configurar diferentes aspectos del mismo. No se trata de RAM, por lo que no se garantiza que
-al leer de un registro obtengamos el último valor que escribimos. Es más, incluso hay
-registros que sólo admiten ser leídos y otros que sólo admiten escrituras. La funcionalidad
-de los registros también es muy variable, incluso dentro de un mismo registro los diferentes
+al leer de un puerto obtengamos el último valor que escribimos. Es más, incluso hay
+puertos que sólo admiten ser leídos y otros que sólo admiten escrituras. La funcionalidad
+de los puertos también es muy variable, incluso dentro de un mismo puerto los diferentes
 bits del mismo tienen distinto comportamiento.
 
 Como cada periférico se controla de una forma diferente, no hay más remedio que leerse
@@ -250,9 +256,9 @@ En total son 54 señales, de las cuales 17 están disponibles a través del cone
 GPIO (26 en los modelos A+/B+). Como nuestra placa auxiliar emplea la fila inferior
 del conector, sólo dispondremos de 9 señales.
 
-Los registros del GPIO están mapeados en memoria, tomando como base la dirección 0x20200000.
-Para nuestros propósitos de esta lección nos basta con acceder a los registros GPFSELn,
-GPSETn y GPCLRn. A continuación tenemos la tabla con las direcciones de estos registros.
+Los puertos del GPIO están mapeados en memoria, tomando como base la dirección 0x20200000.
+Para nuestros propósitos de esta lección nos basta con acceder a los puertos GPFSELn,
+GPSETn y GPCLRn. A continuación tenemos la tabla con las direcciones de estos puertos.
 
 \begin{table}
 \centering
@@ -292,7 +298,7 @@ están apagados. Es más, aunque lo configuremos como salida, tras el reset
 parten del valor cero (nivel bajo), por lo que podemos presuponer que
 todos los LEDs estarán apagados, incluso después de programarlos como salidas.
 
-El registro GPFSEL0 contiene diez grupos funcionales
+El puerto GPFSEL0 contiene diez grupos funcionales
 llamados FSELx (del 0 al 9) de 3 bits cada uno, quedando los dos bits
 más altos sin usar. Nos interesa cambiar FSEL9, que sería el que se corresponde
 con el LED rojo de más a la izquierda, el que queremos encender. Las posibles
@@ -321,13 +327,13 @@ Una vez configurado GPIO 9 como salida, ya sólo queda saber cómo poner un cero
 uno en la señal GPIO 9, para apagar y encender el primer LED respectivamente (un cero apaga
 y un uno enciende el LED).
 
-Para ello tenemos los registros GPSETn y GPCLRn. En principio parece enrevesado el tener
-que usar dos registros distintos para escribir en el puerto GPIO, pero no olvidemos que
+Para ello tenemos los puertos GPSETn y GPCLRn. En principio parece enrevesado el tener
+que usar dos puertos distintos para escribir en el puerto GPIO, pero no olvidemos que
 para ahorrar recursos varios pines están empaquetados en una palabra de 32 bits. Por lo
-que si quisiéramos alterar un único pin tendríamos que leer el registro, modificar el bit
-en cuestión sin tocar los demás y escribir el resultado de nuevo en el registro. Por suerte
-esto no es necesario con registros separados para setear y resetear, tan sólo necesitamos
-una escritura en registro poniendo a 1 los bits que queramos setear/resetear y a 0 los bits
+que si quisiéramos alterar un único pin tendríamos que leer el puerto, modificar el bit
+en cuestión sin tocar los demás y escribir el resultado de nuevo en el puerto. Por suerte
+esto no es necesario con puertos separados para setear y resetear, tan sólo necesitamos
+una escritura en puerto poniendo a 1 los bits que queramos setear/resetear y a 0 los bits
 que no queramos modificar.
 
 En la figura \ref{fig:pinout} vemos cómo está hecho el conexionado de la placa auxiliar.
@@ -340,12 +346,12 @@ En la figura \ref{fig:pinout} vemos cómo está hecho el conexionado de la placa
 \end{figure}
 
 Leemos el datasheet y comprobamos que es así. Además los 54 pines se reparten entre dos
-registros GPSET0/GPCLR0, que contienen los 32 primeros, y en GPSET1/GPCLR1 están los 22
+puertos GPSET0/GPCLR0, que contienen los 32 primeros, y en GPSET1/GPCLR1 están los 22
 restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1.
 
 En nuestro
 primer ejemplo de Bare Metal sólo vamos a encender el primer LED de la placa auxiliar,
-por lo que emplearemos el registro GPCLR0.
+por lo que emplearemos el puerto GPCLR0.
 
 \begin{lstlisting}[caption={esbn2.s},label={lst:codigoPract4_2}]
         .set    GPBASE,   0x20200000
@@ -362,57 +368,57 @@ por lo que emplearemos el registro GPCLR0.
 infi:   b       infi
 \end{lstlisting}
 
-El acceso a los registros lo hemos hecho usando la dirección base donde
+El acceso a los puertos lo hemos hecho usando la dirección base donde
 están mapeados los periféricos {\tt 0x20200000}. Cargamos esta dirección
-base en el registro {\tt r0} y codificamos los accesos a los registros
+base en el registro {\tt r0} y codificamos los accesos a los puertos
 E/S con direccionamiento a memoria empleando distintas constantes como
-desplazamiento en función del registro al que queramos acceder.
+desplazamiento en función del puerto al que queramos acceder.
 
-Los registros a los que accedemos para encender y apagar el LED vienen indicados
+Los puertos a los que accedemos para encender y apagar el LED vienen indicados
 en la figura \ref{fig:gpio1}.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio1.png}
-  \caption{Registros LED}
+  \caption{Puertos LED}
   \label{fig:gpio1}
 \end{figure}
 
-El código simplemente escribe dos constantes en dos registros: {\tt GPFSEL0} y {\tt GPSET0}.
+El código simplemente escribe dos constantes en dos puertos: {\tt GPFSEL0} y {\tt GPSET0}.
 Con la primera escritura configuramos el LED como salida y con la segunda escritura lo
 encendemos, para finalmente entrar en un bucle infinito con {\tt infi: b infi}.
 
-\subsubsection{Otros registros}
+\subsubsection{Otros puertos}
 
-Estos son los registros que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
-más registros. En la figura \ref{fig:gpio2} tenemos los siguientes.
+Estos son los puertos que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
+más puertos. En la figura \ref{fig:gpio2} tenemos los siguientes.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio2.png}
-  \caption{Otros registros del GPIO 1}
+  \caption{Otros puertos del GPIO 1}
   \label{fig:gpio2}
 \end{figure}
 
 \begin{itemize}
-  \item {\tt GPLEVn} Estos registros devuelven el valor del pin respectivo. Si dicho pin está
+  \item {\tt GPLEVn} Estos puertos devuelven el valor del pin respectivo. Si dicho pin está
         en torno a 0V devolverá un cero, si está en torno a 3.3V devolverá un 1.
   \item {\tt GPEDSn} Sirven para detectar qué pin ha provocado una interrupción en caso de
         usarlo como lectura. Al escribir en ellos también podemos notificar que ya hemos procesado
         la interrupción y que por tanto estamos listos para que nos vuelvan a interrumpir sobre
         los pines que indiquemos.
-  \item {\tt GPRENn} Con estos registros enmascaramos los pines que queremos que provoquen una
+  \item {\tt GPRENn} Con estos puertos enmascaramos los pines que queremos que provoquen una
         interrupción en flanco de subida, esto es cuando hay una transición de 0 a 1 en el pin
         de entrada.
   \item {\tt GPFENn} Lo mismo que el anterior pero en flanco de bajada.
 \end{itemize}
 
-El resto de registros GPIO están en la figura \ref{fig:gpio3}.
+El resto de puertos GPIO están en la figura \ref{fig:gpio3}.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio3.png}
-  \caption{Otros registros del GPIO 2}
+  \caption{Otros puertos del GPIO 2}
   \label{fig:gpio3}
 \end{figure}
 
@@ -430,7 +436,7 @@ El resto de registros GPIO están en la figura \ref{fig:gpio3}.
 
 Se trata de un reloj que funciona a 1MHz y en cada paso incrementa un contador de 64bits. Nos
 viene muy bien para hacer las cuentas porque cada paso del contador se corresponde con un
-microsegundo. Los registros asociados al temporizador son los de la figura \ref{fig:systim}.
+microsegundo. Los puertos asociados al temporizador son los de la figura \ref{fig:systim}.
 Básicamente son el contador de 64 bits y cuatro comparadores. El contador está dividido en
 dos partes, la parte baja {\tt CLO} y la parte alta {\tt CHI}. La parte alta no nos resulta
 interesante, porque tarda poco más de una hora ($2^{32}$ \micro s) en incrementarse y no
@@ -443,15 +449,15 @@ va asociado a ningún comparador.
   \label{fig:systim}
 \end{figure}
 
-Los comparadores son registros que se pueden modificar y se comparan con {\tt CLO}, en el momento
+Los comparadores son puertos que se pueden modificar y se comparan con {\tt CLO}, en el momento
 que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
 comparador, se produce una interrupción y se activa el correspondiente bit {\tt Mx}
-asociado al registro {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
+asociado al puerto {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
 Los comparadores {\tt C0} y {\tt C2} los emplea la GPU internamente, por lo que nosotros nos
 ceñiremos a los comparadores {\tt C1} y {\tt C3}.
 
 Las interrupciones las veremos en la siguiente lección, en los ejemplos de esta sólo vamos
-a acceder al registro {\tt CLO} para hacer parpadear al LED a una frecuencia determinada. El
+a acceder al puerto {\tt CLO} para hacer parpadear al LED a una frecuencia determinada. El
 esquema funcional del {\tt System Timer} se muestra en la figura \ref{fig:esqtim}.
 
 \begin{figure}[h]
