@@ -122,6 +122,7 @@ muy sencillas como encender un LED hasta programar desde cero nuestro propio
 sistema operativo.
 
 \subsection{Ejecutar código en Bare Metal}
+\label{sec:Ejecutar}
 
 El ciclo de ensamblado y enlazado es distinto en un programa Bare Metal. Hasta
 ahora hemos creado ejecutables, que tienen una estructura más compleja, con cabecera y
@@ -231,28 +232,36 @@ de los puertos también es muy variable, incluso dentro de un mismo puerto los d
 bits del mismo tienen distinto comportamiento.
 
 Como cada periférico se controla de una forma diferente, no hay más remedio que leerse
-el datasheet del mismo si queremos trabajar con él. En nuestro caso queremos encender un LED
-en la placa auxiliar, que conectaremos a la fila inferior del conector GPIO según la
-figura \ref{fig:posicionaux}.
+el datasheet del mismo si queremos trabajar con él. De ahora en adelante usaremos una placa
+auxiliar, descrita en el apéndice \ref{chp:PlacaAux}, y que conectaremos a la fila inferior
+del conector GPIO según la figura \ref{fig:posicionaux}. En esta sección explicaremos cómo
+encender un LED de esta placa auxiliar.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/posicionaux.png}
+    \includegraphics[width=14cm]{graphs/posicionaux.jpg}
   \caption{Colocación de la placa auxiliar}
   \label{fig:posicionaux}
 \end{figure}
 
 
-\subsection{GPIO}
+\subsection{GPIO (General-Purpose Input/Output)}
 
-GPIO es un conjunto de señales mediante las cuales la CPU se comunica con distintas partes
+El GPIO es un conjunto de señales mediante las cuales la CPU se comunica con distintas partes
 de la Rasberry tanto internamente (audio analógico, tarjeta SD o LEDs internos) como
 externamente a través de los conectores P1 y P5. Como la mayor parte de las señales se
-encuentran en el conector P1, normalmente este conector se denomina GPIO. Nosotros
+encuentran en el conector P1 (ver figura \ref{fig:posiciongpio}), normalmente este conector se denomina GPIO. Nosotros
 no vamos a trabajar con señales GPIO que no pertenezcan a dicho conector, por lo que no
 habrá confusiones.
 
-En total son 54 señales, de las cuales 17 están disponibles a través del conector
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/posiciongpio.jpg}
+  \caption{Posición del puerto GPIO}
+  \label{fig:posiciongpio}
+\end{figure}
+
+El GPIO contiene en total 54 señales, de las cuales 17 están disponibles a través del conector
 GPIO (26 en los modelos A+/B+). Como nuestra placa auxiliar emplea la fila inferior
 del conector, sólo dispondremos de 9 señales.
 
@@ -281,8 +290,8 @@ GPSETn y GPCLRn. A continuación tenemos la tabla con las direcciones de estos p
 
 \subsubsection{GPFSELn}
 
-Las 54 señales las separamos en 6
-grupos funcionales de 10 pines cada uno (excepto el último
+Las 54 señales/pines las separamos en 6
+grupos funcionales de 10 señales/pines cada uno (excepto el último
 que es de 4) para programarlas mediante GPFSELn.
 
 El LED que queremos controlar se corresponde con la señal número 9 del puerto GPIO.
@@ -291,17 +300,19 @@ que la numeración empieza en 0, desde GPIO 0 hasta GPIO 53.
 
 Así que la funcionalidad desde GPIO 0 hasta GPIO 9 se controla con
 GPFSEL0, desde GPIO 10 hasta GPIO 19 se hace con GPFSEL1 y así
-sucesivamente. Nosotros queremos cambiar la funcionalidad de GPIO 9
-que está en GPFSEL0. Por defecto cuando arranca la Raspberry
-todos los pines están preconfigurados como entradas, con lo que los LEDs
-están apagados. Es más, aunque lo configuremos como salida, tras el reset
-parten del valor cero (nivel bajo), por lo que podemos presuponer que
+sucesivamente. Nosotros queremos encender el primer LED rojo de la placa auxiliar.
+En la figura \ref{fig:pinout} vemos que el primer LED rojo se corresponde con GPIO 9.
+Para cambiar la funcionalidad de GPIO 9 nos toca actuar sobre GPFSEL0. Por
+defecto cuando arranca la Raspberry todos los pines están preconfigurados
+como entradas, con lo que los LEDs de nuestra placa auxiliar
+están apagados. Es más, aunque lo configuremos como salida, tras el reset,
+los pines se inicializan al valor cero (nivel bajo), por lo que podemos presuponer que
 todos los LEDs estarán apagados, incluso después de programarlos como salidas.
 
 El puerto GPFSEL0 contiene diez grupos funcionales
 llamados FSELx (del 0 al 9) de 3 bits cada uno, quedando los dos bits
 más altos sin usar. Nos interesa cambiar FSEL9, que sería el que se corresponde
-con el LED rojo de más a la izquierda, el que queremos encender. Las posibles
+con el primer LED rojo, el que queremos encender. Las posibles
 configuraciones para cada grupo son:
 
 \begin{lstlisting}
@@ -317,41 +328,56 @@ configuraciones para cada grupo son:
 
 Las funciones alternativas son para dotar a los pines de funcionalidad específicas
 como puertos SPI, UART, audio PCM y cosas parecidas. La lista completa
-está en la tabla 6-31 (página 102) del datasheet. Nosotros queremos una salida
-genérica, nos quedamos con el código {\tt 001}.
+está en la tabla 6-31 (página 102) del datasheet \cite{ARMP}. Nosotros queremos una salida
+genérica, así que nos quedamos con el código {\tt 001} para el grupo funcional FSEL9 del
+puerto {\tt GPFSEL0} que es el que corresponde al GPIO 9.
 
 
 \subsubsection{GPSETn y GPCLRn}
 
-Una vez configurado GPIO 9 como salida, ya sólo queda saber cómo poner un cero o un
-uno en la señal GPIO 9, para apagar y encender el primer LED respectivamente (un cero apaga
-y un uno enciende el LED).
-
-Para ello tenemos los puertos GPSETn y GPCLRn. En principio parece enrevesado el tener
-que usar dos puertos distintos para escribir en el puerto GPIO, pero no olvidemos que
-para ahorrar recursos varios pines están empaquetados en una palabra de 32 bits. Por lo
-que si quisiéramos alterar un único pin tendríamos que leer el puerto, modificar el bit
-en cuestión sin tocar los demás y escribir el resultado de nuevo en el puerto. Por suerte
-esto no es necesario con puertos separados para setear y resetear, tan sólo necesitamos
-una escritura en puerto poniendo a 1 los bits que queramos setear/resetear y a 0 los bits
-que no queramos modificar.
-
-En la figura \ref{fig:pinout} vemos cómo está hecho el conexionado de la placa auxiliar.
-
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=14cm]{graphs/RaspberryGPIOaux.png}
-  \caption{Correspondencia LEDs y GPIO}
-  \label{fig:pinout}
-\end{figure}
-
-Leemos el datasheet y comprobamos que es así. Además los 54 pines se reparten entre dos
+Los 54 pines se reparten entre dos
 puertos GPSET0/GPCLR0, que contienen los 32 primeros, y en GPSET1/GPCLR1 están los 22
 restantes, quedando libres los 10 bits más significativos de GPSET1/GPCLR1.
 
-En nuestro
-primer ejemplo de Bare Metal sólo vamos a encender el primer LED de la placa auxiliar,
-por lo que emplearemos el puerto GPCLR0.
+Una vez configurado GPIO 9 como salida, ya sólo queda saber cómo poner un cero o un
+uno en la señal GPIO 9, para apagar y encender el primer LED de la placa auxiliar
+respectivamente (un cero apaga y un uno enciende el LED).
+
+Para ello tenemos los puertos GPSETn y GPCLRn, donde GPSETn pone un 1 y GPCLRn pone
+un 0. En principio parece enrevesado el tener
+que usar dos puertos distintos para escribir en el puerto GPIO, pero no olvidemos que
+para ahorrar recursos varios pines están empaquetados en una palabra de 32 bits. Si
+sólo tuviéramos un puerto y quisiéramos alterar un único pin tendríamos que leer el
+puerto, modificar el bit en cuestión sin tocar los demás y escribir el resultado de
+nuevo en el puerto. Por suerte esto no es necesario con puertos separados para setear
+y resetear, tan sólo necesitamos una escritura en puerto poniendo a 1 los bits que
+queramos setear/resetear y a 0 los bits que no queramos modificar.
+
+En la figura \ref{fig:pinoutpeque} vemos cómo está hecho el conexionado de la placa auxiliar.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=10cm]{graphs/RaspberryGPIOaux.png}
+  \caption{Correspondencia LEDs y GPIO}
+  \label{fig:pinoutpeque}
+\end{figure}
+
+
+En nuestro primer ejemplo de Bare Metal sólo vamos a encender el primer LED rojo
+de la placa auxiliar, que como hemos dicho se corresponde con el GPIO 9 así que
+tendremos que actuar sobre el bit 9 del registro {\tt GPSET0}.
+
+Resumiendo, los puertos a los que accedemos para encender y apagar el LED
+vienen indicados en la figura \ref{fig:gpio1}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=14cm]{graphs/gpio1.png}
+  \caption{Puertos LED}
+  \label{fig:gpio1}
+\end{figure}
+
+El siguiente código (listado \ref{lst:codigoPract4_2}) muestra cómo hemos de proceder.
 
 \begin{lstlisting}[caption={esbn2.s},label={lst:codigoPract4_2}]
         .set    GPBASE,   0x20200000
@@ -359,12 +385,12 @@ por lo que emplearemos el puerto GPCLR0.
         .set    GPSET0,   0x1c
 .text
         ldr     r0, =GPBASE
-        mov     r1, #0b00001000000000000000000000000000
 /* guia bits           xx999888777666555444333222111000*/
-        str     r1, [r0, #GPFSEL0]
+        mov     r1, #0b00001000000000000000000000000000
+        str     r1, [r0, #GPFSEL0]  @ Configura GPIO 9
 /* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000000000000001000000000
-        str     r1, [r0, #GPSET0]
+        str     r1, [r0, #GPSET0]   @ Enciende GPIO 9
 infi:   b       infi
 \end{lstlisting}
 
@@ -374,70 +400,65 @@ base en el registro {\tt r0} y codificamos los accesos a los puertos
 E/S con direccionamiento a memoria empleando distintas constantes como
 desplazamiento en función del puerto al que queramos acceder.
 
-Los puertos a los que accedemos para encender y apagar el LED vienen indicados
-en la figura \ref{fig:gpio1}.
-
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=14cm]{graphs/gpio1.png}
-  \caption{Puertos LED}
-  \label{fig:gpio1}
-\end{figure}
-
 El código simplemente escribe dos constantes en dos puertos: {\tt GPFSEL0} y {\tt GPSET0}.
 Con la primera escritura configuramos el LED como salida y con la segunda escritura lo
 encendemos, para finalmente entrar en un bucle infinito con {\tt infi: b infi}.
 
 \subsubsection{Otros puertos}
 
-Estos son los puertos que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
-más puertos. En la figura \ref{fig:gpio2} tenemos los siguientes.
+Ya hemos explicado los puertos que vamos a usar en este capítulo, pero el dispositivo GPIO tiene
+más puertos.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio2.png}
-  \caption{Otros puertos del GPIO 1}
+  \caption{Otros puertos del GPIO (1ª parte)}
   \label{fig:gpio2}
 \end{figure}
 
+En la figura \ref{fig:gpio2} tenemos los siguientes:
+
 \begin{itemize}
-  \item {\tt GPLEVn} Estos puertos devuelven el valor del pin respectivo. Si dicho pin está
+  \item {\tt GPLEVn}. Estos puertos devuelven el valor del pin respectivo. Si dicho pin está
         en torno a 0V devolverá un cero, si está en torno a 3.3V devolverá un 1.
-  \item {\tt GPEDSn} Sirven para detectar qué pin ha provocado una interrupción en caso de
+  \item {\tt GPEDSn}. Sirven para detectar qué pin ha provocado una interrupción en caso de
         usarlo como lectura. Al escribir en ellos también podemos notificar que ya hemos procesado
         la interrupción y que por tanto estamos listos para que nos vuelvan a interrumpir sobre
         los pines que indiquemos.
-  \item {\tt GPRENn} Con estos puertos enmascaramos los pines que queremos que provoquen una
+  \item {\tt GPRENn}. Con estos puertos enmascaramos los pines que queremos que provoquen una
         interrupción en flanco de subida, esto es cuando hay una transición de 0 a 1 en el pin
         de entrada.
-  \item {\tt GPFENn} Lo mismo que el anterior pero en flanco de bajada.
+  \item {\tt GPFENn}. Lo mismo que el anterior pero en flanco de bajada.
 \end{itemize}
 
-El resto de puertos GPIO están en la figura \ref{fig:gpio3}.
+El resto de puertos GPIO se muestran en la figura \ref{fig:gpio3}.
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=14cm]{graphs/gpio3.png}
-  \caption{Otros puertos del GPIO 2}
+  \caption{Otros puertos del GPIO (2ª parte)}
   \label{fig:gpio3}
 \end{figure}
 
+Estos registros son los siguientes:
+
 \begin{itemize}
-  \item {\tt GPHENn} Enmascaramos los pines que provocarán una interrupción al detectar un
+  \item {\tt GPHENn}. Enmascaramos los pines que provocarán una interrupción al detectar un
         nivel alto (3.3V) por dicho pin.
-  \item {\tt GPLENn} Lo mismo que el anterior pero para un nivel bajo (0V).
-  \item {\tt GPARENn y GPAFENn} Tienen funciones idénticas a {\tt GPRENn y GPFENn}, pero permiten
+  \item {\tt GPLENn}. Lo mismo que el anterior pero para un nivel bajo (0V).
+  \item {\tt GPARENn y GPAFENn}. Tienen funciones idénticas a {\tt GPRENn y GPFENn}, pero permiten
         detectar flancos en pulsos de poca duración.
-  \item {\tt GPPUD y GPPUDCLKn} Conectan resistencias de pull-up y de pull-down sobre los pines
+  \item {\tt GPPUD y GPPUDCLKn}. Conectan resistencias de pull-up y de pull-down sobre los pines
         que deseemos. Para más información ver el último ejemplo del siguiente capítulo.
 \end{itemize}
 
 \subsection{Temporizador del sistema}
 
-Se trata de un reloj que funciona a 1MHz y en cada paso incrementa un contador de 64bits. Nos
-viene muy bien para hacer las cuentas porque cada paso del contador se corresponde con un
-microsegundo. Los puertos asociados al temporizador son los de la figura \ref{fig:systim}.
-Básicamente son el contador de 64 bits y cuatro comparadores. El contador está dividido en
+El temporizador del sistema es un reloj que funciona a 1MHz y en cada paso incrementa un
+contador de 64bits. Este contador viene muy bien para implementar retardos o esperas
+porque cada paso del contador se corresponde con un microsegundo. Los puertos asociados
+al temporizador son los de la figura \ref{fig:systim}. Básicamente encontramos un contador
+de 64 bits y cuatro comparadores. El contador está dividido en
 dos partes, la parte baja {\tt CLO} y la parte alta {\tt CHI}. La parte alta no nos resulta
 interesante, porque tarda poco más de una hora ($2^{32}$ \micro s) en incrementarse y no
 va asociado a ningún comparador.
@@ -449,20 +470,21 @@ va asociado a ningún comparador.
   \label{fig:systim}
 \end{figure}
 
-Los comparadores son puertos que se pueden modificar y se comparan con {\tt CLO}, en el momento
+Los comparadores son puertos que se pueden modificar y se comparan con {\tt CLO}. En el momento
 que uno de los 4 comparadores coincida y estén habilitadas las interrupciones para dicho
 comparador, se produce una interrupción y se activa el correspondiente bit {\tt Mx}
-asociado al puerto {\tt CS} (para que en la RTI sepamos qué comparador ha provocado la interrupción).
+asociado al puerto {\tt CS} (para que en la rutina de tratamiento de interrupción o RTI
+sepamos qué comparador ha provocado la interrupción).
 Los comparadores {\tt C0} y {\tt C2} los emplea la GPU internamente, por lo que nosotros nos
 ceñiremos a los comparadores {\tt C1} y {\tt C3}.
 
-Las interrupciones las veremos en la siguiente lección, en los ejemplos de esta sólo vamos
-a acceder al puerto {\tt CLO} para hacer parpadear al LED a una frecuencia determinada. El
+Las interrupciones las veremos en la siguiente lección. Por ahora sólo vamos
+a acceder al puerto {\tt CLO} para hacer parpadear un LED a una frecuencia determinada. El
 esquema funcional del {\tt System Timer} se muestra en la figura \ref{fig:esqtim}.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/esquematimer.png}
+    \includegraphics[width=10cm]{graphs/esquematimer.png}
   \caption{Esquema funcional del System Timer}
   \label{fig:esqtim}
 \end{figure}
@@ -485,43 +507,34 @@ Raspberry, antes de probarlo piensa un poco cómo se comportaría el siguiente c
         ldr     r0, =GPBASE
 /* guia bits           xx999888777666555444333222111000*/
         mov     r1, #0b00001000000000000000000000000000
-        str     r1, [r0, #GPFSEL0]
+        str     r1, [r0, #GPFSEL0]  @ Configura como salida
 /* guia bits           10987654321098765432109876543210*/
 bucle:  mov     r1, #0b00000000000000000000001000000000
-        str     r1, [r0, #GPSET0]
+        str     r1, [r0, #GPSET0]   @ Enciende
         mov     r1, #0b00000000000000000000001000000000
-        str     r1, [r0, #GPCLR0]
+        str     r1, [r0, #GPCLR0]   @ Apaga
         b       bucle
 \end{lstlisting}
 
-Comprobamos que el LED no parpadea sino que está encendido con menos brillo del normal.
+Para compilar y ejecutar este ejemplo sigue los pasos descritos en \ref{sec:Ejecutar}.
+Al ejecutar el kernel.img resultante comprobamos que el LED no parpadea sino que está encendido con menos brillo del normal.
 En realidad sí que lo hace, sólo que nuestro ojo es demasiado lento como para percibirlo.
 Lo siguiente será ajustar la cadencia del parpadeo a un segundo para que podamos observar
 el parpadeo. La secuencia sería apagar el LED, esperar medio segundo, encender el LED,
 esperar otro medio segundo y repetir el bucle. Sabemos que el procesador de la Raspberry
 corre a 700MHz por lo que vamos a suponer que tarde un ciclo de este reloj en ejecutar
-cada instrucción. En base a esto vamos a crear dos bucles de retardo uno tras apagar el LED
+cada instrucción. En base a esto vamos a crear dos bucles de retardo: uno tras apagar el LED
 y otro tras encenderlo de 500ms cada uno. Un bucle de retardo lo único que hace es esperar
-tiempo. 
+tiempo sin hacer realmente nada.
 
-\begin{lstlisting}[caption={Parte de esbn4.s},label={lst:codigoPract4_4}]
-.text
-        ldr     r0, =GPBASE
-        mov     r1, #0b00001000000000000000000000000000
-        str     r1, [r0, #GPFSEL0]
-        mov     r1, #0b00000000000000000000001000000000
-bucle:  ldr     r2, =7000000
-ret1:   subs    r2, #1
-        bne     ret1
-        str     r1, [r0, #GPSET0]
-        ldr     r2, =7000000
-ret2:   subs    r2, #1
-        bne     ret2
-        str     r1, [r0, #GPCLR0]
-        b       bucle
-\end{lstlisting}
+Si suponemos que cada instrucción consume un ciclo y teniendo en cuenta que el bucle de
+retardo tiene 2 instrucciones, cada iteración del bucle consume 2 ciclos. A 700 MHz
+($7\times10^{8}$ ciclos/segundo) un ciclo consume $1/({7\times10^{8})}$ segundos que es igual a
+$1.42\times10^{-9} s$ (aproximadamente 1,5 ns). Así que cada iteración en principio
+consume 3 ns y para consumir 500 ns necesitamos ${500\times10^{-3}/({3\times10^{-9}})}=166.66\times10^{6}$,
+es decir más de 166 millones de iteraciones.
 
-Si lo hacemos con valores teóricos a ciclo por instrucción observaremos como la cadencia del
+Si usamos ese número de iteraciones observaremos como la cadencia del
 LED es más lenta de lo esperado, lo que quiere decir que cada iteración del bucle
 de retardo tarda más de los dos ciclos que hemos supuesto.
 Probamos con cronómetro en mano distintos valores para las constantes hasta comprobar que con
@@ -531,14 +544,41 @@ debe a una dependencia de datos (ya que el flag que altera
 la orden {\tt subs} es requerido justo después por la instrucción {\tt bne}) y que los saltos
 condicionales suelen ser lentos.
 
+
+\begin{lstlisting}[caption={Parte de esbn4.s},label={lst:codigoPract4_4}]
+        .set    GPBASE,   0x20200000
+        .set    GPFSEL0,  0x00
+        .set    GPSET0,   0x1c
+        .set    GPCLR0,   0x28
+.text
+        ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
+        mov     r1, #0b00001000000000000000000000000000
+        str     r1, [r0, #GPFSEL0]  @ Configura GPIO 9
+/* guia bits           10987654321098765432109876543210*/
+        mov     r1, #0b00000000000000000000001000000000
+
+bucle:  ldr     r2, =7000000
+ret1:   subs    r2, #1              @ Bucle de retardo 1
+        bne     ret1
+
+        str     r1, [r0, #GPSET0]   @ Enciende el LED
+
+        ldr     r2, =7000000
+ret2:   subs    r2, #1              @ Bucle de retardo 2
+        bne     ret2
+
+        str     r1, [r0, #GPCLR0]   @ Enciende el LED
+
+        b       bucle               @ Repetir para siempre
+\end{lstlisting}
+
 \subsection{LED parpadeante con temporizador}
 
 Viendo lo poco preciso que es el temporizar con el bucle de retardo, vamos a sincronizar leyendo
-continuamente el valor del {\tt System Timer}.
-
-Como el temporizador va a 1MHz, para temporizar medio segundo lo
-único que tenemos que hacer es esperar a que el contador se incremente en medio millón. El código
-final quedaría así.
+continuamente el valor del {\tt System Timer}. Como el temporizador va a 1MHz, para temporizar
+medio segundo lo único que tenemos que hacer es esperar a que el contador se incremente en
+medio millón. El código final quedaría así.
 
 \begin{lstlisting}[caption={esbn5.s},label={lst:codigoPract4_5}]
         .set    GPBASE,   0x20200000
@@ -549,53 +589,66 @@ final quedaría así.
         .set    STCLO,          0x04
 .text
         ldr     r0, =GPBASE
+/* guia bits           xx999888777666555444333222111000*/
         mov     r1, #0b00001000000000000000000000000000
-        str     r1, [r0, #GPFSEL0]
+        str     r1, [r0, #GPFSEL0]  @ Configura GPIO 9
+/* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000000000000001000000000
         ldr     r2, =STBASE
-bucle:  bl      espera
+
+bucle:  bl      espera        @ Salta a rutina de espera
         str     r1, [r0, #GPSET0]
-        bl      espera
+        bl      espera        @ Salta a rutina de espera
         str     r1, [r0, #GPCLR0]
         b       bucle
 
 /* rutina que espera medio segundo */
-espera: ldr     r3, [r2, #STCLO]
+espera: ldr     r3, [r2, #STCLO]  @ Lee contador en r3
         ldr     r4, =500000
-        add     r4, r3
+        add     r4, r3            @ r4= r3+medio millón
 ret1:   ldr     r3, [r2, #STCLO]
-        cmp     r3, r4
-        bne     ret1
+        cmp     r3, r4            @ Leemos CLO hasta alcanzar
+        bne     ret1              @ el valor de r4
         bx      lr
 \end{lstlisting}
 
 \subsection{Sonido con temporizador}
 
 Este ejemplo es exactamente el mismo que el anterior, tan sólo hemos
-cambiado el puerto del LED (GPIO 9) al altavoz (GPIO 4) y el tiempo de espera,
-para producir un sonido audible.
+cambiado el pin del LED (GPIO 9) por el pin asociado al altavoz de
+nuestra placa de expansión (GPIO 4). También modificamos el tiempo
+de espera para producir un sonido audible.
+
+Vamos a producir un tono de 440 Hz. Para ello generamos una onda
+cuadrada por dicho pin, que no es más que una serie de ceros y unos
+consecutivos de idéntica duración. A esta duración la llamamos
+semi-periodo, y es la que queremos calcular. Como el periodo es
+el inverso de la frecuencia, tenemos que $periodo = 1/(440 s^{-1}) = 2.272\times10^{-3} s$,
+por lo que el semi-periodo buscado es $2.272\times10^{-3}s/2=1.136\times10^{-3} s$ o lo
+que es lo mismo, 1136 microsegundos.
 
 \begin{lstlisting}[caption={Parte de esbn6.s},label={lst:codigoPract4_6}]
         ldr     r0, =GPBASE
 /* guia bits           xx999888777666555444333222111000*/
         mov     r1, #0b00000000000000000001000000000000
-        str     r1, [r0, #GPFSEL0]
+        str     r1, [r0, #GPFSEL0]  @ Configura GPIO 4
 /* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000000000000000000010000
         ldr     r2, =STBASE
-bucle:  bl      espera
+
+bucle:  bl      espera        @ Salta a rutina de espera
         str     r1, [r0, #GPSET0]
-        bl      espera
+        bl      espera        @ Salta a rutina de espera
         str     r1, [r0, #GPCLR0]
         b       bucle
 
 /* rutina que espera 1136 microsegundos */
-espera: ldr     r3, [r2, #STCLO]
+espera: ldr     r3, [r2, #STCLO]  @ Lee contador en r3
         ldr     r4, =1136
-        add     r4, r3
+        add     r4, r3            @ r4= r3 + 1136
 ret1:   ldr     r3, [r2, #STCLO]
-        cmp     r3, r4
-        bne     ret1
+        cmp     r3, r4            @ Leemos CLO hasta alcanzar
+        bne     ret1              @ el valor de r4
         bx      lr
 \end{lstlisting}
 
@@ -617,5 +670,19 @@ interno. Durante los 10 primeros segundos aumentamos la cadencia
 del LED desde 1 segundo hasta los 250ms, y en los últimos 10
 segundos disminuimos la cadencia al mismo ritmo de tal forma
 que el ciclo completo se repite cada 20 segundos.
+
+\subsection{Escala musical}
+
+Escribe un programa que haga sonar el altavoz con las notas Do, Mi
+y Sol (de la quinta octava) durante tres segundos cada una de ellas.
+Las frecuencias de estas notas son:
+
+\begin{longtable}{| p{2cm} | p{3cm} |}
+\hline
+{\bf Nota} & {\bf Frecuencia} \\ \hline
+Do  & 523 Hz \\ \hline
+Mi  & 659 Hz\\ \hline
+Sol & 784 Hz\\ \hline
+\end{longtable}
 
 \chapterend{}
