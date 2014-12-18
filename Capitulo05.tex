@@ -1026,7 +1026,7 @@ para almacenar {\tt INTBASE}.
 
 El código completo del ejemplo es el siguiente:
 
-\begin{lstlisting}[caption={inter4.s},label={lst:codigoPract5_4}]
+\begin{lstlisting}[caption={inter4.s},label={lst:codigoPract5_4},escapeinside={(*@}{@*)}]
         .include  "inter.inc"
 .text
 /* Agrego vector interrupción */
@@ -1100,7 +1100,7 @@ irq_handler:
         add     r3, r2
         str     r3, [r0, #STC1]
 
-/* ¿Hay interrupción pendiente en C3? */
+/* (*@\color[rgb]{0,0.5,0}{¿}@*)Hay interrupción pendiente en C3? */
         ldr     r3, [r0, #STCS]
         ands    r3, #0b0100
         beq     final             @ Si no, salgo
