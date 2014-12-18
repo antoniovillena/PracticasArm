@@ -33,7 +33,7 @@ realizar. En total hay 8 tipos de interrupciones.
 A partir de dicho número se calcula la dirección a la que salta la CPU
 para atender dicha interrupción. A diferencia de otras arquitecturas
 donde los vectores contienen las direcciones de las rutinas de
-tratamiento, en ARM no tenemos datos sino instrucciones. Cada vector
+tratamiento, en ARM no tenemos direcciones sino instrucciones. Cada vector
 contiene normalmente un salto a la rutina de tratamiento correspondiente.
 Dicha rutina se suele llamar RTI ({\bf Rutina
 de Tratamiento de Interrupción}). En la arquitectura ARMv6
@@ -54,6 +54,7 @@ implicada en un canal de E/S.
 
 \noindent La lista del vector de interrupciones es la siguiente.
 
+\newpage
 \begin{longtable}{ p{4.5cm} | p{2.5cm} | p{2cm} | p{4cm}}
 \hline
 {\bf Excepción} & {\bf Tipo} & {\bf Desplaz.} & {\bf Modo} \\ \hline
@@ -145,13 +146,13 @@ seguir para que esto sea posible son:
 
 \begin{enumerate}
   \item Cuando se activa la interrupción, se termina la ejecución de la
-    instrucción en curso. A continuación hacemos una copia {\tt cpsr} en el registro
-    propio {\tt spsr} correspondiente. De esta forma recordamos los flags de estado
+    instrucción en curso. A continuación se hace una copia {\tt cpsr} en el registro
+    propio {\tt spsr} correspondiente. De esta forma se recuerdan los flags de estado
     y el modo que había antes de la interrupción. Una vez hecha la copia se
     procede a cambiar {\tt cpsr}, conmutando al modo correspondiente
     según la tabla \ref{tab:excepciones}.
 
-  \item Seguidamente a lo anterior almacenamos en {\tt lr} (en su registro propio del modo)
+  \item Seguidamente a lo anterior se almacena en {\tt lr} (en su registro propio del modo)
     el contenido de {\tt pc+8} (salvo si es un {\tt error en datos} que sería
     {\tt pc+12}). La razón de estos
     desplazamientos es puramente técnica, debido al segmentado de la CPU en
@@ -168,7 +169,8 @@ x+8 & i+2 & ...     \\ \hline
 x+12 & i+3 & ... \\ \hline
 \end{longtable}
 
-    Podemos observarlo gráficamente en la figura \ref{fig:diagramainterrupcion}.
+\newpage
+Podemos observarlo gráficamente en la figura \ref{fig:diagramainterrupcion}.
 
 \begin{figure}[h]
   \centering
@@ -177,8 +179,8 @@ x+12 & i+3 & ... \\ \hline
   \label{fig:diagramainterrupcion}
 \end{figure}
 
-  \item Luego saltamos al vector correspondiente ($NI$*4). En esa posición del vector
-    encontramos una instrucción de salto a la RTI correspondiente.
+  \item Luego se salta al vector correspondiente ($NI$*4). En esa posición del vector
+    se encuentra una instrucción de salto a la RTI correspondiente.
 
   \item Se ejecuta la rutina.
 
@@ -209,7 +211,7 @@ actuar en consecuencia.
 
 Si nos interesan {\tt IRQ} y {\tt FIQ}, a lo sumo tendremos que escribir dos
 rutinas de tratamiento distintas. Si se produce una {\tt IRQ}, se ejecutará el código
-que se encuentre en la dirección {\tt 0x0018}, mientras que si lo que salta es una {\tt IRQ},
+que se encuentre en la dirección {\tt 0x0018}, mientras que si lo que salta es una {\tt FIQ},
 la dirección a ejecutar será {\tt 0x001C}. La diferencia entre una {\tt IRQ} y una
 {\tt FIQ} es que esta última tiene sus propios registros desde {\tt r8} hasta {\tt r12}
 asociados al modo de operación, con lo que podemos prescindir del salvado y recuperación
@@ -235,7 +237,7 @@ restaurar el registro {\tt cpsr} que había antes de la interrupción (copia {\t
 {\tt spsr\_fiq} en {\tt cpsr}).
 
 Imaginemos que el programa principal está en modo supervisor y que la interrupción que
-esperamos el del tipo IRQ.
+esperamos es del tipo IRQ.
 Cada modo de operación (en particular el modo IRQ) tiene 3 registros replicados: {\tt sp}, {\tt lr} y {\tt spsr}.
 Para evitar confusiones los nombramos con los sufijos de modo {\tt \_svc} y {\tt \_irq} correspondientes.
 Cuando ocurre una interrupción pasamos de modo supervisor a modo IRQ, pero antes hemos guardado
@@ -249,7 +251,7 @@ independiente que no interfiere con la principal {\tt sp\_svc}. Luego se ejecuta
 particular de la RTI, empleando a nuestro antojo los registros previamente salvados, y antes de
 acabar la RTI recuperamos con su {\tt pop} correspondiente.
 
-Al terminar la interrupción restauramos {\tt pc} partiendo {\tt lr\_irq} y {\tt cpsr} del registro
+Al terminar la interrupción restauramos {\tt pc} partiendo de {\tt lr\_irq} y {\tt cpsr} del registro
 {\tt spsr\_irq}. Esto último fuerza un cambio de modo de IRQ a supervisor, conmutando {\tt sp} y {\tt lr}
 a sus registros propios {\tt sp\_svc} y {\tt lr\_svc}. Con todo esto conseguimos volver exactamente
 al punto del que partíamos minimizando las
@@ -527,6 +529,7 @@ bucle:  b       bucle
 
 A continuación mostramos el listado del ejemplo completo:
 
+\newpage
 \begin{lstlisting}[caption={inter1.s},label={lst:codigoPract5_1}]
         .include  "inter.inc"
 .text
@@ -613,6 +616,7 @@ siempre las mismas constantes, haciendo el código más sencillo de mantener.
         .set    INTENIRQ2,     0x214
 \end{lstlisting}
 
+\newpage
 El método para incluir el código fuente de un fichero dentro de otro es mediante
 la macro {\tt .include}, todos nuestros ficheros comienzarán con lo siguiente.
 
@@ -814,6 +818,7 @@ cuenta equivale a un microsegundo, este añadido al contador supone medio segund
 que nos da la cadencia de un segundo que buscamos. El resultado de la suma lo escribimos
 en el comparador ({\tt C1}):
 
+\newpage
 \begin{lstlisting}
         ldr     r1, [r0, #STCLO]
         ldr     r2, =500000       @1 Hz
@@ -840,13 +845,14 @@ pulsador, dejando el otro apagado.
 
 El esquema sería el de la figura \ref{fig:inter3}.
 
-\begin{figure}[h]
+\begin{figure}[h!]
   \centering
-    \includegraphics[width=14cm]{graphs/inter3.png}
+    \includegraphics[width=12cm]{graphs/inter3.png}
   \caption{Interrupciones}
   \label{fig:inter3}
 \end{figure}
 
+\newpage
 Y el código fuente lo vemos a continuación:
 
 \begin{lstlisting}[caption={inter3.s},label={lst:codigoPract5_3}]
@@ -992,6 +998,7 @@ Y finalmente desactivamos los dos flags GPIO pendientes de atención:
         subs    pc, lr, #4
 \end{lstlisting}
 
+\newpage
 \subsection{Parpadeo secuencial de LEDs con sonido por altavoz}
 
 En este ejemplo vamos a trabajar con el temporizador, pero esta vez vamos a complicar
@@ -1000,13 +1007,13 @@ de los comparadores {\tt C1} y {\tt C3}.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/inter4.png}
+    \includegraphics[width=12cm]{graphs/inter4.png}
   \caption{Interrupciones}
   \label{fig:inter4}
 \end{figure}
 
 Con esta segunda fuente vamos a controlar el altavoz, como podemos
-observar en la figura \ref{fig:inter3}. Sacar un tono
+observar en la figura \ref{fig:inter4}. Sacar un tono
 puro por el altavoz es equivalente a hacer parpadear un LED, lo único que cambia es que usamos
 otro pin distinto {\tt GPIO 4} y aumentamos la frecuencia para que sea audible (a 1 Hz el oído
 humano no captaría sonido alguno). Utilizaremos la frecuencia estándar de afinación
@@ -1024,6 +1031,7 @@ o bien leemos el bit asociado {\tt systim\_cx} en el puerto {\tt IRQ pending 1},
 el {\tt Mx} del puerto {\tt CS}. Elegimos el segundo caso, así no gastamos otro puerto más
 para almacenar {\tt INTBASE}.
 
+\newpage
 El código completo del ejemplo es el siguiente:
 
 \begin{lstlisting}[caption={inter4.s},label={lst:codigoPract5_4},escapeinside={(*@}{@*)}]
@@ -1105,7 +1113,7 @@ irq_handler:
         ands    r3, #0b0100
         beq     final             @ Si no, salgo
 
-/* Si es C3, hago sonar altavoz
+/* Si es C3, hago sonar el altavoz */
 sonido: ldr     r2, =bitson
         ldr     r3, [r2]
         eors    r3, #1            @ Invierto estado
@@ -1295,7 +1303,7 @@ una la fuente de interrupción es única, por lo que no hay que comprobar nada n
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/inter5.png}
+    \includegraphics[width=12cm]{graphs/inter5.png}
   \caption{Interrupciones}
   \label{fig:inter5}
 \end{figure}
@@ -1304,6 +1312,7 @@ Empecemos con el programa principal. Aquí sí que hay cambios porque tenemos qu
 elemento nuevo al vector de interrupciones, inicializar el puntero de pila del modo FIQ y activar
 la fuente de interrupción FIQ local y globalmente:
 
+\newpage
 \begin{lstlisting}[caption={Programa principal de inter5.s},label={lst:codigoPract5_5}]
 /* Agrego vectores de interrupción */
         ADDEXC  0x18, irq_handler
@@ -1460,6 +1469,7 @@ fiq_handler:
         add     r10, r9
         str     r10, [r8, #STC3]
 
+
 /* Salgo de la RTI */
         subs    pc, lr, #4
 \end{lstlisting}
@@ -1484,11 +1494,12 @@ cómo se genera una interrupción al pulsar cualquiera de los mismos.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/inter6.png}
+    \includegraphics[width=12cm]{graphs/inter6.png}
   \caption{Interrupciones}
   \label{fig:inter6}
 \end{figure}
 
+\newpage
 El programa principal sería el siguiente:
 
 \begin{lstlisting}[caption={Programa principal de inter6.s},label={lst:codigoPract5_6}]

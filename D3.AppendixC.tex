@@ -23,7 +23,7 @@ bootloader que mostramos aquí es idéntico, el cual reproducimos con permiso de
 Con esta opción hacemos todo el trabajo de ensamblado y enlazado en nuestro ordenador
 de desarrollo, para luego transferir el archivo Bare Metal por el puerto serie
 directamente a la Raspberry. Necesitamos un adaptador USB-serie como el de la siguiente
-figura \ref{fig:mapamemoria}.
+figura \ref{fig:cableusb}.
 
 \begin{figure}[h]
   \centering
@@ -155,7 +155,7 @@ antes aparecía {\tt /dev/ttyUSB0} (o algo similar) lo cambiamos por {\tt /dev/t
 Resulta tedioso tener que desenchufar y enchufar la Raspberry cada vez que queremos introducir
 un nuevo programa Bare Metal. Una solución intermedia es soldar los dos pines de Reset que
 están serigrafiados como {\tt P6} en la Raspberry 2.0 o como {\tt RUN} en el modelo A+/B+.
-A éstos pines le podemos conectar un pulsador, con simplificamos el reseteo, en lugar de
+A éstos pines le podemos conectar un pulsador, con lo que simplificamos el reseteo, en lugar de
 desenchufar y enchufar pulsamos un botón.
 
 Sin embargo es muy conveniente buscar una solución totalmente automática, mediante la cual
@@ -179,7 +179,7 @@ USB-Serie lo haremos por una señal programable que no se emplea en el enlace se
 Lo siguiente es hacer un programa que envíe dicho pulso en incluirlo en el script. Para
 el cable USB-Serie empleamos este programa.
 
-\begin{lstlisting}
+\begin{lstlisting}[language=C]
 int pulseDTR(int fd){
     int status;
 
@@ -240,7 +240,7 @@ al script escribimos algo como esto.
 Mostramos la parte principal del programa bootloader, el resto de archivos están
 en el repositorio.
 
-\begin{lstlisting}[caption={bootloader05.c},label={lst:bootloader}]
+\begin{lstlisting}[caption={bootloader05.c},label={lst:bootloader},language=C]
 //-----------------------------------
 unsigned char xstring[256];
 //-----------------------------------

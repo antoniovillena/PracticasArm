@@ -64,7 +64,7 @@ figura \ref{fig:capas} podemos ver el código llamador junto con las dos capas.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/capas.png}
+    \includegraphics[width=13cm]{graphs/capas.png}
   \caption{Funcionamiento de una llamada a printf}
   \label{fig:capas}
 \end{figure}
@@ -378,6 +378,7 @@ vienen indicados en la figura \ref{fig:gpio1}.
 
 El siguiente código (listado \ref{lst:codigoPract4_2}) muestra cómo hemos de proceder.
 
+\newpage
 \begin{lstlisting}[caption={esbn2.s},label={lst:codigoPract4_2}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,  0x00
@@ -495,8 +496,9 @@ esquema funcional del {\tt System Timer} se muestra en la figura \ref{fig:esqtim
 
 La teoría sobre encender y apagar el LED la sabemos. Lo más sencillo que podemos hacer ahora
 es hacer que el LED parpadee continuamente. Vamos a intruducir el siguiente programa en la
-Raspberry, antes de probarlo piensa un poco cómo se comportaría el siguiente código.
+Raspberry, antes de probarlo piensa un poco cómo se comportaría el código del listado \ref{lst:codigoPract4_3}.
 
+\newpage
 \begin{lstlisting}[caption={esbn3.s},label={lst:codigoPract4_3}]
         .set    GPBASE,   0x20200000
         .set    GPFSEL0,  0x00
@@ -560,13 +562,10 @@ condicionales suelen ser lentos.
 bucle:  ldr     r2, =7000000
 ret1:   subs    r2, #1              @ Bucle de retardo 1
         bne     ret1
-
         str     r1, [r0, #GPSET0]   @ Enciende el LED
-
         ldr     r2, =7000000
 ret2:   subs    r2, #1              @ Bucle de retardo 2
         bne     ret2
-
         str     r1, [r0, #GPCLR0]   @ Enciende el LED
 
         b       bucle               @ Repetir para siempre
@@ -577,7 +576,7 @@ ret2:   subs    r2, #1              @ Bucle de retardo 2
 Viendo lo poco preciso que es el temporizar con el bucle de retardo, vamos a sincronizar leyendo
 continuamente el valor del {\tt System Timer}. Como el temporizador va a 1MHz, para temporizar
 medio segundo lo único que tenemos que hacer es esperar a que el contador se incremente en
-medio millón. El código final quedaría así.
+medio millón. El código final quedaría así:
 
 \begin{lstlisting}[caption={esbn5.s},label={lst:codigoPract4_5}]
         .set    GPBASE,   0x20200000
@@ -651,6 +650,7 @@ ret1:   ldr     r3, [r2, #STCLO]
         bx      lr
 \end{lstlisting}
 
+\newpage
 \section{Ejercicios}
 
 \subsection{Cadencia variable con bucle de retardo}

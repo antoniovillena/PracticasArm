@@ -60,8 +60,9 @@ Por tanto, la instrucción {\tt pop} es equivalente a:
 
 Un uso muy común de la pila es salvaguardar una serie de registros, que queremos
 usar para hacer las operaciones que necesitemos pero que al final tenemos que
-restaurar a sus valores originales. En un procesador típico escribiríamos algo así.
+restaurar a sus valores originales. En un procesador típico escribiríamos algo así:
 
+\newpage
 \begin{lstlisting}
         push    r1
         push    r2
@@ -242,6 +243,7 @@ void mysrand(int x){
 }
 \end{lstlisting}
 
+\newpage
 Veamos en qué se traducen estas funciones en ensamblador:
 
 \begin{lstlisting}[caption={Código del programa subrut1.s},label={lst:codigoPract3_2}]
@@ -274,7 +276,7 @@ mysrand:ldr     r1, =seed
 Antes de nada ensamblamos, compilamos/enlazamos y ejecutamos estos archivos para
 comprobar su correcto funcionamiento:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 pi@raspberrypi ~ $ as -o subrut1.o subrut1.s
 pi@raspberrypi ~ $ gcc -o subrut1 subrut1.c subrut1.o
 pi@raspberrypi ~ $ ./subrut1
@@ -454,6 +456,7 @@ nuestro código es más ilegible. Las 3 variables locales ocupan 12 bytes, a la 
 accedemos con el direccionamiento {\tt [sp]} y a la segunda con {\tt [sp, \#4]} (la tercera
 no la usamos). El código quedaría como en el listado \ref{lst:codigoPract3_45}.
 
+\newpage
 \begin{lstlisting}[caption={Función recursiva fibo (en subrut3.s)},label={lst:codigoPract3_45}]
 fibo:   push    {lr}          @ salvaguarda lr
         sub     sp, #12       @ hago espacio para v. locales
@@ -815,9 +818,9 @@ resultado de la búsqueda}
 
 Como podéis observar, las instrucciones ARM son muy potentes, permiten
 implementar en 5 instrucciones lo que en C nos habría costado 6
-multiplicaciones y 4 sumas. Nótese cómo utilizamos como registros
-intermedios {\tt r2, r3} los parámetros de entrada a medida que no los
-necesitamos más.
+multiplicaciones y 4 sumas. Nótese cómo reusamos los registros {\tt r2} y {\tt r3}:
+al principio son parámetros de entrada, pero luego los empleamos como registros
+temporales a medida que no los necesitamos más.
 
 Después de esto acaba la función con las habituales {\tt pop {r4}} y
 {\tt bx lr}. Ya hemos terminado la función {\tt poly3}, que ha quedado
@@ -902,7 +905,8 @@ la pila desde el llamador, pasando por la llamada a la función y la ejecución 
         ya que nos lo podemos saltar si nuestra función no tiene parámetros.
   \item El llamador invoca a la función con {\tt bl}. Este paso es obligatorio.
   \item Ya dentro de la función, lo primero que hace esta es salvaguardar los registros
-        desde {\tt r4} que se empleen más adelante como registros temporales. También es opcional.
+        desde {\tt r4} que se empleen más adelante como registros temporales. En
+        caso de no necesitar ningún registro temporal nos podemos saltar este paso.
   \item Decrementar la pila para hacer hueco a las variables locales. La suma de bytes
         entre paso de parámetros por pila, salvaguarda y variables locales debe ser
         múltiplo de 8, rellenar aquí hasta completar. Como este paso es opcional, en caso

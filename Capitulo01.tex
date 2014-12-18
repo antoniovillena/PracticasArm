@@ -340,7 +340,7 @@ En el listado \ref{lst:codigoPract1} se muestra el código de la primera
 práctica que probaremos. En el código hay una serie de elementos que
 aparecerán en todos los programas y que estudiaremos a continuación.
 
-\begin{lstlisting}[caption={Código del programa intro1.s},label={lst:codigoPract1},numbers=left,escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa intro1.s},label={lst:codigoPract1}]
 .data
 
 var1:   .word   3
@@ -666,7 +666,7 @@ Pi dentro de la red local. Por defecto el usuario es {\tt pi} y la
 contraseña {\tt raspberry}. Suponiendo que la dirección IP asignada es
 {\tt 192.168.1.42}, utilizaremos ssh:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
         ssh pi@192.168.1.42
 \end{lstlisting}
 
@@ -751,7 +751,7 @@ El {\bf gdb} ofrece muchas posibilidades, sólo explicaremos las que vamos
 a utilizar. Nada más ejecutar el comando anterior, el {\bf gdb} se encuentra
 en modo interactivo:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 pi@raspberrypi ~ $ gdb intro1
 GNU gdb (GDB) 7.4.1-debian
 Copyright (C) 2012 Free Software Foundation, Inc.
@@ -811,6 +811,7 @@ Observen que hay una especie de flecha {\bf $=>$} apuntando a la
 instrucción que está apunto de ejecutarse (no lo ha hecho aún).
 Antes de ejecutarla, veamos los valores de algunos registros:
 
+\newpage
 \begin{lstlisting}
 (gdb) info registers r0 r1 r2 r3
 r0             0x1              1
@@ -963,9 +964,9 @@ El depurador nos indica que el código de salida es 07. Este código
 se lo indicamos en el registro {\bf r0} justo antes de salir del {\bf main}.
 Nos salimos del depurador y comprobamos que ejecutando el programa
 directamente, aunque éste no muestre ninguna salida por pantalla, podemos
-verificar su código de salida de la siguiente forma.
+verificar su código de salida de la siguiente forma:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 pi@raspberrypi ~ $ ./intro1 ; echo $?
 7
 pi@raspberrypi ~ $
@@ -1061,7 +1062,7 @@ Ahora es el momento de comprobar si hemos contestado correctamente.
 El código de esta parte se encuentra en el fichero {\tt intro2.s}
 (listado \ref{lst:codigoPract2}).
 
-\begin{lstlisting}[caption={Código del programa intro2.s},label={lst:codigoPract2},numbers=left,escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa intro2.s},label={lst:codigoPract2}]
 .data
 
 var1:   .byte   0b00110010
@@ -1192,7 +1193,7 @@ var2 &
 
 Para comprobar el resultado tenemos el programa {\tt intro3.s}.
 
-\begin{lstlisting}[caption={Código del programa intro3.s},label={lst:codigoPract3},numbers=left,escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa intro3.s},label={lst:codigoPract3}]
 .text
 .global main
  
@@ -1435,7 +1436,7 @@ adcs r4, r4, r4&\rule{6cm}{0cm}&\rule{1cm}{0cm}\\
 }
 \end{center}
 
-\begin{lstlisting}[caption={Código del programa intro4.s},label={lst:codigoPract4},numbers=left,escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa intro4.s},label={lst:codigoPract4}]
 .data
 
 var1:   .word   0x80000000
@@ -1559,7 +1560,7 @@ smutt &
 }
 \end{center}
 
-\begin{lstlisting}[caption={Código del programa intro5.s},label={lst:codigoPract5},numbers=left,escapeinside={@}{@}]
+\begin{lstlisting}[caption={Código del programa intro5.s},label={lst:codigoPract5}]
 .data
 var1:   .word   0x12345678
 var2:   .word   0x87654321

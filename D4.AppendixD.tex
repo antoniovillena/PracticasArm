@@ -55,9 +55,7 @@ dejamos libres los pines Vcc (3.3V), ya que necesitaremos uno para el último ej
 
 En este primer ejemplo vamos a tratar de encender el LED interno de la Raspberry llamado
 ACT (OK) mediante un pulsador externo. El primer montaje sería el de
-la figura.
-
-El esquema sería el de la figura \ref{fig:circuito1}.
+la figura. El esquema sería el de la figura \ref{fig:circuito1}.
 
 \begin{figure}[h]
   \centering
@@ -70,6 +68,7 @@ Ahora escribimos el código. Como el pin GPIO que controla dicho LED es distinto
 modelos normales que en los A+/B+, enviamos la señal a ambos pines. En el modelo normal
 sería GPIO 16 y en el plus, el GPIO 47.
 
+\newpage
 \begin{lstlisting}[caption={apend1.s},label={lst:codigoApendice_1}]
         .include  "inter.inc"
 .text
@@ -115,7 +114,7 @@ figura \ref{fig:pullup}.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/pullup.png}
+    \includegraphics[width=13cm]{graphs/pullup.png}
   \caption{Resistencia interna de pull-up}
   \label{fig:pullup}
 \end{figure}
@@ -207,7 +206,7 @@ el LED se enciende, apagándose en cuanto lo soltamos.
 
 \subsection{Pulsador a Vcc sin cambiar configuración}
 
-Cambiamos es montaje, y en lugar de a GND conectamos el pulsador a Vcc según
+Cambiamos el montaje, y en lugar de a GND conectamos el pulsador a Vcc según
 la figura \ref{fig:circuito2}.
 
 \begin{figure}[h]
@@ -250,7 +249,7 @@ bucle:  str     r2, [r0, #GPCLR0]   @ apago GPIO 16
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/pulldown.png}
+    \includegraphics[width=13cm]{graphs/pulldown.png}
   \caption{Resistencia interna de pull-down}
   \label{fig:pulldown}
 \end{figure}

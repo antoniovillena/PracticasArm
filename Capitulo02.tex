@@ -257,8 +257,8 @@ representación.
               & ({\tt signed}) {\tt char} & 8 & -128 a 127 \\ \hline
  {\tt .hword} & {\tt unsigned short int} & 16 &  0 a 65.535 \\
  {\tt .short} & ({\tt signed}) {\tt short int} & 16 & -32.768 a 32767 \\ \hline
- {\tt .word}  & {\tt unsigned int} & 32 & 0 a 65.535 \\
- {\tt .int}   & ({\tt signed}) {\tt int} &  32 & -32.768 a 32.767 \\
+ {\tt .word}  & {\tt unsigned int} & 32 & 0 a 4294967296 \\
+ {\tt .int}   & ({\tt signed}) {\tt int} &  32 & -2147483648 a 2147483647 \\
               & {\tt unsigned long int}  & 32 & 0 a 4294967296 \\ 
               & ({\tt signed}) {\tt long int} &  32 & -2147483648 a 2147483647 \\ \hline
  {\tt .quad}  & {\tt unsigned long long} & 64 &  0 a $2^{64}$ \\
@@ -283,7 +283,7 @@ las variables a través de los punteros que directamente. En este ejemplo
 acceder a la dirección de var1 nos cuesta 2 {\tt ldrs} a través del puntero,
 mientras que directamente se puede hacer con uno sólo.
 
-
+\newpage
 \begin{lstlisting}
 .data
 var1:           .word   3
@@ -396,7 +396,8 @@ otra instrucción, aunque la mayoría de las veces lo que nos interesa es contro
 el flujo del programa y así ejecutar o no un grupo de instrucciones dependiendo
 del resultado de una operación (reflejado en los flags).
 
-La lista completa de condiciones es ésta.
+\newpage
+La lista completa de condiciones es ésta:
 
 \begin{itemize}
   \item{\tt EQ} ({\tt eq}ual, igual). Cuando {\tt Z} está activo ({\tt Z} vale 1).
@@ -637,6 +638,7 @@ instrucciones a una. Es decir, estas dos instrucciones:
         bx      lr
 \end{lstlisting}
 
+\newpage
 Se simplifican a:
 
 \begin{lstlisting}

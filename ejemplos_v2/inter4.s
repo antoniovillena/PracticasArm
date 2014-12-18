@@ -76,7 +76,7 @@ irq_handler:
         ands    r3, #0b0100
         beq     final             @ Si no, salgo
 
-/* Si es C3, hago sonar altavoz
+/* Si es C3, hago sonar el altavoz */
 sonido: ldr     r2, =bitson
         ldr     r3, [r2]
         eors    r3, #1            @ Invierto estado
