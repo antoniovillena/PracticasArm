@@ -117,8 +117,15 @@ una tercera instrucción para hacer el desplazamiento.
 
 La dirección actual es {\tt \textbackslash vector}, la de la RTI
 es {\tt \textbackslash dirRTI} y hay que restarle 8 por el
-segmentado de la CPU.
-\\
+segmentado de la CPU (ver figura \ref{fig:saltoseg}).
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=8cm]{graphs/saltosegmentado.png}
+  \caption{Cálculo del desplazamiento}
+  \label{fig:saltoseg}
+\end{figure}
+
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector-8)/4 + 0xEA000000$ \\
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector)/4 + 0xE9FFFFFE$ \\
 {\it instrucción }$ = (\textbackslash dirRTI-\textbackslash vector+3A7FFFFF8)/4$ \\

@@ -168,6 +168,15 @@ x+8 & i+2 & ...     \\ \hline
 x+12 & i+3 & ... \\ \hline
 \end{longtable}
 
+    Podemos observarlo gráficamente en la figura \ref{fig:diagramainterrupcion}.
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=6cm]{graphs/diagramainterrupcion.png}
+  \caption{Diagrama de una interrupción}
+  \label{fig:diagramainterrupcion}
+\end{figure}
+
   \item Luego saltamos al vector correspondiente ($NI$*4). En esa posición del vector
     encontramos una instrucción de salto a la RTI correspondiente.
 
@@ -292,7 +301,7 @@ El orden recomendado es el siguiente, aunque se puede cambiar el mismo salvo el 
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/mapamemoria.png}
+    \includegraphics[width=8cm]{graphs/mapamemoria.png}
   \caption{Mapa de memoria en nuestros ejemplos}
   \label{fig:mapamemoria}
 \end{figure}
@@ -365,8 +374,9 @@ El único puerto que nos falta por ver es {\tt FIQ control ó INTFIQCON} que hem
 mostrado en la figura \ref{fig:interrupciones}. Antes mostraremos la lista de fuentes
 de interrupción aplicables a este puerto.
 
-\begin{longtable}{ p{2cm} | p{6cm}}
-\hline
+\begin{table}
+\centering
+\begin{tabular}{ p{2cm} | p{8cm}} \hline
 {\bf Índice} & {\bf Fuente} \\ \hline
 0-63  & Interrupciones IRQ 1 y 2 (ver figura \ref{fig:interrupciones})  \\ \hline
 64    & ARM Timer  \\ \hline
@@ -377,7 +387,8 @@ de interrupción aplicables a este puerto.
 69    & GPU1 detenida \\ \hline
 70    & Acceso ilegal de tipo 1 \\ \hline
 71    & Acceso ilegal de tipo 2 \\ \hline
-\end{longtable}
+\end{tabular}
+\end{table}
 
 Son las mismas fuentes que en IRQ pero condensadas en un único puerto. De 0 a 31 coincide
 con la tabla {\tt IRQ 1}, de 32 a 63 con {\tt IRQ 2} y de 64 en adelante con {\tt IRQ Basic}.
@@ -399,7 +410,7 @@ El diagrama que vamos a usar es el siguiente.
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/inter1.png}
+    \includegraphics[width=10cm]{graphs/inter1.png}
   \caption{Interrupciones}
   \label{fig:inter1}
 \end{figure}
@@ -445,13 +456,13 @@ En la siguiente tabla vemos cómo se codifica el modo de operación.
 Como las interrupciones globales de IRQ y FIQ están desactivadas (estado por defecto tras
 el reset), mantenemos a 1 dichos bits.
 
-El código que inicializa los punteros de pila es el siguiente.
+El código que inicializa los punteros de pila es el siguiente:
 
 \begin{lstlisting}
-        mov     r0, #0b11010010   @modo IRQ, FIQ&IRQ desact
+        mov     r0, #0b11010010   @ Modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0b11010011   @modo SVC, FIQ&IRQ desact
+        mov     r0, #0b11010011   @ Modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 \end{lstlisting}
@@ -466,7 +477,7 @@ GPIO de entrada y de salida, inicializar temporizadores. En casos más complejos
 inicializar estructuras de datos, rellenar las tablas que sean precalculadas y en general
 cualquier tarea de inicialización requerida para hacer funcionar nuestro programa.
 
-El código para asignar el sentido al pin GPIO 9 es el siguiente.
+El código para asignar el sentido al pin GPIO 9 es el siguiente:
 
 \begin{lstlisting}
         ldr     r0, =GPBASE
@@ -475,7 +486,7 @@ El código para asignar el sentido al pin GPIO 9 es el siguiente.
         str     r1, [r0, #GPFSEL0]
 \end{lstlisting}
 
-Luego programamos el comparador para que salte la interrupción a los 4,19 segundos.
+Luego programamos el comparador para que salte la interrupción a los 4,19 segundos:
 
 \begin{lstlisting}
         ldr     r0, =STBASE
@@ -488,7 +499,7 @@ Luego programamos el comparador para que salte la interrupción a los 4,19 segun
 
 Consiste en escribir en los puertos asociados dependiendo de las fuentes que querramos
 activar. En este primer ejemplo habilitamos el comparador
-{\tt C1} del temporizador como fuente de interrupción.
+{\tt C1} del temporizador como fuente de interrupción:
 
 \begin{lstlisting}
         ldr     r0, =INTBASE
@@ -499,56 +510,70 @@ activar. En este primer ejemplo habilitamos el comparador
 \subsubsection{5. Habilitamos interrupciones globalmente}
 
 Se trata de poner a cero el bit correspondiente en {\tt cpsr}. El siguiente código habilita
-interrupciones del tipo IRQ.
+interrupciones del tipo IRQ:
 
 \begin{lstlisting}
-        mov     r0, #0b01010011   @modo SVC, IRQ activo
+        mov     r0, #0b01010011   @ Modo SVC, IRQ activo
         msr     cpsr_c, r0
 \end{lstlisting}
 
 \subsubsection{6. Resto del programa principal}
 
-Como hemos adelantado, en todos nuestros ejemplos será un bucle infinito.
+Como hemos adelantado, en todos nuestros ejemplos será un bucle infinito:
 
 \begin{lstlisting}
 bucle:  b       bucle
 \end{lstlisting}
 
-A continuación mostramos el listado del ejemplo completo.
+A continuación mostramos el listado del ejemplo completo:
 
 \begin{lstlisting}[caption={inter1.s},label={lst:codigoPract5_1}]
         .include  "inter.inc"
 .text
+/* Agrego vector interrupción */
         ADDEXC  0x18, irq_handler
-        mov     r0, #0b11010010   @modo IRQ, FIQ&IRQ desact
+
+/* Inicializo la pila en modos IRQ y SVC */
+        mov     r0, #0b11010010   @ Modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0b11010011   @modo SVC, FIQ&IRQ desact
+        mov     r0, #0b11010011   @ Modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
+
+/* Configuro GPIO 9 como salida */
         ldr     r0, =GPBASE
 /* guia bits           xx999888777666555444333222111000*/
         mov     r1, #0b00001000000000000000000000000000
         str     r1, [r0, #GPFSEL0]
+
+/* Programo contador C1 para futura interrupción */
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
         add     r1, #0x400000     @4,19 segundos
         str     r1, [r0, #STC1]
+
+/* Habilito interrupciones, local y globalmente */
         ldr     r0, =INTBASE
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
-        mov     r0, #0b01010011   @modo SVC, IRQ activo
+        mov     r0, #0b01010011   @ Modo SVC, IRQ activo
         msr     cpsr_c, r0
+
+/* Repetir para siempre */
 bucle:  b       bucle
 
+/* Rutina de tratamiento de interrupción */
 irq_handler:
-        push    {r0, r1}
+        push    {r0, r1}          @ Salvo registros
+
         ldr     r0, =GPBASE
 /* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000000000000001000000000
-        str     r1, [r0, #GPSET0]
-        pop     {r0, r1}
-        subs    pc, lr, #4
+        str     r1, [r0, #GPSET0] @ Enciendo LED
+
+        pop     {r0, r1}          @ Recupero registros
+        subs    pc, lr, #4        @ Salgo de la RTI
 \end{lstlisting}
 
 Observamos que la RTI es muy sencilla, aparte del esqueleto tenemos tres instrucciones
@@ -603,18 +628,23 @@ que a interrupciones se refiere consiste en reprogramar el comparador C1 cada ve
 se produzca una interrupción, de esta forma conseguimos interrupciones periódicas en lugar
 de una única interrupción.
 
-Veamos el código.
+Veamos el código:
 
 \begin{lstlisting}[caption={inter2.s},label={lst:codigoPract5_2}]
         .include  "inter.inc"
 .text
+/* Agrego vector interrupción */
         ADDEXC  0x18, irq_handler
-        mov     r0, #0b11010010   @modo IRQ, FIQ&IRQ desact
+
+/* Inicializo la pila en modos IRQ y SVC */
+        mov     r0, #0b11010010   @ Modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0b11010011   @modo SVC, FIQ&IRQ desact
+        mov     r0, #0b11010011   @ Modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
+
+/* Configuro GPIOs 9, 10, 11, 17, 22 y 27 como salida */
         ldr     r0, =GPBASE
         mov     r1, #0b00001000000000000000000000000000
         str     r1, [r0, #GPFSEL0]
@@ -623,60 +653,78 @@ Veamos el código.
         str     r1, [r0, #GPFSEL1]
         ldr     r1, =0b00000000001000000000000001000000
         str     r1, [r0, #GPFSEL2]
+
+/* Programo contador C1 para dentro de 2 microsegundos */
         ldr     r0, =STBASE
         ldr     r1, [r0, #STCLO]
         add     r1, #2
         str     r1, [r0, #STC1]
+
+/* Habilito interrupciones, local y globalmente */
         ldr     r0, =INTBASE
         mov     r1, #0b0010
         str     r1, [r0, #INTENIRQ1]
-        mov     r0, #0b01010011   @modo SVC, IRQ activo
+        mov     r0, #0b01010011   @ Modo SVC, IRQ activo
         msr     cpsr_c, r0
+
+/* Repetir para siempre */
 bucle:  b       bucle
 
+/* Rutina de tratamiento de interrupción */
 irq_handler:
         push    {r0, r1, r2}
-        ldr     r0, =ledst
-        ldr     r1, [r0]
-        eors    r1, #1
-        str     r1, [r0]
+
+/* Conmuto variable de estado del LED */
+        ldr     r0, =ledst    @ Leo puntero a v. ledst
+        ldr     r1, [r0]      @ Leo variable
+        eors    r1, #1        @ Invierto bit 0, act. flag Z
+        str     r1, [r0]      @ Escribo variable
+
+/* Enciendo o apago todos los LEDs en función del flag Z */
         ldr     r0, =GPBASE
 /* guia bits           10987654321098765432109876543210*/
         ldr     r1, =0b00001000010000100000111000000000
         streq   r1, [r0, #GPSET0]
         strne   r1, [r0, #GPCLR0]
+
+/* Reseteo estado interrupción de C1 */
         ldr     r0, =STBASE
         mov     r1, #0b0010
         str     r1, [r0, #STCS]
+
+/* Programo siguiente interrupción medio segundo después */
         ldr     r1, [r0, #STCLO]
         ldr     r2, =500000       @1 Hz
         add     r1, r2
         str     r1, [r0, #STC1]
+
+/* Recupero registros y salgo */
         pop     {r0, r1, r2}
         subs    pc, lr, #4
 
+/* Ubicación de la variable ledst */
 ledst:  .word   0
 \end{lstlisting}
 
 Y vamos enumerando, por orden, los pasos que hemos seguido. En primer lugar apuntamos a nuestra
-RTI en el vector de interrupciones.
+RTI en el vector de interrupciones:
 
 \begin{lstlisting}
         ADDEXC  0x18, irq_handler
 \end{lstlisting}
 
-Luego inicializamos los punteros de pila.
+Luego inicializamos los punteros de pila:
 
 \begin{lstlisting}
-        mov     r0, #0b11010010   @modo IRQ, FIQ&IRQ desact
+        mov     r0, #0b11010010   @ Modo IRQ, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000
-        mov     r0, #0b11010011   @modo SVC, FIQ&IRQ desact
+        mov     r0, #0b11010011   @ Modo SVC, FIQ&IRQ desact
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 \end{lstlisting}
 
-Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
+Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas:
 
 \begin{lstlisting}
         ldr     r0, =GPBASE
@@ -690,7 +738,7 @@ Lo siguiente es configurar los pines GPIO asociados a los 6 LEDs como salidas.
 \end{lstlisting}
 
 Preparamos el comparador {\tt C1} para que al cabo de dos microsegundos nos proporcione la primera
-interrupción.
+interrupción:
 
 \begin{lstlisting}
         ldr     r0, =STBASE
@@ -699,7 +747,7 @@ interrupción.
         str     r1, [r0, #STC1]
 \end{lstlisting}
 
-Para después habilitar las interrupciones asociadas al comparador {\tt C1}.
+Para después habilitar las interrupciones asociadas al comparador {\tt C1}:
 
 \begin{lstlisting}
         ldr     r0, =INTBASE
@@ -708,7 +756,7 @@ Para después habilitar las interrupciones asociadas al comparador {\tt C1}.
 \end{lstlisting}
 
 Y finalmente habilitar las interrupciones {\tt IRQ} globalmente, entrando luego en
-el bucle infinito.
+el bucle infinito:
 
 \begin{lstlisting}
         mov     r0, #0b01010011   @modo SVC, IRQ activo
@@ -728,15 +776,17 @@ actualizar los {\tt flags} tras esta operación, tenemos que si el resultado fue
 cero nos lo indica el {\tt flag Z} activo, mientras que estará inactivo en el
 caso contrario (resultado 1). Mediante las instrucciones de ejecución condicional
 {\tt streq} y {\tt strne} enviamos la orden al puerto que enciende los LEDs o al
-puerto que los apaga, respectivamente.
+puerto que los apaga, respectivamente:
 
 \begin{lstlisting}
 irq_handler:
         push    {r0, r1, r2}
-        ldr     r0, =ledst
-        ldr     r1, [r0]
-        eors    r1, #1
-        str     r1, [r0]
+
+        ldr     r0, =ledst    @ Leo puntero a v. ledst
+        ldr     r1, [r0]      @ Leo variable
+        eors    r1, #1        @ Invierto bit 0, act. flag Z
+        str     r1, [r0]      @ Escribo variable
+
         ldr     r0, =GPBASE
 /* guia bits           10987654321098765432109876543210*/
         ldr     r1, =0b00001000010000100000111000000000
@@ -749,7 +799,7 @@ que de lo contrario el gestor de interrupciones verá el bit siempre a 1 y no la
 interrupciones. Resulta confuso tener que escribir un 1 en el puerto para almacenar un 0, pero
 de un modo similar a lo que ocurre con el puerto {\tt GPCLR0} del GPIO es para ahorrar
 operaciones y que la RTI sea más rápida. Así no hay que leer el puerto, aplicar una máscara y
-volver a escribir en el mismo puerto, con una escritura es suficiente.
+volver a escribir en el mismo puerto, con una escritura es suficiente:
 
 \begin{lstlisting}
         ldr     r0, =STBASE
