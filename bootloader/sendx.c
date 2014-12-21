@@ -25,7 +25,7 @@ int main(int argc, char* argv[]){
     printf("Couldn't open serial device /dev/ttyUSB0\n"),
     exit(1);
   tcgetattr(fd, &attr);
-  attr.c_cflag= 0x1032;
+  attr.c_cflag= B230400 | CS8;
   attr.c_oflag= attr.c_iflag= attr.c_lflag= 0;
   tcsetattr(fd, TCSANOW, &attr);
   i= TIOCM_DTR;
