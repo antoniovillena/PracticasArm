@@ -25,7 +25,7 @@
 
 /* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
         mov     r1, #0b00000000000000000000000000001100
-        str     r1, [r0, #GPREN0]
+        str     r1, [r0, #GPFEN0]
         ldr     r0, =INTBASE
 
 /* Habilito interrupciones, local y globalmente */

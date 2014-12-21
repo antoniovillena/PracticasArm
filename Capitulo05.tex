@@ -602,7 +602,7 @@ siempre las mismas constantes, haciendo el código más sencillo de mantener.
         .set    GPSET0,         0x1c
         .set    GPCLR0,         0x28
         .set    GPEDS0,         0x40
-        .set    GPREN0,         0x58
+        .set    GPFEN0,         0x58
         .set    GPPUD,          0x94
         .set    GPPUDCLK0,      0x98
         .set    STBASE,   0x20003000
@@ -883,7 +883,7 @@ Y el código fuente lo vemos a continuación:
 
 /* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
         mov     r1, #0b00000000000000000000000000001100
-        str     r1, [r0, #GPREN0]
+        str     r1, [r0, #GPFEN0]
         ldr     r0, =INTBASE
 
 /* Habilito interrupciones, local y globalmente */
@@ -939,13 +939,13 @@ Así sabemos que el programa está cargado a la espera de que activemos los puls
 \end{lstlisting}
 
 Luego habilitamos las interrupciones particulares del GPIO en el puerto
-{\tt GPREN0}, en concreto las que entran por los pulsadores (GPIO 2 y GPIO 3). 
+{\tt GPFEN0}, en concreto las que entran por los pulsadores (GPIO 2 y GPIO 3). 
 Para que las peticiones se propaguen desde el GPIO al controlador de interrupciones
 habilitamos el bit 20 del puerto {\tt INTENIRQ2}:
 
 \begin{lstlisting}
         mov     r1, #0b00000000000000000000000000001100
-        str     r1, [r0, #GPREN0]
+        str     r1, [r0, #GPFEN0]
         ldr     r0, =INTBASE
 /* guia bits           10987654321098765432109876543210*/
         mov     r1, #0b00000000000100000000000000000000
@@ -1534,7 +1534,7 @@ El programa principal sería el siguiente:
 
 /* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
         mov     r1, #0b00000000000000000000000000001100
-        str     r1, [r0, #GPREN0]
+        str     r1, [r0, #GPFEN0]
 
 /* Programo C1 para dentro de 2 microsegundos */
         ldr     r0, =STBASE
@@ -1560,9 +1560,9 @@ El programa principal sería el siguiente:
 bucle:  b       bucle
 \end{lstlisting}
 
-Lo nuevo que vemos aquí es una escritura en el puerto {\tt GPREN0}. De esta forma
+Lo nuevo que vemos aquí es una escritura en el puerto {\tt GPFEN0}. De esta forma
 le decimos al controlador de interrupciones que esos pines del GPIO serán los únicos que
-provoquen interrupciones, concretamente flancos con de subida síncronos (justo
+provoquen interrupciones, concretamente flancos con de bajada síncronos (justo
 en el momento en que el botón toca fondo).
 
 El manejador FIQ es idéntico al del ejemplo anterior, saca el sonido que corresponde al LED

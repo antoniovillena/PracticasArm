@@ -19,8 +19,8 @@
         .set    GPLEV1,         0x38
         .set    GPEDS0,         0x40
         .set    GPEDS1,         0x44
-        .set    GPREN0,         0x58
-        .set    GPREN1,         0x5c
+        .set    GPFEN0,         0x58
+        .set    GPFEN1,         0x5c
         .set    GPPUD,          0x94
         .set    GPPUDCLK0,      0x98
         .set    STBASE,   0x20003000
