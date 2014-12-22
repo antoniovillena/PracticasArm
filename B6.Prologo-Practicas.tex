@@ -1,0 +1,87 @@
+\chapterbeginx{Prólogo}
+
+El minicomputador Raspberry Pi es una placa del tamaño de una tarjeta de crédito y un
+precio de sólo 30€. El objetivo principal de sus creadores, la Fundación Raspberry Pi,
+era promover la enseñanza de conceptos básicos de informática en los colegios e institutos.
+Sin embargo, ha terminado convirtiéndose también en un pequeño computador de bajo
+coste que se destina a muy diversos usos: servidor multimedia conectado al televisor,
+estación base para domótica en el hogar, estaciones meteorológicas, servidor de discos
+en red para copias de seguridad, o como un simple ordenador que puede ejecutar
+aplicaciones de internet, juegos, ofimática, etc. Esto ha llegado a ser así gracias
+a un vertiginoso crecimiento de la comunidad de desarrolladores para Raspberry Pi,
+y que estos han explorado casi todas las posibilidades para sacar el máximo partido
+de este ordenador de 30€. Esa gran funcionalidad y el bajo coste constituyen el
+principal atractivo de esta plataforma para los estudiantes. Sin embargo, para los
+docentes del Dept. de Arquitectura de Computadores, la Raspberry Pi ofrece una excusa
+perfecta para hacer más amenos y atractivos conceptos a veces complejos, y a veces
+también áridos, de asignaturas del área.
+
+Este trabajo se enmarca dentro del Proyecto de Innovación Educativa PIE13-082, ``Motivando
+al alumno de ingeniería mediante la plataforma Raspberry Pi'' cuyo principal objetivo es
+aumentar el grado de motivación del alumno que cursa asignaturas impartidas por el
+Departamento de Arquitectura de Computadores. La estrategia propuesta se apoya en el
+hecho de que muchos alumnos de Ingeniería perciben que las asignaturas de la carrera
+están alejadas de su realidad cotidiana, y que por ello, pierden cierto atractivo. Sin
+embargo, bastantes de estos alumnos han comprado o piensan comprar un minicomputador
+Raspberry Pi que se caracteriza por proporcionar una gran funcionalidad, gracias a
+estar basado en un procesador y Sistema Operativo de referencia en los dispositivos
+móviles. En este proyecto proponemos aprovechar el interés que los alumnos ya
+demuestran por la plataforma Raspberry Pi, para ponerlo a trabajar en pro del
+siguiente objetivo docente: facilitar el estudio de conceptos y técnicas impartidas
+en varias asignaturas del Departamento. Cuatro de estas asignaturas son:
+
+\begin{itemize}
+  \item{Tecnología de Computadores:} Asignatura obligatoria del módulo de Formación
+        Común de las titulaciones de Grado en Ingeniería Informática, Grado en
+        Ingeniería de Computadores y Grado en Ingeniería del Software. Es una asignatura
+        que se imparte en el primer curso.
+  \item{Estructura de Computadores:} Asignatura obligatoria del módulo de Formación
+        Común de las titulaciones de Grado en Ingeniería Informática, Grado en
+        Ingeniería de Computadores y Grado en Ingeniería del Software. Es una asignatura
+        que se imparte en el segundo curso.
+  \item{Sistemas Operativos:} Asignatura obligatoria del módulo de Formación Común de las
+        titulaciones de Grado en Ingeniería Informática, Grado en Ingeniería de
+        Computadores y Grado en Ingeniería del Software. Se imparte en segundo curso.
+  \item{Diseño de Sistemas Operativos:} Asignatura obligatoria del módulo de Tecnologías
+        Específicas del Grado de Ingeniería de Computadores. Se imparte en tercer curso.
+\end{itemize}
+
+En esas cuatro asignaturas, uno de los conceptos más básicos es el de gestión de
+interrupciones a bajo nivel. En particular, en Estructura de Computadores, esos
+conceptos se ilustraban en el pasado mediante prácticas en PCs con MSDOS y programación
+en ensamblador, pero el uso de ese sistema operativo ya no tiene ningún atractivo y
+además crea problemas de seguridad en los laboratorios del departamento. Sin embargo,
+la plataforma Raspberry Pi se convierte en una herramienta adecuada para trabajar a
+nivel de sistema, es económica y ya disponemos de unidades suficientes para usarlas
+en los laboratorios (30 equipos para ser exactos).
+ 
+El principal objetivo de este trabajo es la creación de un conjunto de prácticas enfocadas
+al aprendizaje de la programación en ensamblador, en concreto del ARMv6 que es el
+procesador de la plataforma que se va a utilizar para el desarrollo de las prácticas,
+así como al manejo a bajo nivel de las interrupciones y la entrada/salida en dicho procesador.
+El aprendizaje del lenguaje ensamblador del procesador ARM usado en la
+Raspberry Pi se puede completar leyendo la documentación disponible en
+\cite{DATH} y haciendo los tutoriales de \cite{TASM}.  Para la parte
+más centrada en el hardware también se puede consultar la amplia
+documentación disponible en internet, como por ejemplo los tutoriales
+disponibles en \cite{BKPI} y la descripción los modos de operación de
+los periféricos conectados al procesador ARM \cite{ARMP}.
+
+
+La presente memoria está dividida cinco capítulos y cuatro
+apéndices. De los 5 capítulos, el primero es introductorio. Los dos
+siguientes se centran en la programación de ejecutables en Linux,
+tratando las estructuras de control en el capítulo 2 y las subrutinas
+(funciones) en el capítulo 3. Los dos últimos capítulos muestran la
+programación en Bare Metal, explicando el subsistema de entrada/salida
+(puertos de entrada/salida y temporizadores) de la plataforma
+Raspberry Pi y su manejo a bajo nivel en el capítulo 4 y las
+interrupciones en el capítulo 5.  En los apéndices hemos añadido
+aspectos laterales pero de suficiente relevancia como para ser
+considerados en la memoria, como el apendice A que explica el
+funcionamiento de la macro ADDEXC, el apéndice B que muestra todos los
+detalles de la placa auxiliar, el apéndice C que nos enseña a agilizar
+la carga de programas Bare Metal y por último tenemos el apéndice D,
+que profundiza en aspectos del GPIO como las resistencias
+programables.
+
