@@ -36,15 +36,25 @@ RERUN	= "(Rerun to get cross-references right|Citation.*undefined)"
 	fig2dev -L pdf $< > $@
 
 TARGET		= A0.PFC
-TEXFILES	= A0.PFC.tex Capitulo01.tex \
+TARGETFILE	= A0.PFC.tex
+TEXFILES	= Capitulo01.tex \
 			  Capitulo02.tex Capitulo03.tex \
 		      Capitulo04.tex Capitulo05.tex D0.Conclusiones.tex
-BIBFILES	= 
+BIBFILES	= E2.Bibliografia.bib
 FIGFILES	= 
 GRAPHS_EPS	= 
 GRAPHS		= 
 
 all: $(TARGET).pdf
+
+prac: LibroDePracticas.pdf
+
+LibroDePracticas.pdf: LibroDePracticas.tex $(TEXFILES) $(BIBFILES)
+	$(PDFLATEX) $<
+	if grep "bibdata" $*.aux ; then $(BIBTEX) $* ; fi
+	if grep -E $(RERUN) $*.log ; then $(PDFLATEX) $< ; fi
+	if grep -E $(RERUN) $*.log ; then $(PDFLATEX) $< ; fi
+	if grep -E $(RERUN) $*.log ; then $(PDFLATEX) $< ; fi
 
 $(TARGET).ps: $(TARGET).dvi $(GRAPHS_EPS)
 	$(DVIPS) -t letter -o $@ $<
@@ -60,8 +70,8 @@ $(TARGET).pdf: $(TEXFILES) $(FIGFILES) $(BIBFILES) $(GRAPHS)
 
 clean:
 	-$(RM)  $(TARGET).ps $(TARGET).pdf ${FIGFILES}
-	-$(RM) *.bbl *.aux *.dvi *.blg *.log
-	-$(RM) *~
+	-$(RM) *.bbl *.aux *.dvi *.blg *.log *.mtc* *.idx *.lof *.lot *.maf *.out 
+	-$(RM) *~ *.synctex.gz *.toc
 
 purge: clean
 	-$(RM) figures/*.eps
