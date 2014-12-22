@@ -1,16 +1,20 @@
-% Preámbulo del documento.
-%-----------------------------------------------------------------%
-% Clase de documento: libro
 \documentclass[12pt,a4paper]{book} % article, report, book.
 
 % Preámbulo: paquetes, comandos, entornos, estilos y título de página.
 \usepackage{anyfontsize}
-\input{A1.Preambulo.paquetes.tex}
-\input{A2.Preambulo.commandos.tex}
+\usepackage[utf8]{inputenc} %Codificación en utf8%
+\usepackage[spanish]{babel} %Hyphenation (Guionado) en español%
+\usepackage[T1]{fontenc} %Codificación de fuente%
+
+\usepackage{graphics,graphicx} %paquetes gráficos estándar%
+\usepackage{color}
 
 \setlength{\textwidth}{15cm}    % Anchura neta del texto (globalmente).
 \setlength{\topmargin}{-2cm}     % top margin (Global).
 \setlength{\textheight}{26cm}
+
+\newcommand{\pfctitlename}{Guiones de prácticas sobre la plataforma Raspberry Pi}
+\newcommand{\pfcanno}{2015}
 
 \begin{document}
 
