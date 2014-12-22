@@ -69,7 +69,7 @@ $(TARGET).pdf: $(TEXFILES) $(FIGFILES) $(BIBFILES) $(GRAPHS)
 	if grep -E $(RERUN) $*.log ; then $(PDFLATEX) $< ; fi
 
 clean:
-	-$(RM)  $(TARGET).ps $(TARGET).pdf ${FIGFILES}
+	-$(RM)  $(TARGET).ps ${FIGFILES}
 	-$(RM) *.bbl *.aux *.dvi *.blg *.log *.mtc* *.idx *.lof *.lot *.maf *.out 
 	-$(RM) *~ *.synctex.gz *.toc
 
