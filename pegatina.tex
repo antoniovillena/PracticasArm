@@ -1,0 +1,90 @@
+% Preámbulo del documento.
+%-----------------------------------------------------------------%
+% Clase de documento: libro
+\documentclass[12pt,a4paper]{book} % article, report, book.
+
+% Preámbulo: paquetes, comandos, entornos, estilos y título de página.
+\usepackage{anyfontsize}
+\input{A1.Preambulo.paquetes.tex}
+\input{A2.Preambulo.commandos.tex}
+
+\setlength{\textwidth}{15cm}    % Anchura neta del texto (globalmente).
+\setlength{\topmargin}{-2cm}     % top margin (Global).
+\setlength{\textheight}{26cm}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \large
+    \scshape
+    \bfseries
+    Universidad de Málaga \\
+    Escuela Técnica Superior de Ingeniería Informática
+  \end{center}
+
+  \smallskip
+
+  \begin{center}
+    \includegraphics[width=4cm,keepaspectratio]{graphs/EscudoETSIIcolor.pdf}
+
+    \bfseries
+    \color[rgb]{0,0.18,0.39}
+    \fontsize{15}{15}
+    \selectfont E.T.S. INGENIERÍA\\
+    \fontsize{20}{20}
+    \selectfont INFORMÁTICA
+  \end{center}
+
+  \begin{center}
+    \scshape
+    \large
+    \bfseries
+    Ingeniero Técnico en Informática de Sistemas
+  \end{center}
+
+  \smallskip
+
+  \begin{center}
+    \huge
+    \sffamily
+    \bfseries
+    \pfctitlename
+  \end{center}
+
+  \begin{center}
+    \huge
+    \sffamily
+    Instructions for hands-on sessions with the Raspberry Pi platform
+  \end{center}
+
+  \bigskip
+
+  \begin{center}
+    \huge
+    \sffamily
+    Realizado por\\
+    ANTONIO JOSÉ VILLENA GODOY
+  \end{center}
+
+  \begin{center}
+    \huge
+    \sffamily
+    Dirigido por\\
+    RAFAEL ASENJO PLAZA\\
+    FRANCISCO J. CORBERA PEÑA
+  \end{center}
+
+  \begin{center}
+    \huge
+    \sffamily
+    Departamento\\
+    ARQUITECTURA DE COMPUTADORES
+  \end{center}
+
+  \vfill
+
+  \hfill \large Málaga, Enero de \pfcanno
+\end{titlepage}
+
+\end{document}
