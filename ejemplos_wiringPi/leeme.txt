@@ -1,0 +1,25 @@
+Wiring Pi hace una renumeración de los números de puerto. Para
+evitar confusiones lo voy a llamar puerto WPIO y la
+correspondencia es ésta:
+
+Componente    | wiringPi  | GPIO real | wiringPi.inc
+--------------+-----------+-----------+-------------
+ LED 1 (rojo) | WPIO 13   | GPIO 9    | L1
+ LED 2 (rojo) | WPIO 12   | GPIO 10   | L2
+ LED 3 (amar) | WPIO 14   | GPIO 11   | L3
+ LED 4 (amar) | WPIO 0    | GPIO 17   | L4
+ LED 5 (verd) | WPIO 3    | GPIO 22   | L5
+ LED 6 (verd) | WPIO 2    | GPIO 27   | L6
+ Altavoz      | WPIO 7    | GPIO 4    | ALT
+ Botón izdo   | WPIO 8    | GPIO 2    | S1
+ Botón dcho   | WPIO 9    | GPIO 3    | S2
+
+De todas formas he incluido una referencia en wiringPi.inc para
+no tener que recordar los valores.
+
+Para compilar es igual que con Linux pero añadiendo la
+librería. Hay que ejecutar con sudo.
+
+as -o ejemplo1.o ejemplo1.s
+gcc -o ejemplo1 ejemplo1.o -lwiringPi
+sudo ./ejemplo1
