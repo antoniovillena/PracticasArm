@@ -21,6 +21,7 @@
         cntadr  .req    r8
         cnt     .req    r9
         timeout .req    r10
+        sgpfs1  .req    r11
 .text
 start:  mov     addr, #0x8200
 star1:  ldr     r3, [addr], #-4
@@ -29,6 +30,7 @@ star1:  ldr     r3, [addr], #-4
         bne     star1
         ldr     gpbas, =GPBASE
         sub     cntadr, gpbas, #GPBASE-0x20004000
+        ldr     sgpfs1, [gpbas, #GPFSEL1]
         mov     r3, #0b00000000000000010010000000000000
         str     r3, [gpbas, #GPFSEL1]
         ldr     cnt, =0b10101010101010101010101010101010
@@ -44,9 +46,9 @@ beep1:  subs    crc, #1
         add     auxbas, #AUXBASE-GPBASE
         mov     block, #1
         str     block, [auxbas, #AMENABLES]
-        mov     timeout, #3
+        mov     timeout, #0x23
         str     timeout, [auxbas, #AMLCRREG]
-        mov     r3, #135
+        add     r3, timeout, #270-0x23
         str     r3, [auxbas, #AMBAUDREG]
         b       star4-0x200
 star2:  uadd8   crc, crc, recv
