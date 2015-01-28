@@ -31,7 +31,7 @@
 
 /* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
         mov     r1, #0b00000000000000000000000000001100
-        str     r1, [r0, #GPREN0]
+        str     r1, [r0, #GPFEN0]
 
 /* Programo C1 para dentro de 2 microsegundos */
         ldr     r0, =STBASE
