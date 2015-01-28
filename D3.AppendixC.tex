@@ -174,35 +174,78 @@ en la figura \ref{fig:pinReset}.
 De lo que se trata ahora es de enviar un pulso negativo a esa señal. En el caso del cable
 USB-Serie lo haremos por una señal programable que no se emplea en el enlace serie llamada
 {\tt DTR}. En el caso de conexión serie-serie entre dos Raspberries usaremos el pin GPIO 18
-(justo a la derecha de RXD), valdría cualquier otro pin, pero por cercanía empleamos este.
+(justo a la derecha de RXD). Valdría cualquier otro pin, pero por cercanía empleamos este.
 
-Lo siguiente es hacer un programa que envíe dicho pulso en incluirlo en el script. Para
-el cable USB-Serie empleamos este programa.
+Desgraciadamente con el cable USB-serie no podemos utilizar el comando {\tt sx}, ya que
+dichos comando sobreescribe el valor del pin {\tt DTR}. El siguiente programa, además de enviar
+el pulso {\tt DTR} para provocar el reset, trasfiere el archivo a la Raspberry. Con esto ya
+no necesitaríamos la herramienta {\tt sx}.
 
-\begin{lstlisting}[language=C]
-int pulseDTR(int fd){
-    int status;
+\begin{lstlisting}[language=C,caption={sendx.c}]
+#include <termios.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
 
-    // leemos la señal de control status
-    if (ioctl(fd, TIOCMGET, &status) == -1) {
-        // manejamos el error
-    }
-
-    // Ponemos DTR a cero (activamos reset)
-    status &= ~TIOCM_DTR;
-    // y lo aplicamos a la señal de control
-    if (ioctl(fd, TIOCMSET, &status) == -1) {
-        // manejamos el error
-    }
-    // esperamos un poco
-    usleep (400*1000);
-    // Ahora ponemos DTR a uno (desactivamos reset)
-    status |= TIOCM_DTR;
-    // y lo aplicamos
-    if (ioctl(fd, TIOCMSET, &status) == -1) {
-        // manejamos el error
-    }
-    return 0;
+int main(int argc, char* argv[]){
+  FILE *fi;
+  int i, fd;
+  unsigned char j, eot= 0x04, buf[132];
+  struct termios attr;
+  buf[0]++;
+  buf[2]--;
+  if( argc != 2 )
+    printf( "sendx v1.00 by Antonio Villena, 21 Dec 2014\n\n"
+            "  sendx <input_file>\n\n"
+            "  <input_file>   Bare Metal input binary file\n\n"),
+    exit(0);
+  fi= fopen(argv[1], "r");
+  if( !fi )
+    printf("Couldn't open file %s\n", argv[1]),
+    exit(1);
+  fd= open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NDELAY);
+  if( fd == -1 )
+    printf("Couldn't open serial device /dev/ttyUSB0\n"),
+    exit(1);
+  tcgetattr(fd, &attr);
+  attr.c_cflag= B115200 | CS8;
+  attr.c_oflag= attr.c_iflag= attr.c_lflag= 0;
+  tcsetattr(fd, TCSANOW, &attr);
+  i= TIOCM_DTR;
+  ioctl(fd, TIOCMSET, &i);
+  usleep( 100*1000 );
+  i= 0;
+  ioctl(fd, TIOCMSET, &i);
+  fcntl(fd, F_SETFL, 0);
+  usleep( 50*1000 );
+  tcflush(fd, TCIOFLUSH);
+  read(fd, &j, 1);
+  printf("Initializing file transfer...\n");
+  while ( fread(buf+3, 1, 128, fi)>0 ){
+    buf[1]++;
+    buf[2]--;
+    for ( buf[131]= 0, i= 3; i < 131; i++ )
+      buf[131]+= buf[i];
+    if( write(fd, buf, 132) != 132 )
+      printf("Error writing to serial port\n"),
+      exit(-1);
+    read(fd, &j, 1);
+    if( j == 6 )  // ACK
+      printf("."),
+      fflush(stdout);
+    else
+      printf("Received %d, expected ACK\n", j),
+      exit(-1);
+  }
+  write(fd, &eot, 1);
+  read(fd, &j, 1);
+  if( j != 6 )  // ACK
+    printf("No ACK for EOT message\n"),
+    exit(-1);
+  printf("\nFile transfer successfully.\n");
+  fclose(fi);
+  close(fd);
 }
 \end{lstlisting}
 
@@ -438,7 +481,7 @@ cabeceras y demás cada paquete ocupa 132 bytes).
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=14cm]{graphs/transm.png}
+    \includegraphics[width=10.5cm]{graphs/transm.png}
   \caption{Ejemplo de transmisión}
   \label{fig:transm}
 \end{figure}
