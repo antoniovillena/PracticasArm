@@ -10,7 +10,7 @@ const2: .word   12345
 .global main
 
 /* Salvamos registros */
-main:   push    {r4, r5}
+main:   push    {r4, lr}
 
 /* Llamamos a mysrand con parámetro 42 */
         mov     r0, #42
@@ -28,7 +28,7 @@ bucle:  bl      myrand      @ leo número aleatorio
         bne     bucle       @ salgo si llego a cero
 
 /* Recuperamos registros y salimos */
-        pop     {r4, r5}
+        pop     {r4, lr}
         bx      lr
 
 myrand: ldr     r1, =seed
