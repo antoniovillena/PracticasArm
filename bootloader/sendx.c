@@ -21,16 +21,23 @@ int main(int argc, char* argv[]){
     printf("Couldn't open file %s\n", argv[1]),
     exit(1);
   fd= open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NDELAY);
-  if( fd == -1 )
-    printf("Couldn't open serial device /dev/ttyUSB0\n"),
-    exit(1);
+  if( fd == -1 ){
+    fd= open("/dev/ttyAMA0", O_RDWR | O_NOCTTY | O_NDELAY);
+    if( fd == -1 )
+      printf("Couldn't open serial device /dev/ttyUSB0 or /dev/ttyAMA0\n"),
+      exit(1);
+  }
+  wiringPiSetup();
+  pinMode(1, 1);
   tcgetattr(fd, &attr);
   attr.c_cflag= B115200 | CS8;
   attr.c_oflag= attr.c_iflag= attr.c_lflag= 0;
   tcsetattr(fd, TCSANOW, &attr);
   i= TIOCM_DTR;
   ioctl(fd, TIOCMSET, &i);
+  digitalWrite(1, 0);
   usleep( 100*1000 );
+  digitalWrite(1, 1);
   i= 0;
   ioctl(fd, TIOCMSET, &i);
   fcntl(fd, F_SETFL, 0);
