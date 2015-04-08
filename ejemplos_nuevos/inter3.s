@@ -34,7 +34,7 @@
 
 /* Habilito interrupciones, local y globalmente */
         mov     r0, #GPIOINT
-        bl      int_enable
+        bl      irq_enable
         mov     r0, #IRQ
         bl      int_setglobalmask
 

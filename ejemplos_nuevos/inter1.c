@@ -8,7 +8,7 @@ int notmain(){
   putsp(SVCMODE, 0x8000000);
   gpio_fsel(L1, OUTPUT);
   systim_add(4000000, 1);
-  int_enable(C1INT);
+  irq_enable(C1INT);
   int_setglobalmask(IRQ);
   while(1);
 }

@@ -39,9 +39,9 @@
 
 /* Habilito interrupciones, local y globalmente */
         mov     r0, #C1INT
-        bl      int_enable
+        bl      irq_enable
         mov     r0, #C3INT
-        bl      int_enable
+        bl      irq_enable
         mov     r0, #IRQ
         bl      int_setglobalmask
 

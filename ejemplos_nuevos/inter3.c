@@ -12,7 +12,7 @@ int notmain(){
   gpio_set(L2);
   gpio_fen(S1);
   gpio_fen(S2);
-  int_enable(GPIOINT);
+  irq_enable(GPIOINT);
   int_setglobalmask(IRQ);
   while(1);
 }

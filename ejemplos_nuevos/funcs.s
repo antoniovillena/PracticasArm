@@ -11,7 +11,8 @@
         .globl  systim_add
         .globl  systim_tst
         .globl  systim_clearmatch
-        .globl  int_enable
+        .globl  irq_enable
+        .globl  fiq_enable
         .globl  int_setglobalmask
 
         .include  "const.inc"
@@ -117,9 +118,15 @@ systim_clearmatch: @ void systim_add(int counter)
         str     r1, [r0]
         bx      lr
 
-int_enable: @ void int_enable(int number)
+irq_enable: @ void irq_enable(int number)
         ldr     r1, =INTBASE+INTENIRQ1
         b       gs1
+
+fiq_enable: @ void fiq_enable(int number)
+        ldr     r1, =INTBASE+INTENIRQ1
+        orr     r0, #0b10000000
+        str     r0, [r1, #INTFIQCON-INTENIRQ1]
+        bx      lr
 
 int_setglobalmask: @ void int_setglobalmask(int mask)
         mrs     r1, cpsr
