@@ -15,7 +15,7 @@ int notmain(){
   gpio_fsel(L6, OUTPUT);
   systim_add(2, 1);
   irq_enable(C1INT);
-  int_setglobalmask(IRQ);
+  int_globalenable(IRQ);
   while(1);
 }
 

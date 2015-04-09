@@ -37,7 +37,7 @@
         mov     r0, #C1INT
         bl      irq_enable
         mov     r0, #IRQ
-        bl      int_setglobalmask
+        bl      int_globalenable
 
 /* Repetir para siempre */
 bucle:  b       bucle

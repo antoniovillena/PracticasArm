@@ -13,7 +13,7 @@
         .globl  systim_clearmatch
         .globl  irq_enable
         .globl  fiq_enable
-        .globl  int_setglobalmask
+        .globl  int_globalenable
 
         .include  "const.inc"
 
@@ -128,7 +128,7 @@ fiq_enable: @ void fiq_enable(int number)
         str     r0, [r1, #INTFIQCON-INTENIRQ1]
         bx      lr
 
-int_setglobalmask: @ void int_setglobalmask(int mask)
+int_globalenable: @ void int_globalenable(int mask)
         mrs     r1, cpsr
         orr     r1, #0b11000000
         eor     r1, r0, lsl #6

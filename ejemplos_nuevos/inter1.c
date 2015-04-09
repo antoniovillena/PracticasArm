@@ -9,7 +9,7 @@ int notmain(){
   gpio_fsel(L1, OUTPUT);
   systim_add(4000000, 1);
   irq_enable(C1INT);
-  int_setglobalmask(IRQ);
+  int_globalenable(IRQ);
   while(1);
 }
 

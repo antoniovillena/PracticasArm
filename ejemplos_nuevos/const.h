@@ -1,36 +1,26 @@
-#define L1               9
-#define L2              10
-#define L3              11
-#define L4              17
-#define L5              22
-#define L6              27
-#define ALT              4
-#define S1               2
-#define S2               3
-#define MASK         0b111
-#define LOW              0
-#define HIGH             1
-#define OUTPUT       0b001
-#define GPBASE  0x20200000
-#define GPSET0        0x1c
-#define GPCLR0        0x28
-#define GPLEV0        0x34
-#define GPLEV1        0x38
-#define GPEDS0        0x40
-#define GPEDS1        0x44
-#define GPFEN0        0x58
-#define GPFEN1        0x5c
-#define GPPUD         0x94
-#define GPPUDCLK0     0x98
-#define STBASE  0x20003000
-#define STCS          0x00
-#define STCLO         0x04
-#define STC1          0x10
-#define STC3          0x18
-#define INTBASE 0x2000b000
-#define INTFIQCON    0x20c
-#define INTENIRQ1    0x210
-#define INTENIRQ2    0x214
+#if 1
+  #define L1             9
+  #define L2            10
+  #define L3            11
+  #define L4            17
+  #define L5            22
+  #define L6            27
+  #define ALT            4
+  #define S1             2
+  #define S2             3
+#else
+  #define L1             5
+  #define L2            12
+  #define L3            16
+  #define L4            26
+  #define L5            20
+  #define L6            21
+  #define ALT            6
+  #define S1            13
+  #define S2            19
+#endif
+
+#define OUTPUT           1
 #define FIQMODE         17
 #define IRQMODE         18
 #define SVCMODE         19
@@ -41,4 +31,3 @@
 #define GPIOINT         52
 #define FIQ              1
 #define IRQ              2
-

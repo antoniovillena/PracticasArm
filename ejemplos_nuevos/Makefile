@@ -1,5 +1,5 @@
-all: esbn5.img esbn5s.img inter1.img inter1s.img inter2s.img \
-     inter2.img inter3s.img inter3.img inter4s.img inter4.img
+all: esbn5.img esbn5s.img inter1s.img inter1.img inter2s.img inter2.img \
+   inter3s.img inter3.img inter4s.img inter4.img inter5s.img inter5.img
 
 clean :
 	rm -f tmp.elf

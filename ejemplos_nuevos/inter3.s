@@ -36,7 +36,7 @@
         mov     r0, #GPIOINT
         bl      irq_enable
         mov     r0, #IRQ
-        bl      int_setglobalmask
+        bl      int_globalenable
 
 /* Repetir para siempre */
 bucle:  b       bucle

@@ -1,7 +1,7 @@
 #include  "const.h"
 
 void irq_handler();
-int cuenta= 0, bitson= 0;
+int cuenta= 5, bitson= 0;
 unsigned char leds[6]= {L1,L2,L3,L4,L5,L6};
 
 int notmain(){
@@ -15,7 +15,7 @@ int notmain(){
   systim_add(2, 3);
   irq_enable(C1INT);
   irq_enable(C3INT);
-  int_setglobalmask(IRQ);
+  int_globalenable(IRQ);
   while(1);
 }
 
