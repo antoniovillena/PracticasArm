@@ -1,0 +1,1 @@
+/c/entorno/ttpmacro /c/entorno/send.ttl $PWD/$1

@@ -1,20 +1,21 @@
 #include  "const.h"
 
 void irq_handler();
-int cuenta= 5, bitson= 0;
+int i, cuenta, bitson;
 unsigned char leds[6]= {L1,L2,L3,L4,L5,L6};
 
 int notmain(){
   addexc(IRQVECT, irq_handler);
   putsp(IRQMODE, 0x8000);
   putsp(SVCMODE, 0x8000000);
-  while ( bitson < 6 )
-    gpio_fsel(leds[bitson++], OUTPUT);
+  for ( i= 0; i<6; i++ )
+    gpio_fsel(leds[i], OUTPUT);
   gpio_fsel(ALT, OUTPUT);
   systim_add(2, 1);
   systim_add(2, 3);
   irq_enable(C1INT);
   irq_enable(C3INT);
+  cuenta= 5;
   int_globalenable(IRQ);
   while(1);
 }
