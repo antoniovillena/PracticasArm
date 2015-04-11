@@ -15,7 +15,7 @@ clean :
 	$(PREFIX)ld -e 0 -Ttext=0x8000 -o tmp.elf $< funcs.o
 	$(PREFIX)objcopy tmp.elf -O binary $@
 
-funcs.o : funcs.s
+funcs.o : funcs.s const.inc
 	$(PREFIX)as -o $@ $<
 
 %s.o : %.s

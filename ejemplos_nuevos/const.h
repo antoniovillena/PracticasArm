@@ -1,4 +1,4 @@
-#if 1
+#if 0
   #define L1             9
   #define L2            10
   #define L3            11
@@ -9,15 +9,15 @@
   #define S1             2
   #define S2             3
 #else
-  #define L1             5
-  #define L2            12
-  #define L3            16
-  #define L4            26
+  #define L1            19
+  #define L2            16
+  #define L3            12
+  #define L4            13
   #define L5            20
   #define L6            21
-  #define ALT            6
-  #define S1            13
-  #define S2            19
+  #define ALT           26
+  #define S1             6
+  #define S2             5
 #endif
 
 #define OUTPUT           1

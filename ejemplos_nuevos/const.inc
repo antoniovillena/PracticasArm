@@ -1,4 +1,4 @@
-        .if 1
+        .if 0
           .set    L1,              9
           .set    L2,             10
           .set    L3,             11
@@ -9,15 +9,15 @@
           .set    S1,              2
           .set    S2,              3
         .else
-          .set    L1,              5
-          .set    L2,             12
-          .set    L3,             16
-          .set    L4,             26
+          .set    L1,             19
+          .set    L2,             16
+          .set    L3,             12
+          .set    L4,             13
           .set    L5,             20
           .set    L6,             21
-          .set    ALT,             6
-          .set    S1,             13
-          .set    S2,             19
+          .set    ALT,            26
+          .set    S1,              6
+          .set    S2,              5
         .endif
 
         .set    GPBASE,   0x20200000
