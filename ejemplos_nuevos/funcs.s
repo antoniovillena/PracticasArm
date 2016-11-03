@@ -2,10 +2,11 @@
         .globl  gpio_set
         .globl  gpio_clr
         .globl  gpio_fen
-        .globl  gpio_fen
+        .globl  gpio_tst
         .globl  gpio_eds_tst
         .globl  gpio_eds_set
         .globl  usleep
+        .globl  initex
         .globl  addexc
         .globl  putsp
         .globl  systim_add
@@ -56,13 +57,17 @@ gpio_fen: @ void gpio_fen(int pin)
         strcc   r0, [r1, #GPFEN1]
         bx      lr
 
+gpio_tst: @ void gpio_tst(int pin)
+        ldr     r1, =GPBASE+GPLEV0
+        b       get
+      
 gpio_eds_tst: @ int gpio_eds_tst(int pin)
-        ldr     r1, =GPBASE
-        mov     r2, #0x80000000
+        ldr     r1, =GPBASE+GPEDS0
+get:    mov     r2, #0x80000000
         rsbs    r0, #31
         ror     r2, r0
-        ldrcs   r0, [r1, #GPEDS0]
-        ldrcc   r0, [r1, #GPEDS1]
+        ldrcs   r0, [r1, #0]
+        ldrcc   r0, [r1, #4]
         ands    r0, r2
         bx      lr
 
@@ -77,6 +82,11 @@ usleep: @ void usleep(int usecs)
 es1:    ldr     r2, [r1, #STCLO]
         cmp     r0, r2
         bne     es1
+        bx      lr
+
+initex: @ void initex(void)
+        mov     r0, #0
+        mcr     p15, 0, r0, c12, c0, 0
         bx      lr
 
 addexc: @ void addexc(int vector, int dirRTI)

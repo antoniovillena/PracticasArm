@@ -5,6 +5,7 @@ int i, cuenta, bitson;
 unsigned char leds[6]= {L1,L2,L3,L4,L5,L6};
 
 int notmain(){
+  initex();
   addexc(IRQVECT, irq_handler);
   putsp(IRQMODE, 0x8000);
   putsp(SVCMODE, 0x8000000);

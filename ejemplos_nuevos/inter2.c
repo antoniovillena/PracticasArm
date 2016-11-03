@@ -4,6 +4,7 @@ void irq_handler();
 int ledst;
 
 int notmain(){
+  initex();
   addexc(IRQVECT, irq_handler);
   putsp(IRQMODE, 0x8000);
   putsp(SVCMODE, 0x8000000);
