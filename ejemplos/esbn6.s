@@ -1,9 +1,14 @@
-        .set    GPBASE,   0x20200000
-        .set    GPFSEL0,        0x00
-        .set    GPSET0,         0x1c
-        .set    GPCLR0,         0x28
-        .set    STBASE,   0x20003000
-        .set    STCLO,          0x04
+      .if 1     // 0 for RPi1, 1 for RPi2 or RPi3
+        .set    BASE,       0x3f000000
+      .else
+        .set    BASE,       0x20000000
+      .endif
+        .set    GPBASE,     BASE+0x200000
+        .set    GPFSEL0,    0x00
+        .set    GPSET0,     0x1c
+        .set    GPCLR0,     0x28
+        .set    STBASE,     BASE+0x003000
+        .set    STCLO,      0x04
 .text
         ldr     r0, =GPBASE
 /* guia bits           xx999888777666555444333222111000*/

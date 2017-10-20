@@ -15,28 +15,22 @@
         msr     cpsr_c, r0
         mov     sp, #0x8000000
 
-/* Configuro GPIOs 0, 1, 2, 3, 4, 10, 11, 17 y 22 como salida */
+/* Configuro GPIOs 4, 9, 10, 11, 17, 22 y 27 como salida */
         ldr     r0, =GPBASE
-        ldr     r1, =0b00000000000000000001001001001001
+        ldr     r1, =0b00001000000000000001000000000000
         str     r1, [r0, #GPFSEL0]
 /* guia bits           xx999888777666555444333222111000*/
         ldr     r1, =0b00000000001000000000000000001001
         str     r1, [r0, #GPFSEL1]
-        mov     r1, #0b00000000000000000000000001000000
+        ldr     r1, =0b00000000001000000000000001000000
         str     r1, [r0, #GPFSEL2]
 
-/* Enciendo LEDs       21098765432109876543210*/
-        mov     r1, #0b00000000000000000000101
+/* Enciendo LEDs       10987654321098765432109876543210*/
+        mov     r1, #0b00000000000000000000001000000000
         str     r1, [r0, #GPSET0]
-        mov     r1, #2
-        str     r1, [r0, #GPPUD]
-        bl      wait
-/* Pongo pullups y habilito pines GPIO 9, 21 y 27 (botones) para interrupciones*/
-        ldr     r1, =0b00001000001000000000001000000000
-        str     r1, [r0, #GPPUDCLK0]
-        bl      wait
-        mov     r2, #0
-        str     r2, [r0, #GPPUD]
+
+/* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
+        mov     r1, #0b00000000000000000000000000001100
         str     r1, [r0, #GPFEN0]
 
 /* Programo C1 para dentro de 2 microsegundos */
@@ -61,11 +55,6 @@
 
 /* Repetir para siempre */
 bucle:  b       bucle
-
-wait:   mov     r2, #50
-wait1:  subs    r2, #1
-        bne     wait1
-        bx      lr
 
 /* Rutina de tratamiento de interrupción FIQ */
 fiq_handler:
@@ -106,12 +95,12 @@ irq_handler:
         ldr     r1, =cuenta
 
 /* Apago todos LEDs    10987654321098765432109876543210*/
-        ldr     r2, =0b00000000010000100000110000001111
+        ldr     r2, =0b00001000010000100000111000000000
         str     r2, [r0, #GPCLR0]
 
 /* Leo botón pulsado */
         ldr     r2, [r0, #GPEDS0]
-        ands    r2, #0b00000000000000000000001000000000
+        ands    r2, #0b00000000000000000000000000001000
         beq     incre
 
 /* Si es botón izquierdo, decrementar */
@@ -122,7 +111,7 @@ irq_handler:
         b       conti             @ Salto a conti
 
 /* Si es botón derecho, incrementar */
-incre:  mov     r2, #0b00001000001000000000000000000000
+incre:  mov     r2, #0b00000000000000000000000000000100
         str     r2, [r0, #GPEDS0] @ Reseteo flag b. der
         ldr     r2, [r1]          @ Leo variable cuenta
         add     r2, #1            @ Incremento
@@ -130,26 +119,25 @@ incre:  mov     r2, #0b00001000001000000000000000000000
         moveq   r2, #1            @ Si es 7, volver a 1
 
 /* Actualizo variable, enciendo LED y salgo */
-/* Actualizo variable, enciendo LED y salgo */
 conti:  str     r2, [r1], #-4     @ Escribo variable cuenta
         ldr     r2, [r1, +r2, LSL #3] @ Leo secuencia
         str     r2, [r0, #GPSET0] @ Escribo secuencia en LEDs
         pop     {r0, r1, r2}      @ Recupero registros
         subs    pc, lr, #4        @ Salgo RTI
 
-bitson: .word   0             @ Bit 0 = Estado del altavoz
-cuenta: .word   6             @ Entre 1 y 6, LED a encender
-secuen: .word   0b00000000000100000000000
-        .word   716           @ Retardo para nota 6
-        .word   0b00000000000010000000000
-        .word   758           @ Retardo para nota 5
-/* guia bits      21098765432109876543210*/
-        .word   0b10000000000000000000000
-        .word   851           @ Retardo para nota 4
-        .word   0b00000100000000000000000
-        .word   956           @ Retardo para nota 3
-/* guia bits      21098765432109876543210*/
-        .word   0b00000000000000000001010
-        .word   1012          @ Retardo para nota 2
-        .word   0b00000000000000000000101
-        .word   1136          @ Retardo para nota 1
+bitson: .word   0                 @ Bit 0 = Estado del altavoz
+cuenta: .word   6                 @ Entre 1 y 6, LED a encender
+secuen: .word   0b1000000000000000000000000000
+        .word   716               @ Retardo para nota 6
+        .word   0b0000010000000000000000000000
+        .word   758               @ Retardo para nota 5
+/* guia bits      7654321098765432109876543210*/
+        .word   0b0000000000100000000000000000
+        .word   851               @ Retardo para nota 4
+        .word   0b0000000000000000100000000000
+        .word   956               @ Retardo para nota 3
+/* guia bits      7654321098765432109876543210*/
+        .word   0b0000000000000000010000000000
+        .word   1012              @ Retardo para nota 2
+        .word   0b0000000000000000001000000000
+        .word   1136              @ Retardo para nota 1

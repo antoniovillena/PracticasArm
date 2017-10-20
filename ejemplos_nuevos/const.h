@@ -1,4 +1,4 @@
-#if 0
+#if 1
   #define L1             9
   #define L2            10
   #define L3            11
@@ -20,6 +20,7 @@
   #define S2             5
 #endif
 
+#define INPUT            0
 #define OUTPUT           1
 #define FIQMODE         17
 #define IRQMODE         18
@@ -31,3 +32,5 @@
 #define GPIOINT         52
 #define FIQ              1
 #define IRQ              2
+#define PULLDOWN         1
+#define PULLUP           2

@@ -1,11 +1,16 @@
-        .set    STCLO,      0x20003004
-        .set    AUXBASE,    0x20215000
+      .if 1     // 0 for RPi1, 1 for RPi2 or RPi3
+        .set    BASE,       0x3f000000
+      .else
+        .set    BASE,       0x20000000
+      .endif
+        .set    GPBASE,     BASE+0x200000
+        .set    STCLO,      BASE+0x003004
+        .set    AUXBASE,    BASE+0x215000
         .set    AMENABLES,  0x04
         .set    AMIOREG,    0x40
-        .set    AMLCRREG,   0x4C
+        .set    AMLCRREG,   0x4c
         .set    AMLSRREG,   0x54
         .set    AMBAUDREG,  0x68
-        .set    GPBASE,     0x20200000
         .set    GPFSEL0,    0x00
         .set    GPFSEL1,    0x04
         .set    GPSET0,     0x1c
@@ -29,7 +34,7 @@ star1:  ldr     r3, [addr], #-4
         cmp     addr, #0x8000
         bne     star1
         ldr     gpbas, =GPBASE
-        sub     cntadr, gpbas, #GPBASE-0x20004000
+        ldr     cntadr, =STCLO
         ldr     sgpfs1, [gpbas, #GPFSEL1]
         mov     r3, #0b00000000000000010010000000000000
         str     r3, [gpbas, #GPFSEL1]
@@ -54,7 +59,7 @@ beep1:  subs    crc, #1
 star2:  uadd8   crc, crc, recv
         strb    recv, [addr], #1
 star3:  add     state, #1
-star4:  ldr     cnt, [cntadr, #STCLO-0x20004000]
+star4:  ldr     cnt, [cntadr]
         cmp     cnt, timeout
         addcs   timeout, cnt, #0xa000
         movcs   send, #0x15

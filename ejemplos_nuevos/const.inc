@@ -1,4 +1,9 @@
-        .if 0
+        .if 1     // 0 for RPi1, 1 for RPi2 or RPi3
+          .set    BASE,       0x3f000000
+        .else
+          .set    BASE,       0x20000000
+        .endif
+        .if 1
           .set    L1,              9
           .set    L2,             10
           .set    L3,             11
@@ -20,7 +25,9 @@
           .set    S2,              5
         .endif
 
-        .set    GPBASE,   0x20200000
+        .set    GPBASE,         BASE+0x200000
+        .set    STBASE,         BASE+0x003000
+        .set    INTBASE,        BASE+0x00b000
         .set    GPSET0,         0x1c
         .set    GPCLR0,         0x28
         .set    GPLEV0,         0x34
@@ -30,14 +37,13 @@
         .set    GPFEN1,         0x5c
         .set    GPPUD,          0x94
         .set    GPPUDCLK0,      0x98
-        .set    STBASE,   0x20003000
         .set    STCLO,          0x04
         .set    STC0,           0x0c
-        .set    INTBASE,  0x2000b000
         .set    INTFIQCON,     0x20c
         .set    INTENIRQ1,     0x210
 
         .set    MASK,          0b111
+        .set    INPUT,         0b000
         .set    OUTPUT,        0b001
         .set    FIQMODE,          17
         .set    IRQMODE,          18

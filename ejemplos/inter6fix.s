@@ -94,7 +94,8 @@ irq_handler:
         ldr     r0, =STBASE
         ldr     r2, [r0, #STCLO]
         ldr     r1, =pultim
-        swp     r0, r2, [r1]
+        ldr     r0, [r1]
+        str     r2, [r1]
         add     r0, #0x28000
         cmp     r0, r2
         ldr     r0, =GPBASE
@@ -135,20 +136,20 @@ conti:  str     r2, [r1], #-4     @ Escribo variable cuenta
         pop     {r0, r1, r2}      @ Recupero registros
         subs    pc, lr, #4        @ Salgo RTI
 
-bitson: .word   0             @ Bit 0 = Estado del altavoz
-pultim: .word   0             @ Temporizador al pulsar botón
-cuenta: .word   6             @ Entre 1 y 6, LED a encender
+bitson: .word   0                 @ Bit 0 = Estado del altavoz
+pultim: .word   0                 @ Temporizador al pulsar botón
+cuenta: .word   6                 @ Entre 1 y 6, LED a encender
 secuen: .word   0b1000000000000000000000000000
-        .word   716           @ Retardo para nota 6
+        .word   716               @ Retardo para nota 6
         .word   0b0000010000000000000000000000
-        .word   758           @ Retardo para nota 5
+        .word   758               @ Retardo para nota 5
 /* guia bits      7654321098765432109876543210*/
         .word   0b0000000000100000000000000000
-        .word   851           @ Retardo para nota 4
+        .word   851               @ Retardo para nota 4
         .word   0b0000000000000000100000000000
-        .word   956           @ Retardo para nota 3
+        .word   956               @ Retardo para nota 3
 /* guia bits      7654321098765432109876543210*/
         .word   0b0000000000000000010000000000
-        .word   1012          @ Retardo para nota 2
+        .word   1012              @ Retardo para nota 2
         .word   0b0000000000000000001000000000
-        .word   1136          @ Retardo para nota 1
+        .word   1136              @ Retardo para nota 1

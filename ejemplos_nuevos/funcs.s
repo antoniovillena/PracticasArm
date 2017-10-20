@@ -1,3 +1,4 @@
+        .globl  gpio_pull
         .globl  gpio_fsel
         .globl  gpio_set
         .globl  gpio_clr
@@ -17,6 +18,21 @@
         .globl  int_globalenable
 
         .include  "const.inc"
+
+gpio_pull: @ void gpio_pull(int pin, int mode)
+        ldr     r12, =GPBASE
+        str     r1, [r12, #GPPUD]
+        mov     r1, #-99
+gp1:    adds    r1, #2
+        bcc     gp1
+        lsl     r1, r0
+        str     r1, [r12, #GPPUDCLK0]
+        mov     r1, #50
+gp2:    subs    r1, #1
+        bne     gp2
+        str     r1, [r12, #GPPUD]
+        str     r1, [r12, #GPPUDCLK0]
+        bx      lr
 
 gpio_fsel: @ void gpio_fsel(int pin, int mode)
         ldr     r12, =GPBASE
@@ -57,7 +73,7 @@ gpio_fen: @ void gpio_fen(int pin)
         strcc   r0, [r1, #GPFEN1]
         bx      lr
 
-gpio_tst: @ void gpio_tst(int pin)
+gpio_tst: @ int gpio_tst(int pin)
         ldr     r1, =GPBASE+GPLEV0
         b       get
       
@@ -85,8 +101,15 @@ es1:    ldr     r2, [r1, #STCLO]
         bx      lr
 
 initex: @ void initex(void)
+      .if BASE==0x3f000000
+        mov     r0, #0b11010011
+        msr     spsr_cxsf, r0
+        add     r0, pc, #4
+        msr     elr_hyp, r0
+        eret
+      .endif
         mov     r0, #0
-        mcr     p15, 0, r0, c12, c0, 0
+        mcr     p15, 4, r0, c12, c0, 0
         bx      lr
 
 addexc: @ void addexc(int vector, int dirRTI)
