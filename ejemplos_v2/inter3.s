@@ -26,11 +26,11 @@
 /* Habilito pines GPIO 2 y 3 (botones) para interrupciones*/
         mov     r1, #0b00000000000000000000000000001100
         str     r1, [r0, #GPFEN0]
-        ldr     r0, =INTBASE
 
 /* Habilito interrupciones, local y globalmente */
-        mov     r1, #0b00000000000100000000000000000000
+        ldr     r0, =INTBASE
 /* guia bits           10987654321098765432109876543210*/
+        mov     r1, #0b00000000000100000000000000000000
         str     r1, [r0, #INTENIRQ2]
         mov     r0, #0b01010011   @ Modo SVC, IRQ activo
         msr     cpsr_c, r0

@@ -32,3 +32,5 @@
         .set    INTFIQCON,     0x20c
         .set    INTENIRQ1,     0x210
         .set    INTENIRQ2,     0x214
+        mov     r0, #0
+        mcr     p15, 0, r0, c12, c0, 0

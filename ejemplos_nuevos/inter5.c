@@ -7,6 +7,7 @@ unsigned char leds[6]= {L1,L2,L3,L4,L5,L6};
 unsigned short freq[6]= {1136, 1012, 956, 851, 758, 716};
 
 int notmain(){
+  initex();
   addexc(IRQVECT, irq_handler);
   addexc(FIQVECT, fiq_handler);
   putsp(FIQMODE, 0x4000);

@@ -1,6 +1,7 @@
         .include  "const.inc"
 .text
 /* Agrego vector interrupción */
+        bl      initex
         mov     r0, #IRQVECT
         ldr     r1, =irq_handler
         bl      addexc
