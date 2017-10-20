@@ -97,9 +97,11 @@
 \newcommand{\chapterbegin}[1]%
   {%
     \pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
     \fancyhead[LE,RO]{\thepage}
     \fancyhead[LO]{Capítulo \thechapter. #1}
-    %\fancyhead[RE]{Parte \thepart \rightmark} %
+    \fancyfoot[C]{\ccbyncndeu \quad A. Villena, R. Asenjo, F. Corbera. DAC-UMA.} %
     \fancyhead[RE]{\nouppercase{\rightmark}} %
         
     \chapter{#1}
@@ -109,6 +111,7 @@
 \newcommand{\chapterbeginx}[1]%
   {%
     \pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.5pt}
     \fancyhead[RO,LE]{\thepage}
     \fancyhead[RE,LO]{#1}
     %\fancyhead[LO]{Chapter \thechapter}
